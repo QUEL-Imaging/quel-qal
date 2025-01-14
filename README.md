@@ -1,1 +1,1 @@
-# q-qal
+# Q-QAL: QUEL Quantitative Analysis Library
