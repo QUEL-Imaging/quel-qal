@@ -6,7 +6,8 @@ registry = {
     # Concentration Targets
     "concentration_targets/cn_sample_2.tiff": "a4c37bd36042370567297a6802a623586dc86405f11b14e32c15232849aa06be",
     "concentration_targets/cn_sample_3.tiff": "aac12c12735f2de5563ab5177361502d2f91386b542dfea949163601392fc54a",
-    "concentration_targets/cn_sample_1.tiff": "a78b4ea0cbf2c6f4badb65e4054a71a636b7f16adda46f3460d63d8a0479b8d4",
+    "concentration_targets/cn_sample_1.tiff": "8dae075be3cb52d849b1b4aaf801036ccc9103ee9ccba9c11aeb055cb2fcdab7",
+    "concentration_targets/cn_sample_4.tiff": "784e376feafa0f5c8624fd437bb70d416170e605b00213d849975073a405d057",
 
     # Depth Targets
     "depth_targets/depth_sample_1.tiff": "da8a4e6d9f4d7e13048462b06a2efb0f5da10ea4d4d36be2ee07cd3b73c8dbd1",

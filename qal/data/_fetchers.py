@@ -174,6 +174,12 @@ def cn_sample_3():
     """
     return _load("concentration_targets/cn_sample_3.tiff")
 
+def cn_sample_4():
+    """
+    Return the cn_sample_4.tiff path as an ndarray.
+    """
+    return _load("concentration_targets/cn_sample_4.tiff")
+
 # --- Depth resolution targets
 def dr_sample1():
     """
