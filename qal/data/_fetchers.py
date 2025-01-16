@@ -305,6 +305,26 @@ def lung_test_image():
     """
     return _load("lung_test_image/lung_test_image.tiff")
 
+def lung_reference_inclusions():
+    """
+    Return Inclusions image.tiff as an ndarray.
+    """
+    return _load("lung_reference_source/Inclusions image.tiff")
+
+def lung_reference_body():
+    """
+    Return Phantom image.tiff as an ndarray.
+    """
+    return _load("lung_reference_source/Phantom image.tiff")
+
+def lung_reference():
+    """
+    Return Inclusions image.tiff and Phantom image.tiff as ndarrays.
+    """
+    im_phantom = lung_reference_body()
+    im_inclusions = lung_reference_inclusions()
+    return im_phantom, im_inclusions
+
 #
 # End of _fetchers.py
 #
