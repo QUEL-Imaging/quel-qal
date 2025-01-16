@@ -219,7 +219,7 @@ def resolution_target_cropped():
     """
     return _load("resolution_targets/resolution_target_cropped.tiff")
 
-# --- RUD targets, example_1
+# --- RUD targets
 def rud_example_1():
     """
     Load example 1 RUD images and return the local path to the image directory.
@@ -248,6 +248,14 @@ def rud_example_3():
     rud_center_fov_example_3()
     return os.path.join(get_cache_dir(), "rud_targets", "example_3")
 
+def rud_example_4():
+    """
+    Load example 4 RUD image and return the local path to the image directory.
+    """
+    rud_image_example_4()
+    return os.path.join(get_cache_dir(), "rud_targets", "example_4")
+
+# --- RUD targets, example_1
 def rud_image1_example_1():
     """
     Return rud_image1.tiff from example_1 as an ndarray.
@@ -309,6 +317,13 @@ def rud_center_fov_example_3():
     Return rud_center_fov.tiff from example_3 as an ndarray.
     """
     return _load("rud_targets/example_3/rud_center_fov.tiff")
+
+# --- RUD targets, example_4
+def rud_image_example_4():
+    """
+    Return rud_image.TIF from example_4 as an ndarray.
+    """
+    return _load("rud_targets/example_4/rud_image.TIF")
 
 # --- Lung test
 def lung_test_image():

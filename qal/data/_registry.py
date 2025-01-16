@@ -43,4 +43,7 @@ registry = {
 
     # RUD Targets - Example 3
     "rud_targets/example_3/rud_center_fov.tiff": "984cc3cab573c06c1ab3c0b4b2db5e14038cab18c3feacdf98598ca9370f7b19",
+
+    # RUD Targets - Example 4
+    "rud_targets/example_4/rud_image.TIF": "5ed18c9ad867348f90597c158b5b4cbf1c20b3750d149cce40e2c25656b8fe71",
 }
