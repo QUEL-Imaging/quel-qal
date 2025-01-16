@@ -11,6 +11,7 @@ registry = {
 
     # Depth Targets
     "depth_targets/depth_sample_1.tiff": "da8a4e6d9f4d7e13048462b06a2efb0f5da10ea4d4d36be2ee07cd3b73c8dbd1",
+    "depth_targets/depth_sample_2.tiff": "3d5fefd4d4335fd682d253bd8a33fc2cbe9dfd09660051e068bc217816ba5c3d",
 
     # Resolution Targets
     "resolution_targets/resolution_target_cropped.tiff": "6eecae1044587f2a2598ea97b017cab7c20935fee0d150068dd508523c01e581",

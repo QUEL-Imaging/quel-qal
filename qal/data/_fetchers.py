@@ -200,6 +200,12 @@ def depth_sample_1():
     """
     return _load("depth_targets/depth_sample_1.tiff")
 
+def depth_sample_2():
+    """
+    Return depth_sample_2.tiff as an ndarray.
+    """
+    return _load("depth_targets/depth_sample_2.tiff")
+
 # --- Resolution targets
 def res_sample_1():
     """
