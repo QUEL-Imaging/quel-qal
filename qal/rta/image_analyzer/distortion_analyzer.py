@@ -3,7 +3,7 @@ import pickle
 import warnings
 import numpy as np
 import matplotlib.pyplot as plt
-from qal.rta.image_analyzer.uniformity_analyzer import UniformityAnalyzer
+from qal import UniformityAnalyzer
 
 
 class DistortionAnalyzer:
