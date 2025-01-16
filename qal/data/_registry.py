@@ -6,10 +6,12 @@ registry = {
     # Concentration Targets
     "concentration_targets/cn_sample_2.tiff": "a4c37bd36042370567297a6802a623586dc86405f11b14e32c15232849aa06be",
     "concentration_targets/cn_sample_3.tiff": "aac12c12735f2de5563ab5177361502d2f91386b542dfea949163601392fc54a",
-    "concentration_targets/cn_sample_1.tiff": "a78b4ea0cbf2c6f4badb65e4054a71a636b7f16adda46f3460d63d8a0479b8d4",
+    "concentration_targets/cn_sample_1.tiff": "8dae075be3cb52d849b1b4aaf801036ccc9103ee9ccba9c11aeb055cb2fcdab7",
+    "concentration_targets/cn_sample_4.tiff": "784e376feafa0f5c8624fd437bb70d416170e605b00213d849975073a405d057",
 
     # Depth Targets
     "depth_targets/depth_sample_1.tiff": "da8a4e6d9f4d7e13048462b06a2efb0f5da10ea4d4d36be2ee07cd3b73c8dbd1",
+    "depth_targets/depth_sample_2.tiff": "3d5fefd4d4335fd682d253bd8a33fc2cbe9dfd09660051e068bc217816ba5c3d",
 
     # Resolution Targets
     "resolution_targets/resolution_target_cropped.tiff": "6eecae1044587f2a2598ea97b017cab7c20935fee0d150068dd508523c01e581",
@@ -27,10 +29,10 @@ registry = {
     "lung_reference_source/Inclusions image.tiff": "23c2fee447d5cde3ea965b324fd9afb6be4b68c138fba1af4afb65402f84a458",
 
     # RUD Targets - Example 1
-    "rud_targets/example_1/rud_image1.tiff": "4594a33578cca3d8b86dc6bc0930acbaeb4d74ea5aad8235664d5ad2ad5ec457",
-    "rud_targets/example_1/rud_image3.tiff": "e47930c56b02ffa2e581ae7a8f331c175e9cee62adde0bb153b4efa3ec912f12",
-    "rud_targets/example_1/rud_image2.tiff": "34d8405754e43109901cf9642015f72da340460128d7053066f8beb561009213",
-    "rud_targets/example_1/rud_image4.tiff": "84ddaa6e4ece30d0f228c2fc62b30fd4464c11c2ba6d358537c6254e76a090b4",
+    "rud_targets/example_1/rud_image1.tiff": "4cde7ef6639898685133378a87b4171e5ead1d006519df2279507cbacce1bbdb",
+    "rud_targets/example_1/rud_image2.tiff": "45e6b96e1a638c2ad4a26b4cf7c98ced5d36dc6e63ba5a01f6e9907dde936281",
+    "rud_targets/example_1/rud_image3.tiff": "fd1b75ce2cb2e20bfb5c2cd8cf875c4697f92ec3f54f2e0b816b1f705f9723e2",
+    "rud_targets/example_1/rud_image4.tiff": "0d168e244b93c3cc4cf0c4a0f272752d6c79322fc2f970cc2e924d70e90ef346",
 
     # RUD Targets - Example 2
     "rud_targets/example_2/rud_image1.tiff": "382728a8810f4e50e29de53263a1334d9b323e784957703a7be759d18345193e",
@@ -41,4 +43,7 @@ registry = {
 
     # RUD Targets - Example 3
     "rud_targets/example_3/rud_center_fov.tiff": "984cc3cab573c06c1ab3c0b4b2db5e14038cab18c3feacdf98598ca9370f7b19",
+
+    # RUD Targets - Example 4
+    "rud_targets/example_4/rud_image.TIF": "5ed18c9ad867348f90597c158b5b4cbf1c20b3750d149cce40e2c25656b8fe71",
 }
