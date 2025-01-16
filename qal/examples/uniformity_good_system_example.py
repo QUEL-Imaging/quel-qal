@@ -4,10 +4,8 @@ target. The input images are from an imaging system that is fairly uniform in te
 the field of view. As such, the default parameters for processing should work well for these images.
 """
 
-from qal.data._fetchers import rud_example_1
-from qal.rta.roi_extraction.rud_detector import RudDetector
-from qal.rta.image_analyzer.uniformity_analyzer import UniformityAnalyzer
-from qal.rta.data_visualizer.uniformity_visualizer import UniformityVisualizer
+from qal.data import rud_example_1
+from qal import RudDetector, UniformityAnalyzer, UniformityVisualizer
 
 
 def main():

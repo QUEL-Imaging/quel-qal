@@ -1,8 +1,6 @@
 import numpy as np
-from qal.data._fetchers import dr_sample1, dr_sample2
-from qal.rta.roi_extraction.crop_depth_phantom import PhantomCropper
-from qal.rta.image_analyzer.depth_resolution_analyzer import DepthAnalyzer
-from qal.rta.data_visualizer.depth_resolution_plotter import DepthDataPlotter
+from qal.data import dr_sample1, dr_sample2
+from qal import PhantomCropper, DepthAnalyzer, DepthDataPlotter
 
 
 def main():

@@ -3,10 +3,8 @@ This script shows the basic process of analyzing images of QUEL Imaging's refere
 quantify local geometric distortion. The images used in this example span the field of view of the imaging system.
 """
 
-from qal.data._fetchers import rud_example_1
-from qal.rta.roi_extraction.rud_detector import RudDetector
-from qal.rta.image_analyzer.distortion_analyzer import DistortionAnalyzer
-from qal.rta.data_visualizer.distortion_visualizer import DistortionVisualizer
+from qal.data import rud_example_1
+from qal import RudDetector, DistortionAnalyzer, DistortionVisualizer
 
 
 def main():

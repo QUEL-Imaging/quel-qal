@@ -1,7 +1,6 @@
 import pandas as pd
-from qal.data._fetchers import resolution_target_cropped
-from qal.rta.image_analyzer.rrt_analyzer import RrtAnalyzer
-from qal.rta.data_visualizer.rrt_data_plotter import RrtDataPlotter
+from qal.data import resolution_target_cropped
+from qal import RrtAnalyzer, RrtDataPlotter
 
 
 def main():

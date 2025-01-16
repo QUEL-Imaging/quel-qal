@@ -4,10 +4,8 @@ fluorescence uniformity map. The images were taken on an imaging system with a v
 profile. As a result, parameters need to be adjusted in order to obtain the fluorescence profile of the imaging system.
 """
 
-from qal.data._fetchers import rud_example_2
-from qal.rta.roi_extraction.rud_detector import RudDetector
-from qal.rta.image_analyzer.uniformity_analyzer import UniformityAnalyzer
-from qal.rta.data_visualizer.uniformity_visualizer import UniformityVisualizer
+from qal.data import rud_example_2
+from qal import RudDetector, UniformityAnalyzer, UniformityVisualizer
 
 
 def main():

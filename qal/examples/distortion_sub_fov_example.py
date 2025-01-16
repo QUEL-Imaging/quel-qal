@@ -3,10 +3,8 @@ This script shows an example of distortion analysis using only one image that do
 imaging system. Results will only be provided for the portion of the field of view in which wells were detected.
 """
 
-from qal.data._fetchers import rud_example_3
-from qal.rta.roi_extraction.rud_detector import RudDetector
-from qal.rta.image_analyzer.distortion_analyzer import DistortionAnalyzer
-from qal.rta.data_visualizer.distortion_visualizer import DistortionVisualizer
+from qal.data import rud_example_3
+from qal import RudDetector, DistortionAnalyzer, DistortionVisualizer
 
 
 def main():

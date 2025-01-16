@@ -1,7 +1,5 @@
-from qal.data._fetchers import cn_sample_3, depth_sample_1
-from qal.rta.roi_extraction.well_detector import WellDetector
-from qal.rta.image_analyzer.well_analyzer import WellAnalyzer
-from qal.rta.data_visualizer.well_data_plotter import WellPlotter
+from qal.data import cn_sample_3, depth_sample_1
+from qal import WellDetector, WellAnalyzer, WellPlotter
 import pandas as pd
 
 def main():

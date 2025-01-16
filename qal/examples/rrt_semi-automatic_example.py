@@ -1,7 +1,5 @@
-from qal.data._fetchers import res_sample_1
-from qal.rta.roi_extraction.rrt_roi import RrtROI
-from qal.rta.image_analyzer.rrt_analyzer import RrtAnalyzer
-from qal.rta.data_visualizer.rrt_data_plotter import RrtDataPlotter
+from qal.data import res_sample_1
+from qal import RrtROI, RrtAnalyzer, RrtDataPlotter
 import pandas as pd
 import matplotlib.pyplot as plt
 
