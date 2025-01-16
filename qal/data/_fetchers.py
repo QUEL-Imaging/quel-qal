@@ -63,7 +63,7 @@ def _create_image_fetcher(branch="main"):
     )
 
 # Initialize the fetcher
-_image_fetcher = _create_image_fetcher(branch='feature/data-downloader')
+_image_fetcher = _create_image_fetcher(branch='dev')
 
 def _fetch(filename):
     """
