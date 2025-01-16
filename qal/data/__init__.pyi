@@ -9,8 +9,13 @@ __all__ = [
     "dr_sample1",
     "dr_sample2",
     "depth_sample_1",
+    "depth_sample_2",
     "res_sample_1",
     "resolution_target_cropped",
+    "rud_example_1",
+    "rud_example_2",
+    "rud_example_3",
+    "rud_example_4",
     "rud_image1_example_1",
     "rud_image2_example_1",
     "rud_image3_example_1",
@@ -21,8 +26,11 @@ __all__ = [
     "rud_image4_example_2",
     "rud_image5_example_2",
     "rud_center_fov_example_3",
+    "rud_image_example_4",
     "lung_test_image",
-    "registry"
+    "lung_reference_inclusions",
+    "lung_reference_body",
+    "lung_reference"
 ]
 
 # Type hints for lazy-loaded modules
@@ -32,12 +40,18 @@ from ._fetchers import (
     clear_cache,
     cn_sample_1, 
     cn_sample_2, 
-    cn_sample_3, 
+    cn_sample_3,
+    cn_sample_4,
     dr_sample1, 
     dr_sample2, 
     depth_sample_1,
+    depth_sample_2,
     res_sample_1, 
-    resolution_target_cropped, 
+    resolution_target_cropped,
+    rud_example_1,
+    rud_example_2,
+    rud_example_3,
+    rud_example_4,
     rud_image1_example_1, 
     rud_image2_example_1,
     rud_image3_example_1, 
@@ -48,5 +62,9 @@ from ._fetchers import (
     rud_image4_example_2, 
     rud_image5_example_2, 
     rud_center_fov_example_3,
-    lung_test_image
+    rud_image_example_4,
+    lung_test_image,
+    lung_reference_inclusions,
+    lung_reference_body,
+    lung_reference
 )
