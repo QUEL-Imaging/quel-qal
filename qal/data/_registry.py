@@ -27,10 +27,10 @@ registry = {
     "lung_reference_source/Inclusions image.tiff": "23c2fee447d5cde3ea965b324fd9afb6be4b68c138fba1af4afb65402f84a458",
 
     # RUD Targets - Example 1
-    "rud_targets/example_1/rud_image1.tiff": "4594a33578cca3d8b86dc6bc0930acbaeb4d74ea5aad8235664d5ad2ad5ec457",
-    "rud_targets/example_1/rud_image3.tiff": "e47930c56b02ffa2e581ae7a8f331c175e9cee62adde0bb153b4efa3ec912f12",
-    "rud_targets/example_1/rud_image2.tiff": "34d8405754e43109901cf9642015f72da340460128d7053066f8beb561009213",
-    "rud_targets/example_1/rud_image4.tiff": "84ddaa6e4ece30d0f228c2fc62b30fd4464c11c2ba6d358537c6254e76a090b4",
+    "rud_targets/example_1/rud_image1.tiff": "4cde7ef6639898685133378a87b4171e5ead1d006519df2279507cbacce1bbdb",
+    "rud_targets/example_1/rud_image2.tiff": "45e6b96e1a638c2ad4a26b4cf7c98ced5d36dc6e63ba5a01f6e9907dde936281",
+    "rud_targets/example_1/rud_image3.tiff": "fd1b75ce2cb2e20bfb5c2cd8cf875c4697f92ec3f54f2e0b816b1f705f9723e2",
+    "rud_targets/example_1/rud_image4.tiff": "0d168e244b93c3cc4cf0c4a0f272752d6c79322fc2f970cc2e924d70e90ef346",
 
     # RUD Targets - Example 2
     "rud_targets/example_2/rud_image1.tiff": "382728a8810f4e50e29de53263a1334d9b323e784957703a7be759d18345193e",
