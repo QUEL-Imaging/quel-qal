@@ -4,6 +4,7 @@ numpy
 opencv-python
 openpyxl
 pandas
+pooch
 roipoly
 scikit-image
 scikit-learn
