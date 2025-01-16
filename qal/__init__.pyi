@@ -20,6 +20,7 @@ from .rta.roi_extraction.rrt_roi import RrtROI as RrtROI
 from .rta.roi_extraction.rud_detector import RudDetector as RudDetector
 from .rta.roi_extraction.crop_depth_phantom import PhantomCropper as PhantomCropper
 from .rta.roi_extraction.well_detector import WellDetector as WellDetector
+from .vpa.quel_lung_phantom import LungPhantom
 
 # __all__ reflects classes at qal level
 __all__ = [
@@ -41,4 +42,5 @@ __all__ = [
     "RudDetector", 
     "PhantomCropper",
     "WellDetector",
+    "LungPhantom"
 ]
