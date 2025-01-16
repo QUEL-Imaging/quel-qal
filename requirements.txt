@@ -1,0 +1,10 @@
+matplotlib==3.9.2
+numba
+numpy
+opencv-python
+openpyxl
+pandas
+roipoly
+scikit-image
+scikit-learn
+statsmodels
