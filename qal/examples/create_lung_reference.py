@@ -2,8 +2,8 @@
 This script creates the reference image and mask for the lung phantom.
 """
 
-from qal.data._fetchers import lung_reference
-from qal.vpa.quel_lung_phantom import LungPhantom
+from qal.data import lung_reference
+from qal import LungPhantom
 
 
 def main():

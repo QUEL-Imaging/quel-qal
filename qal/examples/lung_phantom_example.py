@@ -2,8 +2,8 @@
 This script shows example use of the LungPhantom class.
 """
 
-from qal.data._fetchers import lung_test_image
-from qal.vpa.quel_lung_phantom import LungPhantom
+from qal.data import lung_test_image
+from qal import LungPhantom
 
 
 def main():
