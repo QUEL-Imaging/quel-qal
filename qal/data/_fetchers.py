@@ -154,13 +154,6 @@ def _load(filename):
     path = _fetch(filename)
     return io.imread(path)
 
-def cn_sample_1():
-    """Return the cn_sample_1.tiff path as an ndarray."""
-    return _load("concentration_targets/cn_sample_1.tiff")
-
-def cn_sample_2():
-    """Return the cn_sample_2.tiff path as an ndarray."""
-    return _load("concentration_targets/cn_sample_2.tiff")
 
 # --- Concentration samples
 def cn_sample_1():
@@ -215,6 +208,34 @@ def resolution_target_cropped():
     return _load("resolution_targets/resolution_target_cropped.tiff")
 
 # --- RUD targets, example_1
+def rud_example_1():
+    """
+    Load example 1 RUD images and return the local path to the image directory.
+    """
+    rud_image1_example_1()
+    rud_image2_example_1()
+    rud_image3_example_1()
+    rud_image4_example_1()
+    return os.path.join(get_cache_dir(), "rud_targets", "example_1")
+
+def rud_example_2():
+    """
+    Load example 2 RUD images and return the local path to the image directory.
+    """
+    rud_image1_example_2()
+    rud_image2_example_2()
+    rud_image3_example_2()
+    rud_image4_example_2()
+    rud_image5_example_2()
+    return os.path.join(get_cache_dir(), "rud_targets", "example_2")
+
+def rud_example_3():
+    """
+    Load example 3 RUD image and return the local path to the image directory.
+    """
+    rud_center_fov_example_3()
+    return os.path.join(get_cache_dir(), "rud_targets", "example_3")
+
 def rud_image1_example_1():
     """
     Return rud_image1.tiff from example_1 as an ndarray.
