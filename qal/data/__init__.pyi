@@ -1,0 +1,52 @@
+# Expose available attributes for type checkers
+__all__ = [
+    "get_cache_dir",
+    "download_all",
+    "clear_cache",
+    "cn_sample_1",
+    "cn_sample_2",
+    "cn_sample_3",
+    "dr_sample1",
+    "dr_sample2",
+    "depth_sample_1",
+    "res_sample_1",
+    "resolution_target_cropped",
+    "rud_image1_example_1",
+    "rud_image2_example_1",
+    "rud_image3_example_1",
+    "rud_image4_example_1",
+    "rud_image1_example_2",
+    "rud_image2_example_2",
+    "rud_image3_example_2",
+    "rud_image4_example_2",
+    "rud_image5_example_2",
+    "rud_center_fov_example_3",
+    "lung_test_image",
+    "registry"
+]
+
+# Type hints for lazy-loaded modules
+from ._fetchers import (
+    get_cache_dir, 
+    download_all, 
+    clear_cache,
+    cn_sample_1, 
+    cn_sample_2, 
+    cn_sample_3, 
+    dr_sample1, 
+    dr_sample2, 
+    depth_sample_1,
+    res_sample_1, 
+    resolution_target_cropped, 
+    rud_image1_example_1, 
+    rud_image2_example_1,
+    rud_image3_example_1, 
+    rud_image4_example_1, 
+    rud_image1_example_2, 
+    rud_image2_example_2,
+    rud_image3_example_2, 
+    rud_image4_example_2, 
+    rud_image5_example_2, 
+    rud_center_fov_example_3,
+    lung_test_image
+)
