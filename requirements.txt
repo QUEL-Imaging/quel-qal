@@ -9,4 +9,5 @@ roipoly
 scikit-image
 scikit-learn
 statsmodels
+pooch
 tqdm

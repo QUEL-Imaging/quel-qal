@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qal"
+version = "0.1.0"
+description = "A research-oriented Python package for advanced image analysis and scientific computing"
+authors = [
+    { name = "Emmanuel Mannoh" },
+    { name = "Eammon Littler" },
+    { name = "Ethan LaRochelle" },
+]
+maintainers = [
+    { name = "QUEL Imaging LLC", email = "devops@quelimaging.com" },
+]
+license = { text = "AGPL-3.0" }
+readme = "README.md"
+keywords = [
+    "image-processing",
+    "scientific-computing",
+    "data-analysis",
+    "research",
+    "academia",
+    "image-analysis",
+    "python",
+    "machine-learning"
+]
+classifiers = [
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: GNU Affero General Public License v3 (AGPLv3)",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Education",
+    "Topic :: Scientific/Engineering :: Image Recognition",
+    "Topic :: Scientific/Engineering :: Image Processing",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Operating System :: OS Independent"
+]
+requires-python = ">=3.12"
+dependencies = [
+    "matplotlib==3.9.2",
+    "numba",
+    "numpy",
+    "opencv-python",
+    "openpyxl",
+    "pandas",
+    "pooch",
+    "roipoly",
+    "scikit-image",
+    "scikit-learn",
+    "statsmodels",
+    "tqdm",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[project.urls]
+homepage = "https://github.com/QUEL-Imaging/q-qal/tree/main"
+repository = "https://github.com/QUEL-Imaging/q-qal/tree/main"
+documentation = "https://github.com/QUEL-Imaging/q-qal/wiki"
