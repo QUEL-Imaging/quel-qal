@@ -16,10 +16,10 @@ registry = {
     # Resolution Targets
     "resolution_targets/resolution_target_cropped.tiff": "6eecae1044587f2a2598ea97b017cab7c20935fee0d150068dd508523c01e581",
     "resolution_targets/res_sample_1.tiff": "a0f967202b36ebe732058fb6ab23b952773bb025a3e958752cc232c7a54d8b2d",
-    "depth_resolution_targets/dr_sample2.tiff": "08ff21d678db1b0f29a3ed09fe4e3062d20a6541d32dccfb737e748aa586f49c",
 
     # Depth Resolution Targets
     "depth_resolution_targets/dr_sample1.tiff": "58790cc0f3b17e008260337b3ae24457f61fd41d77baaae16570516147439990",
+    "depth_resolution_targets/dr_sample2.tiff": "08ff21d678db1b0f29a3ed09fe4e3062d20a6541d32dccfb737e748aa586f49c",
 
     # Lung Test Image
     "lung_test_image/lung_test_image.tiff": "fb8bc5a98428cf0acb19693b241805f07c4cd888186820f60fb485d686b3a0fe",
