@@ -1,4 +1,4 @@
-# Q-QAL: QUEL Quantitative Analysis Library
+# QUEL-QAL: QUEL Quantitative Analysis Library
 
 ## License
 

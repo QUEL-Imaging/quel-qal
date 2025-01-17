@@ -3,8 +3,8 @@ requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "q-qal"
-version = "0.2.0"
+name = "quel-qal"
+version = "0.2.1"
 description = "A Python library for analyzing Quel Imaging fluorescent phantoms and imaging targets."
 authors = [
     { name = "Emmanuel Mannoh" },
@@ -63,6 +63,6 @@ package = "qal"
 where = ["."]
 
 [project.urls]
-homepage = "https://github.com/QUEL-Imaging/q-qal/tree/main"
-repository = "https://github.com/QUEL-Imaging/q-qal/tree/main"
-documentation = "https://github.com/QUEL-Imaging/q-qal/wiki"
+homepage = "https://github.com/QUEL-Imaging/quel-qal/wiki"
+repository = "https://github.com/QUEL-Imaging/quel-qal/tree/main"
+documentation = "https://github.com/QUEL-Imaging/quel-qal/wiki"
