@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "q-qal"
 version = "0.2.0"
-description = "A research-oriented Python package for advanced image analysis and scientific computing"
+description = "A Python library for analyzing Quel Imaging fluorescent phantoms and imaging targets."
 authors = [
     { name = "Emmanuel Mannoh" },
     { name = "Eammon Littler" },
