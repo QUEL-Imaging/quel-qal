@@ -63,7 +63,7 @@ def _create_image_fetcher(branch="main"):
     )
 
 # Initialize the fetcher
-_image_fetcher = _create_image_fetcher(branch='feature/data-downloader')
+_image_fetcher = _create_image_fetcher(branch='main')
 
 def _fetch(filename):
     """
@@ -154,13 +154,6 @@ def _load(filename):
     path = _fetch(filename)
     return io.imread(path)
 
-def cn_sample_1():
-    """Return the cn_sample_1.tiff path as an ndarray."""
-    return _load("concentration_targets/cn_sample_1.tiff")
-
-def cn_sample_2():
-    """Return the cn_sample_2.tiff path as an ndarray."""
-    return _load("concentration_targets/cn_sample_2.tiff")
 
 # --- Concentration samples
 def cn_sample_1():
@@ -180,6 +173,12 @@ def cn_sample_3():
     Return the cn_sample_3.tiff path as an ndarray.
     """
     return _load("concentration_targets/cn_sample_3.tiff")
+
+def cn_sample_4():
+    """
+    Return the cn_sample_4.tiff path as an ndarray.
+    """
+    return _load("concentration_targets/cn_sample_4.tiff")
 
 # --- Depth resolution targets
 def dr_sample1():
@@ -201,6 +200,12 @@ def depth_sample_1():
     """
     return _load("depth_targets/depth_sample_1.tiff")
 
+def depth_sample_2():
+    """
+    Return depth_sample_2.tiff as an ndarray.
+    """
+    return _load("depth_targets/depth_sample_2.tiff")
+
 # --- Resolution targets
 def res_sample_1():
     """
@@ -213,6 +218,42 @@ def resolution_target_cropped():
     Return resolution_target_cropped.tiff as an ndarray.
     """
     return _load("resolution_targets/resolution_target_cropped.tiff")
+
+# --- RUD targets
+def rud_example_1():
+    """
+    Load example 1 RUD images and return the local path to the image directory.
+    """
+    rud_image1_example_1()
+    rud_image2_example_1()
+    rud_image3_example_1()
+    rud_image4_example_1()
+    return os.path.join(get_cache_dir(), "rud_targets", "example_1")
+
+def rud_example_2():
+    """
+    Load example 2 RUD images and return the local path to the image directory.
+    """
+    rud_image1_example_2()
+    rud_image2_example_2()
+    rud_image3_example_2()
+    rud_image4_example_2()
+    rud_image5_example_2()
+    return os.path.join(get_cache_dir(), "rud_targets", "example_2")
+
+def rud_example_3():
+    """
+    Load example 3 RUD image and return the local path to the image directory.
+    """
+    rud_center_fov_example_3()
+    return os.path.join(get_cache_dir(), "rud_targets", "example_3")
+
+def rud_example_4():
+    """
+    Load example 4 RUD image and return the local path to the image directory.
+    """
+    rud_image_example_4()
+    return os.path.join(get_cache_dir(), "rud_targets", "example_4")
 
 # --- RUD targets, example_1
 def rud_image1_example_1():
@@ -277,12 +318,39 @@ def rud_center_fov_example_3():
     """
     return _load("rud_targets/example_3/rud_center_fov.tiff")
 
+# --- RUD targets, example_4
+def rud_image_example_4():
+    """
+    Return rud_image.TIF from example_4 as an ndarray.
+    """
+    return _load("rud_targets/example_4/rud_image.TIF")
+
 # --- Lung test
 def lung_test_image():
     """
     Return lung_test_image.tiff as an ndarray.
     """
     return _load("lung_test_image/lung_test_image.tiff")
+
+def lung_reference_inclusions():
+    """
+    Return Inclusions image.tiff as an ndarray.
+    """
+    return _load("lung_reference_source/Inclusions image.tiff")
+
+def lung_reference_body():
+    """
+    Return Phantom image.tiff as an ndarray.
+    """
+    return _load("lung_reference_source/Phantom image.tiff")
+
+def lung_reference():
+    """
+    Return Inclusions image.tiff and Phantom image.tiff as ndarrays.
+    """
+    im_phantom = lung_reference_body()
+    im_inclusions = lung_reference_inclusions()
+    return im_phantom, im_inclusions
 
 #
 # End of _fetchers.py

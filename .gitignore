@@ -139,6 +139,9 @@ venv.bak/
 # DS Store file from Mac computers
 .DS_Store
 
+# IntelliJ project settings
+.idea
+
 # Spyder project settings
 .spyderproject
 .spyproject
