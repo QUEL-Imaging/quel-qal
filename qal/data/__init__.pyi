@@ -6,6 +6,7 @@ __all__ = [
     "cn_sample_1",
     "cn_sample_2",
     "cn_sample_3",
+    "cn_sample_4",
     "dr_sample1",
     "dr_sample2",
     "depth_sample_1",
