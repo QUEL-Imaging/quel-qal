@@ -3,8 +3,8 @@ requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "qal"
-version = "0.1.0"
+name = "q-qal"
+version = "0.1.1"
 description = "A research-oriented Python package for advanced image analysis and scientific computing"
 authors = [
     { name = "Emmanuel Mannoh" },
@@ -12,7 +12,7 @@ authors = [
     { name = "Ethan LaRochelle" },
 ]
 maintainers = [
-    { name = "QUEL Imaging LLC", email = "devops@quelimaging.com" },
+    { name = "QUEL Imaging, LLC", email = "devops@quelimaging.com" },
 ]
 license = { text = "AGPL-3.0" }
 readme = "README.md"
@@ -28,7 +28,7 @@ keywords = [
 ]
 classifiers = [
     "Programming Language :: Python :: 3.12",
-    "License :: OSI Approved :: GNU Affero General Public License v3 (AGPLv3)",
+    "License :: OSI Approved :: GNU Affero General Public License v3",
     "Intended Audience :: Science/Research",
     "Intended Audience :: Education",
     "Topic :: Scientific/Engineering :: Image Recognition",
@@ -50,7 +50,14 @@ dependencies = [
     "scikit-learn",
     "statsmodels",
     "tqdm",
+    "lazy-loader",
 ]
+
+[tool.spin.scripts]
+pre-build = "rm -rf dist build *.egg-info"
+
+[tool.spin]
+package = "qal"
 
 [tool.setuptools.packages.find]
 where = ["."]
