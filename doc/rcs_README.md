@@ -1,11 +1,11 @@
 # Reference Concentration Target Analysis   
-This document details analysis methods for QUEL Imaging's reference concentration sensitivity (RCS) target using the RTA library. At a high level, the document is structured into four sections: a brief description of the target, followed by a "quick start" section showing basic use of the code, then a more detailed overview of how the code works, and finally, some examples.
+This document details analysis methods for QUEL Imaging's reference concentration sensitivity (RCS) target using the qal library. At a high level, the document is structured into four sections: a brief description of the target, followed by a "quick start" section showing basic use of the code, then a more detailed overview of how the code works, and finally, some examples.
 
 # <br/>Target Description   
 The RCS target consists of nine wells with varying concentrations of fluorescent material embedded within a block of non-fluorescent and absorbing background material. It can be thought of as a dilution series to probe an imaging device's fluorescence sensitivity. See the use guide (available here: https://shop.quelimaging.com/resources/) for more information on the target, including imaging recommendations.
 
 # <br/>Quick Start   
-Below is a block of code that can be used to analyze an image of the RCS target. It assumes the fluorophore in the concentration target is "ICG-equivalent" and labels it as such. For a different fluorophore, change `fluorophore_label` in the last line (this only affects labeling on the plot). In addition to using the RTA library, the code uses the scikit-image library (https://scikit-image.org/) to read in the image.
+Below is a block of code that can be used to analyze an image of the RCS target. It assumes the fluorophore in the concentration target is "ICG-equivalent" and labels it as such. For a different fluorophore, change `fluorophore_label` in the last line (this only affects labeling on the plot). In addition to using the qal library, the code uses the scikit-image library (https://scikit-image.org/) to read in the image.
 ```python
 from skimage import io
 from qal import WellDetector, WellAnalyzer, WellPlotter
