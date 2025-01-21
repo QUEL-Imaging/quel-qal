@@ -1,3 +1,7 @@
+![Version](https://img.shields.io/badge/version-0.2.1-blue)
+![Python Version](https://img.shields.io/badge/python-3.12-green)
+[![PyPI](https://img.shields.io/pypi/v/quel-qal?color=green)](https://pypi.org/project/quel-qal/)
+[![license](https://img.shields.io/badge/license-AGPL%20V3-blue)](https://github.com/QUEL-Imaging/quel-qal/blob/main/LICENSE)
 # QUEL-QAL: QUEL Quantitative Analysis Library
 Welcome to **quel-qal**! This repository contains Python code for analyzing images of QUEL Imaging's fluorescence phantoms and obtaining relevant metrics about the capabilities of your fluorescence imaging system. Find more information about our fluorescence targets [on our website](https://shop.quelimaging.com/resources/). Documentation on how to use **quel-qal** to analyze images can be found in the `doc` folder and in the [Wiki](https://github.com/QUEL-Imaging/quel-qal/wiki).
 
