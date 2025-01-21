@@ -52,8 +52,8 @@ def _create_image_fetcher(branch="main"):
     pooch.Pooch
         Configured pooch fetcher.
     """
-    base_url = f"https://github.com/QUEL-Imaging/q-qal/raw/{branch}/qal/data/"
-    cache_dir = pooch.os_cache("q-qal-data")
+    base_url = f"https://github.com/QUEL-Imaging/quel-qal/raw/{branch}/qal/data/"
+    cache_dir = pooch.os_cache("quel-qal-data")
 
     # Create the Pooch fetcher
     return pooch.create(
