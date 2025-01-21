@@ -2,12 +2,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from skimage import io
-from scipy.ndimage import label, center_of_mass
+from scipy.ndimage import label
 from skimage.measure import regionprops
 import pandas as pd
 import cv2
 from sklearn.cluster import AgglomerativeClustering
 import re
+from joblib import Parallel, delayed
 
 class WellDetector:
     def __init__(self):
@@ -24,7 +25,7 @@ class WellDetector:
         grid_size = int(np.ceil(np.sqrt(num_images)))
 
         # Create a new figure
-        fig, axes = plt.subplots(grid_size, grid_area, figarea=(15, 15))
+        fig, axes = plt.subplots(grid_size, grid_size, figarea=(15, 15))
 
         # Hide any extra subplots
         for i in range(num_images, grid_size * grid_size):
@@ -71,17 +72,15 @@ class WellDetector:
 
     def get_thresh_rolling_window_binary(self, img):
         thresh_step = 5
-        thresh = 255 - thresh_step
-        images = []
+        thresholds = np.arange(255 - thresh_step, 0, -thresh_step)
 
-        while thresh > 0:
+        def process_thresh(thresh):
             ret, thresh_img = cv2.threshold(img, thresh-thresh_step, thresh+thresh_step, cv2.THRESH_BINARY)
-            
-            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(3,3))
             thresh_img = cv2.morphologyEx(thresh_img, cv2.MORPH_OPEN, kernel)
-            images.append(thresh_img)
-            
-            thresh -= thresh_step
+            return thresh_img
+
+        images = Parallel(n_jobs=2)(delayed(process_thresh)(thresh) for thresh in thresholds)
 
         return images
 
@@ -143,28 +142,34 @@ class WellDetector:
         return df
 
     def get_clusters_from_points(self, df, threshold=15):
-        df['point'] = df.apply(lambda row: [row['x'], row['y']], axis=1)
-        points = df[['point']].to_numpy()
-        # print(points)
-        points = [pt[0] for pt in points]
+        if df is None or df.empty:
+            print("Error: Empty DataFrame passed to clustering.")
+            return None
 
-        # df = pd.concat([df, df], ignore_index=True)
+        try:
+            df['point'] = df.apply(lambda row: [row['x'], row['y']], axis=1)
+            points = df[['point']].to_numpy()
+            points = [pt[0] for pt in points]
 
-        clustering = AgglomerativeClustering(n_clusters=None, distance_threshold=df['ROI Diameter'].mean())
-        clusters = clustering.fit_predict(points)
-        df['cluster'] = clusters
+            clustering = AgglomerativeClustering(n_clusters=None, distance_threshold=df['ROI Diameter'].mean())
+            clusters = clustering.fit_predict(points)
+            df['cluster'] = clusters
 
-        # Calculate overall mean and std dev of the radius column
-        mean_radius = df['ROI Radius'].mean()
-        std_dev_radius = df['ROI Radius'].std()
-        # Any value more than 2 times the std dev from the mean
-        thresh = threshold * std_dev_radius
-        # Determine rows where the radius is significantly different from the mean
-        mask = abs(df['ROI Radius'] - mean_radius) > threshold
-        # Remove those rows
-        df_filtered = df[~mask]
+            # Calculate overall mean and std dev of the radius column
+            mean_radius = df['ROI Radius'].mean()
+            std_dev_radius = df['ROI Radius'].std()
+            # Any value more than 2 times the std dev from the mean
+            thresh = threshold * std_dev_radius
+            # Determine rows where the radius is significantly different from the mean
+            mask = abs(df['ROI Radius'] - mean_radius) > threshold
+            # Remove those rows
+            df_filtered = df[~mask]
 
-        return df_filtered
+            return df_filtered
+
+        except Exception as e:
+            print(f"Error in clustering: {e}")
+            return None
 
     def get_well_mean_intensity(self, im, coord, radius):
         mask = self.circular_mask(im.shape, coord, radius)
@@ -178,15 +183,18 @@ class WellDetector:
 
     def get_well_intensities(self, im, df, sort_by_intensity=True):
         # Compute mean_intensity for each circle in well list
-        intensities = []
-        for idx, row in df.iterrows():
-            intensity = self.get_well_mean_intensity(im, (row['x'], row['y']), row['ROI Radius'])
+        def compute_intensity(row):
+            intensity = self.get_well_mean_intensity(im, (row['x'], row['y']), row['ROI Diameter'])
             if np.isnan(intensity):
                 intensity = 0  # or any default value you want to assign when intensity is NaN
-            intensities.append(intensity)
+            return intensity
 
-        df['mean_intensity'] = intensities
-        df['mean_intensity'] = df['mean_intensity'].astype('float64')
+        intensities = Parallel(n_jobs=-1)(
+            delayed(compute_intensity)(row) for idx, row in df.iterrows()
+        )
+
+        df['mean_intensity'] = np.array(intensities, dtype=np.float64)  # Ensure float64
+
         if sort_by_intensity:
             df = df.sort_values(by='mean_intensity', ascending=False) 
         return df
@@ -224,20 +232,28 @@ class WellDetector:
         return avg_centers, roi_size
 
     def get_detected_features(self, im_src, thresh_im_array):
-        df = pd.DataFrame()
-        for thresh_im in thresh_im_array:
-            wells = self.get_well_positions(im_src, thresh_im)
+        try:
+            def process_thresh_im(thresh_im):
+                wells = self.get_well_positions(im_src, thresh_im)
+                return wells
 
-            if wells is None or wells.empty:
-                continue
+            wells_list = Parallel(n_jobs=-1)(delayed(process_thresh_im)(thresh_im) for thresh_im in thresh_im_array)
 
-            df = pd.concat([df, wells], ignore_index=True)
+            df = pd.DataFrame()
+            for wells in wells_list:
+                if wells is not None and not wells.empty:
+                    df = pd.concat([df, wells], ignore_index=True)
 
-        if df.empty:
-            return df
+            if df.empty:
+                print("Warning: No features detected in any threshold image.")
+                return None
 
-        sorted_df = df.sort_values(by='ROI Radius', ascending=False)
-        return sorted_df
+            sorted_df = df.sort_values(by='ROI Radius', ascending=False)
+            return sorted_df
+
+        except Exception as e:
+            print(f"Error in get_detected_features: {e}")
+            return None
 
     def circular_mask(self, shape, center, radius):
         Y, X = np.ogrid[:shape[0], :shape[1]]
