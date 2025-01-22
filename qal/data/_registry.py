@@ -17,6 +17,9 @@ registry = {
     "resolution_targets/resolution_target_cropped.tiff": "6eecae1044587f2a2598ea97b017cab7c20935fee0d150068dd508523c01e581",
     "resolution_targets/res_sample_1.tiff": "a0f967202b36ebe732058fb6ab23b952773bb025a3e958752cc232c7a54d8b2d",
 
+    # Resolution Target Template
+    "USAF1951_template/res_source.png": "98828cd558902ac5f02a38a68315da1991603159e72535aa118211101d2881df",
+
     # Depth Resolution Targets
     "depth_resolution_targets/dr_sample1.tiff": "58790cc0f3b17e008260337b3ae24457f61fd41d77baaae16570516147439990",
     "depth_resolution_targets/dr_sample2.tiff": "08ff21d678db1b0f29a3ed09fe4e3062d20a6541d32dccfb737e748aa586f49c",
@@ -27,6 +30,11 @@ registry = {
     # Lung Reference Source
     "lung_reference_source/Phantom image.tiff": "26ec41433735675274476a065792c99abdd34ddb58c6968a08077575b7fee5b0",
     "lung_reference_source/Inclusions image.tiff": "23c2fee447d5cde3ea965b324fd9afb6be4b68c138fba1af4afb65402f84a458",
+
+    # Lung Reference
+    "lung_reference/Lung_reference_image.tiff": "bd810b9052c260e34e7b689ea76fa31fb1e0425cb750a17536eb47b75579b380",
+    "lung_reference/Lung_reference_mask.png": "104a550ee3287137fa32a518e9b67d80c3b949dcd7b1328bcf36c7d039c36e06",
+    "lung_reference/Inclusions_info.pkl": "dd809eb0bd92578cd071a809903aa70be7ac239af10f3a32d7f12604f4156820",
 
     # RUD Targets - Example 1
     "rud_targets/example_1/rud_image1.tiff": "4cde7ef6639898685133378a87b4171e5ead1d006519df2279507cbacce1bbdb",

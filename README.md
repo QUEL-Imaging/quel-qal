@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/version-0.2.2-blue)
+![Version](https://img.shields.io/badge/version-0.2.3-blue)
 ![Python Version](https://img.shields.io/badge/python-3.12-green)
 [![PyPI](https://img.shields.io/pypi/v/quel-qal?color=green)](https://pypi.org/project/quel-qal/)
 [![license](https://img.shields.io/badge/license-AGPL%20V3-blue)](https://github.com/QUEL-Imaging/quel-qal/blob/main/LICENSE)
