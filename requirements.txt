@@ -1,3 +1,4 @@
+lazy-loader
 matplotlib==3.9.2
 numba
 numpy
