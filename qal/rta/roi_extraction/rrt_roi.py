@@ -7,6 +7,7 @@ from skimage.draw import circle_perimeter
 import numpy as np
 from skimage import io, img_as_float, img_as_ubyte, transform as sk_transform
 from skimage import io, segmentation
+from qal.data import resolution_template
 import cv2
 import os
 
@@ -246,7 +247,10 @@ class RrtROI:
         t_pad, b_pad, l_pad, r_pad = 20, 30, 25, 30
 
         # Load the template image
-        template = cv2.imread(template_path, 0)
+        if os.path.exists(template_path):
+            template = cv2.imread(template_path, 0)
+        else:
+            template = resolution_template()
 
         # Convert the im_src image to uint8 if necessary
         numpy_image = self.cvt_to_uint8(im_src)

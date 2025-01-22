@@ -13,6 +13,7 @@ __all__ = [
     "depth_sample_2",
     "res_sample_1",
     "resolution_target_cropped",
+    "resolution_template",
     "rud_example_1",
     "rud_example_2",
     "rud_example_3",
@@ -31,7 +32,10 @@ __all__ = [
     "lung_test_image",
     "lung_reference_inclusions",
     "lung_reference_body",
-    "lung_reference"
+    "lung_reference",
+    "lung_reference_image",
+    "lung_reference_mask",
+    "load_lung_info"
 ]
 
 # Type hints for lazy-loaded modules
@@ -49,6 +53,7 @@ from ._fetchers import (
     depth_sample_2,
     res_sample_1, 
     resolution_target_cropped,
+    resolution_template,
     rud_example_1,
     rud_example_2,
     rud_example_3,
@@ -67,5 +72,8 @@ from ._fetchers import (
     lung_test_image,
     lung_reference_inclusions,
     lung_reference_body,
-    lung_reference
+    lung_reference,
+    lung_reference_image,
+    lung_reference_mask,
+    load_lung_info
 )

@@ -13,6 +13,7 @@ from skimage import io
 from scipy.ndimage import label
 from skimage.measure import regionprops
 from matplotlib.patches import Rectangle
+from qal.data import get_cache_dir, lung_reference_image, lung_reference_mask, load_lung_info
 
 
 class LungPhantom:
@@ -53,14 +54,14 @@ class LungPhantom:
         # Load the reference image and mask (if they exist)
         self.ref_dir = "../vpa/reference"
         try:
-            io.imread(os.path.join(self.ref_dir, "Lung_reference_image.tiff"))
-            io.imread(os.path.join(self.ref_dir, "Lung_reference_mask.png"))
+            self.im_reference = io.imread(os.path.join(self.ref_dir, "Lung_reference_image.tiff"))
+            self.mask_reference = io.imread(os.path.join(self.ref_dir, "Lung_reference_mask.png"))
         except OSError:
             self.im_reference = None
             self.mask_reference = None
-        else:
-            self.im_reference = io.imread(os.path.join(self.ref_dir, "Lung_reference_image.tiff"))
-            self.mask_reference = io.imread(os.path.join(self.ref_dir, "Lung_reference_mask.png"))
+            if not os.path.exists(self.ref_dir):
+                self.ref_dir = os.path.join(get_cache_dir(), "lung_reference")
+                os.makedirs(self.ref_dir, exist_ok=True)
 
         # Remaining needed attribute initializations
         self.opt_reg_params = None
@@ -182,6 +183,15 @@ class LungPhantom:
         :param save_dir:            If provided, directory in which to save results
         :return:                    Two dataframes (summary and full) containing statistics on inclusions
         """
+
+        if self.im_reference is None:
+            try:
+                self.im_reference = io.imread(os.path.join(self.ref_dir, "Lung_reference_image.tiff"))
+                self.mask_reference = io.imread(os.path.join(self.ref_dir, "Lung_reference_mask.png"))
+            except OSError:
+                self.im_reference = lung_reference_image()
+                self.mask_reference = lung_reference_mask()
+                load_lung_info()
 
         assert self.im_reference is not None and self.mask_reference is not None, "Missing reference image and/or mask"
 
