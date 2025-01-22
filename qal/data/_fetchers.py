@@ -1,4 +1,5 @@
 import os
+import cv2
 import hashlib
 import shutil
 import pooch
@@ -218,6 +219,13 @@ def resolution_target_cropped():
     Return resolution_target_cropped.tiff as an ndarray.
     """
     return _load("resolution_targets/resolution_target_cropped.tiff")
+
+def resolution_template():
+    """
+    Return res_source.png as an ndarray.
+    """
+    path = _fetch("USAF1951_template/res_source.png")
+    return cv2.imread(path, 0)
 
 # --- RUD targets
 def rud_example_1():
