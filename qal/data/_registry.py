@@ -33,7 +33,7 @@ registry = {
 
     # Lung Reference
     "lung_reference/Lung_reference_image.tiff": "bd810b9052c260e34e7b689ea76fa31fb1e0425cb750a17536eb47b75579b380",
-    "lung_reference/lung_reference_mask.png": "104a550ee3287137fa32a518e9b67d80c3b949dcd7b1328bcf36c7d039c36e06",
+    "lung_reference/Lung_reference_mask.png": "104a550ee3287137fa32a518e9b67d80c3b949dcd7b1328bcf36c7d039c36e06",
 
     # RUD Targets - Example 1
     "rud_targets/example_1/rud_image1.tiff": "4cde7ef6639898685133378a87b4171e5ead1d006519df2279507cbacce1bbdb",
