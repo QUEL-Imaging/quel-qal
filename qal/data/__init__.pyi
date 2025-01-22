@@ -32,7 +32,10 @@ __all__ = [
     "lung_test_image",
     "lung_reference_inclusions",
     "lung_reference_body",
-    "lung_reference"
+    "lung_reference",
+    "lung_reference_image",
+    "lung_reference_mask",
+    "load_lung_info"
 ]
 
 # Type hints for lazy-loaded modules
@@ -69,5 +72,8 @@ from ._fetchers import (
     lung_test_image,
     lung_reference_inclusions,
     lung_reference_body,
-    lung_reference
+    lung_reference,
+    lung_reference_image,
+    lung_reference_mask,
+    load_lung_info
 )

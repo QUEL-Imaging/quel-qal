@@ -360,6 +360,24 @@ def lung_reference():
     im_inclusions = lung_reference_inclusions()
     return im_phantom, im_inclusions
 
+def lung_reference_image():
+    """
+    Return Lung_reference_image.tiff as an ndarray.
+    """
+    return _load("lung_reference/Lung_reference_image.tiff")
+
+def lung_reference_mask():
+    """
+    Return Lung_reference_mask.png as an ndarray.
+    """
+    return _load("lung_reference/Lung_reference_mask.png")
+
+def load_lung_info():
+    """
+    Download the pickle file containing information on the lung phantom inclusions
+    """
+    _fetch("lung_reference/Inclusions_info.pkl")
+
 #
 # End of _fetchers.py
 #
