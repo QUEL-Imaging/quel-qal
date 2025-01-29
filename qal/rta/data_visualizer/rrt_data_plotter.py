@@ -4,7 +4,25 @@ from skimage.measure import profile_line
 
 class RrtDataPlotter:
     def __init__(self):
-        pass
+        self.line_profile_fig_size = (12, 6)
+        self.check_environment()
+
+    def check_environment(self):
+        try:
+            from IPython import get_ipython
+            get_ipython()
+            if 'IPKernelApp' in get_ipython().config:
+                # print("Running in Jupyter Notebook")
+                get_ipython().magic('matplotlib widget')
+                self.line_profile_fig_size = (10, 5)
+                return "Jupyter Notebook"
+            else:
+                # print("Running in JupyterLab")
+                self.line_profile_fig_size = (10, 5)
+                return "JupyterLab"
+        except AttributeError:
+            # print("Running in a standard Python environment")
+            return "Standard Python"
 
     def plot_percentage_contrast(self, df, resolution_threshold=26):
         """
@@ -64,7 +82,7 @@ class RrtDataPlotter:
 
     def plot_line_profiles(self, im, group_coordinates, percentage_contrast_df):
         num_groups = len(group_coordinates)
-        fig, axs = plt.subplots(1, num_groups + 1, figsize=(12, 6))
+        fig, axs = plt.subplots(1, num_groups + 1, figsize=self.line_profile_fig_size)
         fig.canvas.manager.set_window_title('Line Profile Plots')
         fig.suptitle('Line Profile Plots', fontsize=16)
 
