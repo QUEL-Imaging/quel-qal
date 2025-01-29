@@ -20,18 +20,23 @@ class RrtROI:
         self.roi_corners = None
         self.group_coordinates = None
 
+        self.environment = self.check_environment()
+
     def check_environment(self):
         try:
+            from IPython import get_ipython
             get_ipython()
             if 'IPKernelApp' in get_ipython().config:
                 # print("Running in Jupyter Notebook")
                 get_ipython().magic('matplotlib widget')
+                get_ipython().run_line_magic('matplotlib', 'ipympl')
                 return "Jupyter Notebook"
             else:
                 # print("Running in JupyterLab")
+                get_ipython().run_line_magic('matplotlib', 'ipympl')
                 return "JupyterLab"
-        except NameError:
-            print("Running in a standard Python environment")
+        except AttributeError:
+            # print("Running in a standard Python environment")
             return "Standard Python"
 
     def on_click(self, event):
@@ -84,6 +89,12 @@ class RrtROI:
         for corner in corners:
             rr, cc = circle_perimeter(corner[0], corner[1], radius=5)
             self.ax.plot(cc, rr, 'bo', markersize=0.5)
+
+    def select_points(self, im):
+        if "Jupyter" in self.environment:
+            self.select_points_jupyter(im)
+        else:
+            self.select_points_standard(im)
 
     def select_points_jupyter(self, im):
         self.image = im
