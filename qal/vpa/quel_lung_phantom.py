@@ -261,7 +261,7 @@ class LungPhantom:
 
         return metrics
 
-    def initialize_figure(self):
+    def initialize_progress_figure(self):
         """
         Initialize the interactive figure (for Jupyter notebooks).
         """
