@@ -9,6 +9,7 @@ import pandas as pd
 import scipy.optimize as optim
 import matplotlib.pyplot as plt
 import skimage.transform as transform
+from IPython.core.pylabtools import figsize
 from skimage import io
 from scipy.ndimage import label
 from skimage.measure import regionprops
@@ -163,6 +164,16 @@ class LungPhantom:
         # Assign the reference image and mask to class attributes and optionally save to image files
         self.im_reference = phantom_image
         self.mask_reference = reference_mask
+        fig, (ax1, ax2) = plt.subplots(figsize=(10, 5), ncols=2, layout='tight')
+        ax1.imshow(phantom_image, cmap='inferno')
+        ax1.set_title("Lung Reference Image", fontweight='bold')
+        ax1.set_axis_off()
+        ax2.imshow(reference_mask, cmap='gray')
+        ax2.add_patch(Rectangle((-3, -3), width=1, height=1, color=[1, 1, 1], label='Inclusions'))
+        ax2.add_patch(Rectangle((-3, -3), width=1, height=1, color=[0.5, 0.5, 0.5], label='Background'))
+        ax2.legend(loc='lower left', fontsize=self.TITLE_FS)
+        ax2.set_title("Lung Reference Mask", fontweight='bold')
+        ax2.set_axis_off()
         if save:
             io.imsave(os.path.join(self.ref_dir, "Lung_reference_image.tiff"), phantom_image)
             io.imsave(os.path.join(self.ref_dir, "Lung_reference_mask.png"), reference_mask)
@@ -170,6 +181,7 @@ class LungPhantom:
                 pickle.dump(inclusions_df, f)
             print(f"Lung phantom reference image and mask successfully created and saved to "
                   f"{os.path.abspath(self.ref_dir)}")
+        plt.show()
 
     def get_inclusion_stats(self, im_target, show_progress=True, verbose=True, print_every=10, save_dir=None):
         """
