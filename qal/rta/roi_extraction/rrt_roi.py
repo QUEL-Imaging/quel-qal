@@ -100,8 +100,7 @@ class RrtROI:
         self.image = im
         self.fig, self.ax = plt.subplots()
         self.fig.suptitle("Keypoint Selection", fontsize=16)
-        self.fig.text(0.5, 0.91, "(Select points, then close window to continue)", 
-                    ha='center', fontsize=10, color='gray')
+        self.fig.text(0.5, 0.91, "(Select points)", ha='center', fontsize=10, color='gray')
         self.fig.subplots_adjust(top=0.85)  # Add padding between title/message and plot
         self.ax.imshow(self.image)
         self.points = []
