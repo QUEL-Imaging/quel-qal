@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "quel-qal"
-version = "0.2.3"
+version = "0.2.4"
 description = "A Python library for analyzing Quel Imaging fluorescent phantoms and imaging targets."
 authors = [
     { name = "Emmanuel Mannoh" },
@@ -38,6 +38,7 @@ classifiers = [
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "ipympl",
     "matplotlib==3.9.2",
     "numba",
     "numpy",
@@ -48,6 +49,7 @@ dependencies = [
     "roipoly",
     "scikit-image",
     "scikit-learn",
+    "scipy",
     "statsmodels",
     "tqdm",
     "lazy-loader",
