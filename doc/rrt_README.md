@@ -4,17 +4,26 @@ This document details analysis methods for QUEL Imaging's reference resolution (
 # <br/>Target Description   
 The RRT target consists of a negative 1951 USAF resolution test chart with a fluorescent backing. It allows assessing the fluorescence resolution capability of an imaging system. See the use guide (available here: https://shop.quelimaging.com/resources/) for more information on the target, including imaging recommendations.
 
+An image of the RRT can be analyzed to provide a plot of contrast versus spatial resolution. Contrast is defined as:
+
+$$ Contrast (\\%) = {{{I_{max} - I_{min}} \over {I_{max} + I_{min}}} * 100} $$
+
+where $I_{max}$ is the maximum intensity along a line profile crossing a set of bars on the target (e.g. Group 0, Element 2), and $I_{min}$ is the minimum intensity along the line profile.
+
 # <br/>Quick Start   
-Use the following block of code to analyze an image of the RRT target and produce a plot of contrast versus spatial resolution. In addition to using the qal library, the code uses the scikit-image library (https://scikit-image.org/) to read in the image.
+Use the following block of code to analyze an image of the RRT target and produce a plot of contrast versus spatial resolution. In addition to using the qal library, the code uses the scikit-image library (https://scikit-image.org/) to read in the image. If working in an iPython notebook, see note at the bottom of [Semi-automated ROI selection](#semi-automated-roi-selection) before running this block of code.
 ```python
 from skimage import io
+from qal.data import res_sample_1
 from qal import RrtROI, RrtAnalyzer, RrtDataPlotter
 
 image = io.imread('***replace-with-path-to-your-image***')
+# Uncomment the line below to use our sample image instead
+# image = res_sample_1()
 
 rrt_roi = RrtROI()
 cropped_image = rrt_roi.get_resolution_target_cropped(image)
-rrt_roi.select_points_standard(cropped_image)
+rrt_roi.select_points(cropped_image)
 group_coordinates = rrt_roi.group_coordinates
 
 analyzer = RrtAnalyzer()
@@ -62,7 +71,7 @@ ROI selection for the RRT target involves taking line profiles along the horizon
 There are two methods to obtain these line profiles: (1) in a semi-automated fashion using the `RrtROI` class, and (2) manually by entering coordinates. Both methods are described below.
 
 ### Semi-automated ROI selection
-Using the `RrtROI` class, line profiles can be obtained in a semi-automated fashion for three groups of the resolution chart: groups 0, 1, and 2 (these are the lines shown in the figure above). This method involves first cropping and aligning the image of the RRT target to an internal reference, using the `get_resolution_target_cropped()` method, and then obtaining the endpoints of the three line profiles, using the `select_points_standard()` method.
+Using the `RrtROI` class, line profiles can be obtained in a semi-automated fashion for three groups of the resolution chart: groups 0, 1, and 2 (these are the lines shown in the figure above). This method involves first cropping and aligning the image of the RRT target to an internal reference, using the `get_resolution_target_cropped()` method, and then obtaining the endpoints of the three line profiles, using the `select_points()` method.
 
 The `get_resolution_target_cropped()` method takes the input image of the resolution target and aligns it to an internal reference image of the resolution test chart pattern. It returns the aligned and cropped image for subsequent analysis. Its inputs are defined below:
 <table>
@@ -118,9 +127,9 @@ This will produce a figure like the one below:
 <img src="./images/RRT_keypoints.png" width="900"/>
 </p>
 
-The `select_points_standard()` method takes the aligned and cropped image, i.e., the output of the `get_resolution_target_cropped()` method, and prompts the user to select two corners of the resolution pattern to assist with obtaining line profiles for subsequent analysis. It only has the one input. For an aligned and cropped image named `cropped_image`,
+The `select_points()` method takes the aligned and cropped image, i.e., the output of the `get_resolution_target_cropped()` method, and prompts the user to select two corners of the resolution pattern to assist with obtaining line profiles for subsequent analysis. It only has the one input. For an aligned and cropped image named `cropped_image`,
 ```python
-select_points_standard(cropped_image)
+select_points(cropped_image)
 ```
 Upon calling this method, the cropped image is displayed and the following is printed to the screen:
 ```
@@ -129,6 +138,8 @@ Please make the following selections.
 2: Bottom right corner of Group 0 Element 1
 ```
 When finished, the `group_coordinates` attribute of the `RrtROI` object will contain a dictionary with endpoints (pixel locations) for three line profiles going across Group 0, Group 1, and Group 2.
+
+<span style="color:darkorange">**NOTE:** If working within an iPython notebook, you will need to make sure that `select_points()` is the last line of code within a cell &ndash; Jupyter appears to wait for Python execution in a cell to complete before displaying figures, so `select_points()` will need to be last in order to capture user input before proceeding with the rest of the analysis.</span>
 
 ### Manual ROI selection
 In some cases, the user may wish to manually provide endpoints of the line profiles for analysis. One possible scenario could be that the imaging system is well capable of resolving Groups 0, 1, and 2, which are the only Groups identified with the semi-automated method, and the user would like to additionally analyze Group 3. Another scenario could be that pattern matching using the semi-automated method is unsuccessful.
@@ -265,15 +276,15 @@ ax2.set_title('Cropped image')
 ax2.set_axis_off()
 plt.show()
 ```
-Next, the line profiles for analysis are obtained, and analysis is performed:
+Next, the line profiles for analysis are obtained, and analysis is performed. <span style="color:darkorange">**NOTE:** If working with an iPython notebook, `select_points()` will need to be the last line of code within a cell, so split the following block into two cells.</span>
 ```python
-rrt_roi.select_points_standard(cropped_image)
+rrt_roi.select_points(cropped_image)
 group_coordinates = rrt_roi.group_coordinates
 
 analyzer = RrtAnalyzer()
 percentage_contrast_df = analyzer.load_and_process_groups(cropped_image, group_coordinates)
 ```
-Using 26% as a cutoff, the dataframe is inspected to determine the smallest resolvable feature:
+Using 26% as a cutoff (based on the Rayleigh criterion and [recommendation of the AAPM Task Group 311](https://aapm.onlinelibrary.wiley.com/doi/10.1002/mp.16849)), the dataframe is inspected to determine the smallest resolvable feature:
 ```python
 threshold = 26
 above_threshold_data = percentage_contrast_df[percentage_contrast_df['Percentage Contrast'] >= threshold]
