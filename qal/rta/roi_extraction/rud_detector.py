@@ -481,16 +481,13 @@ class RudDetector:
             from IPython import get_ipython
             get_ipython()
             if 'IPKernelApp' in get_ipython().config:
-                # print("Running in Jupyter Notebook")
                 get_ipython().magic('matplotlib widget')
                 get_ipython().run_line_magic('matplotlib', 'ipympl')
                 return "Jupyter Notebook"
             else:
-                # print("Running in JupyterLab")
                 get_ipython().run_line_magic('matplotlib', 'ipympl')
                 return "JupyterLab"
         except AttributeError:
-            # print("Running in a standard Python environment")
             return "Standard Python"
 
     @staticmethod

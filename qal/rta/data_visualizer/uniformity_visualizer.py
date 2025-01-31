@@ -377,7 +377,6 @@ class UniformityVisualizer:
             from IPython import get_ipython
             get_ipython()
             if 'IPKernelApp' in get_ipython().config:
-                # get_ipython().magic('matplotlib widget')
                 get_ipython().run_line_magic('matplotlib', 'ipympl')
                 return "Jupyter Notebook"
             else:
