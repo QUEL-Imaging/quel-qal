@@ -1,7 +1,9 @@
-# Reference Resolution Target Analysis   
+# Reference Resolution Target Analysis
 This document details analysis methods for QUEL Imaging's reference resolution (RRT) target using the qal library. At a high level, the document is structured into four sections: a brief description of the target, followed by a "quick start" section showing basic use of the code, then a more detailed overview of how the code works, and finally, some examples.
 
-# <br/>Target Description   
+<br/>
+
+# Target Description
 The RRT target consists of a negative 1951 USAF resolution test chart with a fluorescent backing. It allows assessing the fluorescence resolution capability of an imaging system. See the use guide (available here: https://shop.quelimaging.com/resources/) for more information on the target, including imaging recommendations.
 
 An image of the RRT can be analyzed to provide a plot of contrast versus spatial resolution. Contrast is defined as:
@@ -10,7 +12,9 @@ $$ Contrast (\\%) = {{{I_{max} - I_{min}} \over {I_{max} + I_{min}}} * 100} $$
 
 where $I_{max}$ is the maximum intensity along a line profile crossing a set of bars on the target (e.g. Group 0, Element 2), and $I_{min}$ is the minimum intensity along the line profile.
 
-# <br/>Quick Start   
+<br/>
+
+# Quick Start
 Use the following block of code to analyze an image of the RRT target and produce a plot of contrast versus spatial resolution. In addition to using the qal library, the code uses the scikit-image library (https://scikit-image.org/) to read in the image. If working in an iPython notebook, see note at the bottom of [Semi-automated ROI selection](#semi-automated-roi-selection) before running this block of code.
 ```python
 from skimage import io
@@ -56,19 +60,25 @@ Finally, the contrast (modulation) is displayed. This figure includes a horizont
 
 Continue reading for an understanding of the code and how to use it.
 
-# <br/>Methodology   
+<br/>
+
+# Methodology
 Analysis of the RRT target consists of three steps. These are:
 * ROI selection
 * Contrast calculation
 * Visualization of results
 
-## <br/>Step 1 - ROI selection
+<br/>
+
+## Step 1 - ROI selection
 ROI selection for the RRT target involves taking line profiles along the horizontally-oriented bars of the target, as shown in the image below. A limitation of this method is that it only assesses resolution in the axis perpendicular to the bars, and an imaging system could have different resolution horizontally versus vertically (if that is the case, consider taking a second image of the RRT target rotated by 90°).
 <p align="center">
 <img src="./images/RRT_line_profiles.png" width="250"/>
 </p>
 
 There are two methods to obtain these line profiles: (1) in a semi-automated fashion using the `RrtROI` class, and (2) manually by entering coordinates. Both methods are described below.
+
+<br/>
 
 ### Semi-automated ROI selection
 Using the `RrtROI` class, line profiles can be obtained in a semi-automated fashion for three groups of the resolution chart: groups 0, 1, and 2 (these are the lines shown in the figure above). This method involves first cropping and aligning the image of the RRT target to an internal reference, using the `get_resolution_target_cropped()` method, and then obtaining the endpoints of the three line profiles, using the `select_points()` method.
@@ -139,7 +149,9 @@ Please make the following selections.
 ```
 When finished, the `group_coordinates` attribute of the `RrtROI` object will contain a dictionary with endpoints (pixel locations) for three line profiles going across Group 0, Group 1, and Group 2.
 
-<span style="color:darkorange">**NOTE:** If working within an iPython notebook, you will need to make sure that `select_points()` is the last line of code within a cell &ndash; Jupyter appears to wait for Python execution in a cell to complete before displaying figures, so `select_points()` will need to be last in order to capture user input before proceeding with the rest of the analysis.</span>
+<span style="color:darkorange">**NOTE: If working within an iPython notebook, you will need to make sure that `select_points()` is the last line of code within a cell &ndash; Jupyter appears to wait for Python execution in a cell to complete before displaying figures, so `select_points()` will need to be last in order to capture user input before proceeding with the rest of the analysis.**</span>
+
+<br/>
 
 ### Manual ROI selection
 In some cases, the user may wish to manually provide endpoints of the line profiles for analysis. One possible scenario could be that the imaging system is well capable of resolving Groups 0, 1, and 2, which are the only Groups identified with the semi-automated method, and the user would like to additionally analyze Group 3. Another scenario could be that pattern matching using the semi-automated method is unsuccessful.
@@ -158,8 +170,9 @@ group_coordinates = {
     3: {'coordinates': ((165, 126), (165, 151)), 'elements': range(1, 7)}   # Group 3, Elements 1 through 6
 }
 ```
+<br/>
 
-## <br/>Step 2 - Contrast calculation
+## Step 2 - Contrast calculation
 In this step, contrast is calculated using line profiles provided. Contrast is calculated as:
 
 $$ Contrast (\\%) = {{{I_{peak} - I_{trough}} \over {I_{peak} + I_{trough}}} * 100} $$
@@ -191,7 +204,9 @@ The output will be a dataframe that looks like the following:
 ```
 A common thing to look for is where the contrast reaches 26.4%, which determines the resolution limit of the imaging system based on the Rayleigh criterion. In the example data above, this is before Group 2, Element 5. Hence, the smallest resolvable feature is Group 2, Element 4, which has a resolution of 5.657 lp/mm.
 
-## <br/>Step 3 - Visualization
+<br/>
+
+## Step 3 - Visualization
 Final visualization is done using the `RrtDataPlotter` class. This class has two methods for plotting. The first, `plot_line_profiles()`, displays the input image of the RRT target, overlaid with the line profiles used in analysis, as well as the intensity data from each of the line profiles. Inputs to to the method are defined below:
 <table>
 <tr>
@@ -250,8 +265,9 @@ Example use:
 visualizer = RrtDataPlotter()
 visualizer.plot_percentage_contrast(percentage_contrast_df)
 ```
+<br/>
 
-# <br/>Examples   
+# Examples
 
 ## Semi-automated example
 This example uses the semi-automated process to analyze an image of the RRT target. The image used is downloaded from the repository but can also be found at: **qal/data/resolution_targets/res_sample_1.tiff**. First, the necessary modules are imported:
@@ -276,7 +292,7 @@ ax2.set_title('Cropped image')
 ax2.set_axis_off()
 plt.show()
 ```
-Next, the line profiles for analysis are obtained, and analysis is performed. <span style="color:darkorange">**NOTE:** If working with an iPython notebook, `select_points()` will need to be the last line of code within a cell, so split the following block into two cells.</span>
+Next, the line profiles for analysis are obtained, and analysis is performed. <span style="color:darkorange">**NOTE: If working with an iPython notebook, `select_points()` will need to be the last line of code within a cell, so split the following block into two cells.**</span>
 ```python
 rrt_roi.select_points(cropped_image)
 group_coordinates = rrt_roi.group_coordinates
@@ -327,6 +343,7 @@ Finally, the line profiles are displayed, followed by the plot of contrast versu
 <p align="center">
 <img src="./images/RRT_percentage_contrast_plot.png" width="700"/>
 </p>
+<br/>
 
 ## Manual example
 This example uses the manual process to define line profiles for analysis. Line profiles are defined for Groups 0 through 3 of the resolution pattern. The image used in this example is downloaded but can also be located in the repository at: **qal/data/resolution_targets/resolution_target_cropped.tiff**. First, the necessary modules are imported (note that this does not include the `RrtROI` class since it is not needed):
