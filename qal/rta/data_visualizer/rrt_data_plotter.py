@@ -90,6 +90,7 @@ class RrtDataPlotter:
 
         axs[0].imshow(im, cmap='gray')
         axs[0].set_title('Input Image')
+        axs[0].set_axis_off()
 
         for i, group_number in enumerate(group_coordinates.keys()):
             group_data = group_coordinates[group_number]
