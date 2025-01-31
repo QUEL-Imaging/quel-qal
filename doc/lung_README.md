@@ -3,19 +3,22 @@ This document details analysis methods for QUEL Imaging's lung phantom using the
 
 
 # <br/>Phantom Description
-The lung phantom is a 3D-printed lung resection, pictured below. It consists of two groups of parts: the body and the nodules. The bottom part of the body has cutouts into which the nodules (fluorescent inserts) are placed. The top part of the body encloses the fluorescent inserts such that the surface of each insert is a specified distance beneath the top surface of the phantom - the diameters and depths of the inserts are indicated in the image below. The body of the phantom has lung optical properties and can also contain some background fluorescence. A fluorescence image of the phantom can be analyzed for metrics such as signal-to-background ratio.
+The lung phantom is a 3D-printed lung resection, pictured below. It consists of two groups of parts: the body and the nodules. The bottom part of the body has cutouts into which the nodules (fluorescent inserts) are placed. The top part of the body encloses the fluorescent inserts such that the surface of each insert is a specified distance beneath the top surface of the phantom - the diameters and depths of the inserts are indicated in the image below. The body of the phantom has lung optical properties and can also contain some background fluorescence. A fluorescence image of the phantom can be analyzed for metrics such as tumor signal-to-background ratio.
 <p align="center">
 <img src="./images/Lung_phantom.png" width="400"/>
 </p>
 
 
 # <br/>Quick Start
-The following block of code can be used to analyze an image of the lung phantom and calculate metrics about the fluorescent inclusions. In addition to the qal library, it uses the scikit-image library (https://scikit-image.org/) to read in the image.
+The following block of code can be used to analyze an image of the lung phantom and calculate metrics about the fluorescent inclusions. In addition to the qal library, it uses the scikit-image library (https://scikit-image.org/) to read in the image. If working in an iPython notebook, see note at the bottom of [Extracting lung phantom metrics](#brextracting-lung-phantom-metrics) before running this block of code.
 ```python
 from skimage import io
 from qal import LungPhantom
+from qal.data import lung_test_image
 
 im = io.imread("***Replace-with-path-to-your-image***")
+# Uncomment the line below to use our example image instead
+# im = lung_test_image()
 save_dir = "***Replace-with-path-to-your-save-directory***"      # Or, replace string with None to not save
 
 lung_phantom = LungPhantom()
@@ -44,8 +47,12 @@ Note that, depending on how different your input image is from the reference ima
 
 
 # <br/>Methodology
+<p align="center">
+<img src="./images/Lung_phantom_registered_simple.png" width="400"/>
+</p>
+
 The `LungPhantom` class employs an optimization function to register the reference image of the phantom to an input image, and thereby extract the following metrics about the fluorescent inclusions in the input image.
-* Tumor-to-background ratio (TBR)
+* Tumor signal-to-background ratio (TBR)
 
 $$ TBR = {μ_{inclusion} \over μ_{background}} $$
 
@@ -170,9 +177,16 @@ Example use:
 ```python
 metrics = lung_phantom.get_inclusion_stats(im, show_progress=True, verbose=True, print_every=5)
 ```
+<span style="color:darkorange">**NOTE:** If you are working in an iPython notebook and want to observe the progress figure, you will need to initialize the figure separately. To do this, run: `lung_phantom.initialize_progress_figure()` as the last line of code in a cell before calling `get_inclusion_stats()` in the next cell.</span>
+
+Choosing a good set of initial registration parameters can be tricky and depends entirely on the input image. A good strategy is to:
+* Start with the default registration parameters and observe the progress figure for the first few iterations, then terminate. Adjust scale first.
+  * Did the phantom in the warping reference image look very different in size than in the target image? If so, adjust the scale parameter accordingly (e.g., if the phantom in the warping reference image looks twice the size of the phantom in the target image, adjust the scale parameter to 0.5).
+* With the initial scale guess chosen, adjust rotation to roughly match the orientation of the phantom &ndash; optimization will likely not be successful if the orientations of the images are very different, e.g. the phantom is flipped vertically in the target image versus the reference.
+* Finally, adjust x- and y-translation if needed
 
 ## <br/>Creating lung reference image
-As mentioned above, a `LungPhantom` object already contains a reference image and mask when instantiated. Should there be a need to update these references, the `create_reference_mask()` method can be used. This requires two images as inputs: an image of the phantom with the top on, and an image of the phantom with the top off with inclusions exposed (contact QUEL Imaging for imaging recommendations if needing to do this). If `im_phantom` and `im_inclusions` represent these two images respectively, the following code can be used to update the reference:
+As mentioned above, a `LungPhantom` object already contains a reference image and mask when instantiated. Should there be a need to update these references, the `create_reference_mask()` method can be used. This requires two images as inputs: an image of the phantom with the top on (`im_phantom`), and an image of the phantom with the top off with inclusions exposed (`im_inclusions`). Contact QUEL Imaging for imaging recommendations if needing to do this. The following code can be used to update the reference:
 ```python
 lung_phantom = LungPhantom()
 lung_phantom.create_reference_mask(im_phantom, im_inclusions)
@@ -250,7 +264,7 @@ The image used in this example is downloaded from the repository but can also be
 from qal.data import lung_test_image
 from qal import LungPhantom
 ```
-The input image is downloaded and then analyzed to obtain metrics. In this example, the metrics are not saved to Excel files, so `save_dir` is `None`.
+The input image is downloaded and then analyzed to obtain metrics. In this example, the metrics are not saved to Excel files, so `save_dir` is `None`. <span style="color:darkorange">**NOTE:** If working with an iPython notebook, you will need to use `lung_phantom.initialize_progress_figure()` as the last line of code within a cell before calling `get_inclusions_stats()` in the next cell.</span>
 ```python
 im = lung_test_image()
 
@@ -336,3 +350,7 @@ Lung phantom reference image and mask successfully created and saved to [***abso
 
 Process finished with exit code 0
 ```
+Additionally, the new reference image and mask are displayed:
+<p align="center">
+<img src="./images/Lung_reference.png" width="800"/>
+</p>

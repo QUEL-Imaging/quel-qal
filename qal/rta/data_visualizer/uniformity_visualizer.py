@@ -37,6 +37,8 @@ class UniformityVisualizer:
         :param params:      Parameters for class methods (optional)
         """
 
+        self.environment = self.check_environment()
+
         # Default parameters
         if params is None:
             self.params = {
@@ -57,6 +59,7 @@ class UniformityVisualizer:
         self.show_figs = self.params["Show figures"]
         assert len(self.levels) == len(self.alpha_mults), "Number of iso-levels and alphas should be the same"
 
+        self.analyzer_outputs = None
         self.save_figures = False
         self.im_dir = None
         self.save_dir = None
@@ -70,6 +73,7 @@ class UniformityVisualizer:
         :param uniformity_analyzer_outputs:      Fluorescence uniformity profile data
         """
 
+        self.analyzer_outputs = uniformity_analyzer_outputs
         if uniformity_analyzer_outputs is None:
             return
 
@@ -97,6 +101,7 @@ class UniformityVisualizer:
 
         # Restore default matplotlib graph settings
         plt.rcdefaults()
+        print("  Done")
 
     def display_surf_rep(self, surf_rep, xq, yq, dots, fov):
         """
@@ -136,6 +141,9 @@ class UniformityVisualizer:
             fit_in_fov = surf_rep.copy()
         fit_in_fov /= np.max(fit_in_fov)
 
+        if self.environment == "Standard Python":
+            anim = self.make_animation(self.analyzer_outputs)
+
         fig1, ax1 = plt.subplots()
         im = ax1.imshow(fit_in_fov, cmap=self.IM_COLORMAP, vmin=0, vmax=1, extent=(0, fov[1], fov[0], 0))
         divider = make_axes_locatable(ax1)
@@ -149,30 +157,58 @@ class UniformityVisualizer:
             fig_name = "Fluorescence uniformity"
             plt.savefig(os.path.join(self.save_dir, fig_name))
 
-        fig2, ax2 = plt.subplots(subplot_kw={"projection": "3d"})
-        ax2.plot_surface(xqm, yqm, surf_rep, cmap=self.IM_COLORMAP, linewidth=0, alpha=self.SURF_ALPHA)
-        ax2.scatter(x, y, z, color=self.DOT_COLOR, label='Data')
-        ax2.set_xlabel("X")
-        ax2.set_ylabel("Y")
-        ax2.set_zlabel("Normalized Intensity")
-        ax2.legend()
+        if self.show_figs:
+            plt.show()
+
+        return fit_in_fov
+
+    def make_animation(self, uniformity_analyzer_outputs):
+        """
+        Create animated 3D plot of input data points and fitted surface.
+
+        :param uniformity_analyzer_outputs:      Fluorescence uniformity profile data
+        """
+
+        if "Jupyter" in self.environment:
+            print("\nGENERATING ANIMATION...")
+
+        surf_rep = uniformity_analyzer_outputs["surf_rep"]
+        xq = uniformity_analyzer_outputs["xq"]
+        yq = uniformity_analyzer_outputs["yq"]
+        dots = uniformity_analyzer_outputs["dots"]
+        im_dir = uniformity_analyzer_outputs["image_dir"]
+        self.save_figures = uniformity_analyzer_outputs["save_output"]
+        if self.save_figures:
+            self.save_dir = os.path.join(im_dir, "Surface Representation")
+        x = dots["x"].to_numpy()
+        y = dots["y"].to_numpy()
+        z = dots["dot_intensity"].to_numpy()
+        xqm, yqm = np.meshgrid(xq, yq)
+
+        fig1, ax1 = plt.subplots(subplot_kw={"projection": "3d"})
+        ax1.plot_surface(xqm, yqm, surf_rep, cmap=self.IM_COLORMAP, linewidth=0, alpha=self.SURF_ALPHA)
+        ax1.scatter(x, y, z, color=self.DOT_COLOR, label='Data')
+        ax1.set_xlabel("X")
+        ax1.set_ylabel("Y")
+        ax1.set_zlabel("Normalized Intensity")
+        ax1.legend()
 
         def animate(i):
             angle = i * 3
-            ax2.view_init(10, angle)
-            return ax2,
+            ax1.view_init(10, angle)
+            return ax1,
 
-        ani = animation.FuncAnimation(fig2, animate, repeat=True, frames=self.ANI_FRAMES, interval=self.ANI_INTERVAL)
+        ani = animation.FuncAnimation(fig1, animate, repeat=True, frames=self.ANI_FRAMES, interval=self.ANI_INTERVAL)
         writer = animation.PillowWriter(fps=self.ANI_FPS, metadata=dict(artist='Me'), bitrate=self.ANI_BITRATE)
 
         if self.save_figures:
             fig_name = "Fit_animation.gif"
             ani.save(os.path.join(self.save_dir, fig_name), writer=writer)
 
-        if self.show_figs:
+        if self.show_figs and "Jupyter" in self.environment:
             plt.show()
 
-        return fit_in_fov
+        return ani
 
     def display_line_profiles(self, fit_in_fov, surf_rep, xq, yq, fov):
         """
@@ -217,6 +253,8 @@ class UniformityVisualizer:
         cb.set_label("Normalized Intensity")
         ax1.set_title("Calculated fluorescence uniformity\n", fontsize=self.TITLE_FONTSIZE, fontweight='bold')
         ax1.set_axis_off()
+        if self.show_figs and "Jupyter" in self.environment:
+            plt.show()
 
         if self.save_figures:
             fig_name = "Fluorescence uniformity - line profiles"
@@ -230,6 +268,8 @@ class UniformityVisualizer:
         ax2.set_xlabel('Horizontal pixel count')
         ax2.set_ylabel('Normalized intensity')
         ax2.set_title('Horizontal Profiles\n', fontsize=self.TITLE_FONTSIZE, fontweight='bold')
+        if self.show_figs and "Jupyter" in self.environment:
+            plt.show()
 
         if self.save_figures:
             fig_name = "Horizontal profiles"
@@ -278,6 +318,8 @@ class UniformityVisualizer:
         ax1.legend(loc='lower left', fontsize=16)
         ax1.set_axis_off()
         ax1.set_title("Fluorescence uniformity regions\n", fontsize=self.TITLE_FONTSIZE, fontweight='bold')
+        if self.show_figs and "Jupyter" in self.environment:
+            plt.show()
 
         if self.save_figures:
             fig_name = "Iso-maps"
@@ -325,6 +367,23 @@ class UniformityVisualizer:
         self.alpha_mults = self.params["Alpha scaling"]
         self.show_figs = self.params["Show figures"]
         assert len(self.levels) == len(self.alpha_mults), "Number of iso-levels and alphas should be the same"
+
+    @staticmethod
+    def check_environment():
+        """
+        Return the Python environment type.
+        """
+        try:
+            from IPython import get_ipython
+            get_ipython()
+            if 'IPKernelApp' in get_ipython().config:
+                get_ipython().run_line_magic('matplotlib', 'ipympl')
+                return "Jupyter Notebook"
+            else:
+                get_ipython().run_line_magic('matplotlib', 'ipympl')
+                return "JupyterLab"
+        except AttributeError:
+            return "Standard Python"
 
     @staticmethod
     def get_colors(cmap_levels, cmap):

@@ -1,3 +1,4 @@
+ipympl
 lazy-loader
 matplotlib==3.9.2
 numba
@@ -9,5 +10,6 @@ pooch
 roipoly
 scikit-image
 scikit-learn
+scipy
 statsmodels
 tqdm

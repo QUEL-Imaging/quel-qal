@@ -9,6 +9,7 @@ import pandas as pd
 import scipy.optimize as optim
 import matplotlib.pyplot as plt
 import skimage.transform as transform
+from IPython.core.pylabtools import figsize
 from skimage import io
 from scipy.ndimage import label
 from skimage.measure import regionprops
@@ -64,6 +65,7 @@ class LungPhantom:
                 os.makedirs(self.ref_dir, exist_ok=True)
 
         # Remaining needed attribute initializations
+        self.environment = self.check_environment()
         self.opt_reg_params = None
         self.show_progress = None
         self.progress_figure = None
@@ -162,6 +164,16 @@ class LungPhantom:
         # Assign the reference image and mask to class attributes and optionally save to image files
         self.im_reference = phantom_image
         self.mask_reference = reference_mask
+        fig, (ax1, ax2) = plt.subplots(figsize=(10, 5), ncols=2, layout='tight')
+        ax1.imshow(phantom_image, cmap='inferno')
+        ax1.set_title("Lung Reference Image", fontweight='bold')
+        ax1.set_axis_off()
+        ax2.imshow(reference_mask, cmap='gray')
+        ax2.add_patch(Rectangle((-3, -3), width=1, height=1, color=[1, 1, 1], label='Inclusions'))
+        ax2.add_patch(Rectangle((-3, -3), width=1, height=1, color=[0.5, 0.5, 0.5], label='Background'))
+        ax2.legend(loc='lower left', fontsize=self.TITLE_FS)
+        ax2.set_title("Lung Reference Mask", fontweight='bold')
+        ax2.set_axis_off()
         if save:
             io.imsave(os.path.join(self.ref_dir, "Lung_reference_image.tiff"), phantom_image)
             io.imsave(os.path.join(self.ref_dir, "Lung_reference_mask.png"), reference_mask)
@@ -169,6 +181,7 @@ class LungPhantom:
                 pickle.dump(inclusions_df, f)
             print(f"Lung phantom reference image and mask successfully created and saved to "
                   f"{os.path.abspath(self.ref_dir)}")
+        plt.show()
 
     def get_inclusion_stats(self, im_target, show_progress=True, verbose=True, print_every=10, save_dir=None):
         """
@@ -260,6 +273,16 @@ class LungPhantom:
 
         return metrics
 
+    def initialize_progress_figure(self):
+        """
+        Initialize the interactive figure (for Jupyter notebooks).
+        """
+        if "Jupyter" in self.environment:
+            self.progress_figure, ((self.ax1, self.ax2), (self.ax3, self.ax4)) = plt.subplots(nrows=2, ncols=2,
+                                                                                              figsize=self.FIG_SIZE)
+        else:
+            print("Figure initialization not needed when running in standard Python environment")
+
     def _reg_ref_to_target(self, im_target):
         """
         Register the reference image to the input target image and return the transformation parameters that achieve
@@ -276,8 +299,9 @@ class LungPhantom:
 
         # Maybe create progress figure
         if self.show_progress:
-            self.progress_figure, ((self.ax1, self.ax2), (self.ax3, self.ax4)) = plt.subplots(nrows=2, ncols=2,
-                                                                                              figsize=self.FIG_SIZE)
+            if "Jupyter" not in self.environment:
+                self.progress_figure, ((self.ax1, self.ax2), (self.ax3, self.ax4)) = plt.subplots(nrows=2, ncols=2,
+                                                                                                  figsize=self.FIG_SIZE)
 
             self.ax1.imshow(im_target, cmap=self.IM_CMAP)
             self.ax1.set_axis_off()
@@ -293,8 +317,12 @@ class LungPhantom:
             self.ax4.set_axis_off()
             self.ax4.set_title("Joint histogram", fontsize=self.TITLE_FS)
 
-            plt.show(block=False)
-            plt.pause(0.1)
+            if "Jupyter" not in self.environment:
+                plt.show(block=False)
+                plt.pause(0.1)
+            else:
+                self.progress_figure.canvas.draw()
+                time.sleep(0.1)
             self.progress_bg = self.progress_figure.canvas.copy_from_bbox(self.progress_figure.bbox)
             self.progress_figure.canvas.blit(self.progress_figure.bbox)
 
@@ -508,6 +536,27 @@ class LungPhantom:
                 metrics_df_summary.to_excel(writer, index=False)
 
         return metrics_df_summary, metrics_df_full
+
+    @staticmethod
+    def check_environment():
+        """
+        Return the Python environment type.
+        """
+        try:
+            from IPython import get_ipython
+            get_ipython()
+            if 'IPKernelApp' in get_ipython().config:
+                # print("Running in Jupyter Notebook")
+                get_ipython().magic('matplotlib widget')
+                get_ipython().run_line_magic('matplotlib', 'ipympl')
+                return "Jupyter Notebook"
+            else:
+                # print("Running in JupyterLab")
+                get_ipython().run_line_magic('matplotlib', 'ipympl')
+                return "JupyterLab"
+        except AttributeError:
+            # print("Running in a standard Python environment")
+            return "Standard Python"
 
     @staticmethod
     def make_square(im_array):

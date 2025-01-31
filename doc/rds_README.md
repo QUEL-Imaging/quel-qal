@@ -8,9 +8,12 @@ The RDS target consists of nine wells of fluorescent material buried beneath var
 Below is a block of code that can be used to analyze an image of the RDS target. It assumes the fluorophore in the depth target is "ICG-equivalent" and labels it as such. For a different fluorophore, change `fluorophore_label` in the last line (this only affects labeling on the plot). In addition to using the qal library, the code uses the scikit-image library (https://scikit-image.org/) to read in the image.
 ```python
 from skimage import io
+from qal.data import depth_sample_1
 from qal import WellDetector, WellAnalyzer, WellPlotter
 
 depth_im = io.imread('***replace-with-path-to-your-image***')
+# Uncomment the line below to use our example image instead
+# depth_im = depth_sample_1()
 
 detector = WellDetector()
 detector.detect_wells(depth_im)
@@ -47,7 +50,7 @@ Analyzing an image of the RDS target involves a three-step process of:
 ## <br/>Step 1 - Well identification, localization, and quantification
 This step is accomplished using the `WellDetector` class. Two methods are used sequentially to obtain a dataframe containing information on the nine wells, including their centroid locations and average intensities. The first is `detect_wells()`, which identifies as many fluorescent wells as it can, based on their intensity. Often this may not be sufficient to identify all nine wells, so the second method, `estimate_remaining_wells_3x3()` is needed. This uses the already identified well positions and knowledge of the physical dimensions of the RDS target to estimate the locations of any remaining wells.
 
-In its simplest form, the code for well identification for an RDS target looks like the following (where `depth_im` is a 2D image array of the RDS target):
+In its simplest form, the code for well identification for an RDS target looks like the following (where `depth_im` is an image of the RDS target):
 ```python
 detector = WellDetector()
 detector.detect_wells(depth_im)
@@ -102,7 +105,7 @@ set_consistent_roi_region
 </tr>
 </table>
 
-The output of `detect_wells()` is a dataframe containing identified wells. This dataframe is also contained within the `df` attribute of the `WellDetector` instance. Assuming `depth_im` is a 2D image array of the RDS target, the dataframe can be obtained with:
+The output of `detect_wells()` is a dataframe containing identified wells. This dataframe is also contained within the `df` attribute of the `WellDetector` instance. Assuming `depth_im` is an image of the RDS target, the dataframe can be obtained with:
 ```python
 detector = WellDetector()
 depth_df = detector.detect_wells(depth_im)
@@ -185,7 +188,7 @@ This step is accomplished by using the `WellAnalyzer` class. `WellAnalyzer` must
 im
 </td>
 <td width="75%">
-A 2D array containing an image of the RDS target. This should be the same image used in the first step.
+A 2D array representing an image of the RDS target. This should be the same image used in the first step.
 </td>
 </tr>
 <tr>
@@ -198,7 +201,7 @@ A dataframe containing the wells identified in the first step. This will be the 
 </tr>
 </table>
 
-Then, data is processed using the `get_stats()` method of `WellAnalyzer`. As the name implies, `get_stats()` simply calculates relevant statistics about the image of the RDS target. These are then used in the final step to visualize results. Given a 2D image array of the RDS target called `depth_im`, and the output from Step 1 called `depth_df`, obtaining statistics goes as follows:
+Then, data is processed using the `get_stats()` method of `WellAnalyzer`. As the name implies, `get_stats()` simply calculates relevant statistics about the image of the RDS target. These are then used in the final step to visualize results. Given an image of the RDS target called `depth_im`, and the output from Step 1 called `depth_df`, obtaining statistics goes as follows:
 ```python
 analyzer = WellAnalyzer(depth_im, depth_df)
 depth_df = analyzer.get_stats()
@@ -388,7 +391,7 @@ depth_df = analyzer.get_stats(region_of_well_to_analyze=0.8)
 ```
 Finally, the analyzed ROIs are visualized and baselined mean intensity is plotted with error bars:
 ```python
-plotter = WellPlotter(depth_df)
+plotter = WellPlotter(depth_df, image=depth_im)
 plotter.visualize_roi()
 plotter.plot(graph_type='depth', col_to_plot='mean intensity baselined', fluorophore_label='ICG-eq',
              plot_error_bars=True, trendline_lib='scipy')
