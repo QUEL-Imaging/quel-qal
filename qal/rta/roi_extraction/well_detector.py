@@ -12,7 +12,7 @@ from joblib import Parallel, delayed
 
 class WellDetector:
     def __init__(self):
-        pass
+        self.environment = self.check_environment()
 
     def get_colormap(self, unique_ids, cmap='gist_rainbow'):
         plt_cmap = plt.get_cmap(cmap)
@@ -479,3 +479,20 @@ class WellDetector:
         
         except Exception as e:
             print(e)
+
+    @staticmethod
+    def check_environment():
+        """
+        Return the Python environment type.
+        """
+        try:
+            from IPython import get_ipython
+            get_ipython()
+            if 'IPKernelApp' in get_ipython().config:
+                get_ipython().run_line_magic('matplotlib', 'ipympl')
+                return "Jupyter Notebook"
+            else:
+                get_ipython().run_line_magic('matplotlib', 'ipympl')
+                return "JupyterLab"
+        except AttributeError:
+            return "Standard Python"
