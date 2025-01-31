@@ -115,7 +115,7 @@ The minimum number of fluorescent wells that need to be identified within a spec
 Crop images
 </td>
 <td width="75%">
-Whether to zero regions of an image prior to detecting wells. If <code>True</code>, the <code>crop_images()</code> method is called and the user is prompted to demarcate the region of the image to analyze. Images still remain the same size, but everything outside the demarcated region is set to zero. Default is <code>False</code>.
+Whether to zero regions of an image prior to detecting wells. If <code>True</code>, the <code>crop_images()</code> method is called and the user is prompted to demarcate the region of the image to analyze. Images still remain the same size, but everything outside the demarcated region is set to zero. Default is <code>False</code>. (This method is not currently available for iPython environments).
 </td>
 </tr>
 <tr>
