@@ -8,9 +8,12 @@ The RCS target consists of nine wells with varying concentrations of fluorescent
 Below is a block of code that can be used to analyze an image of the RCS target. It assumes the fluorophore in the concentration target is "ICG-equivalent" and labels it as such. For a different fluorophore, change `fluorophore_label` in the last line (this only affects labeling on the plot). In addition to using the qal library, the code uses the scikit-image library (https://scikit-image.org/) to read in the image.
 ```python
 from skimage import io
+from qal.data import cn_sample_1
 from qal import WellDetector, WellAnalyzer, WellPlotter
 
 cn_im = io.imread('***replace-with-path-to-your-image***')
+# Uncomment the line below to use our example image instead
+# cn_im = cn_sample_1()
 
 detector = WellDetector()
 detector.detect_wells(cn_im)
@@ -41,7 +44,7 @@ Analyzing an image of the RCS target involves a three-step process of:
 ## <br/>Step 1 - Well identification, localization, and quantification
 This step is accomplished using the `WellDetector` class. Two methods are used sequentially to obtain a dataframe containing information on the nine wells, including their centroid locations and average intensities. The first is `detect_wells()`, which identifies as many fluorescent wells as it can, based on their intensity. Often this may not be sufficient to identify all nine wells, so the second method, `estimate_remaining_wells_3x3()` is needed. This uses the already identified well positions and knowledge of the physical dimensions of the RCS target to estimate the locations of any remaining wells.
 
-In its simplest form, the code for well identification for an RCS target looks like the following (where `cn_im` is a 2D array image of the RCS target):
+In its simplest form, the code for well identification for an RCS target looks like the following (where `cn_im` is an image of the RCS target):
 ```python
 detector = WellDetector()
 detector.detect_wells(cn_im)
@@ -96,7 +99,7 @@ set_consistent_roi_region
 </tr>
 </table>
 
-The output of `detect_wells()` is a dataframe containing identified wells. This dataframe is also contained within the `df` attribute of the `WellDetector` instance. Assuming `cn_im` is a 2D image array of the RCS target, the dataframe can be obtained with:
+The output of `detect_wells()` is a dataframe containing identified wells. This dataframe is also contained within the `df` attribute of the `WellDetector` instance. Assuming `cn_im` is an image of the RCS target, the dataframe can be obtained with:
 ```python
 detector = WellDetector()
 cn_df = detector.detect_wells(cn_im)
@@ -192,7 +195,7 @@ A dataframe containing the wells identified in the first step. This will be the 
 </tr>
 </table>
 
-Then, data is processed using the `get_stats()` method of `WellAnalyzer`. As the name implies, `get_stats()` simply calculates relevant statistics about the image of the RCS target. These are then used in the final step to visualize results. Given a 2D image array of the RCS target called `cn_im`, and the output from Step 1 called `cn_df`, obtaining statistics goes as follows:
+Then, data is processed using the `get_stats()` method of `WellAnalyzer`. As the name implies, `get_stats()` simply calculates relevant statistics about the image of the RCS target. These are then used in the final step to visualize results. Given an image of the RCS target called `cn_im`, and the output from Step 1 called `cn_df`, obtaining statistics goes as follows:
 ```python
 analyzer = WellAnalyzer(cn_im, cn_df)
 cn_df = analyzer.get_stats()
@@ -277,7 +280,7 @@ If provided, the path (directory + filename) to which to save the plot. Default 
 
 Then, the recommended way to visualize analysis results for an RCS target is:
 ```python
-save_path = '***replace-with-desired-file-path***'      # Or, skip this line if not saving
+save_path = '***replace-with-desired-file-path***'      # Or, replace string with None if not saving
 fluor_label = '***replace-with-fluorophore-name***'
 plotter.plot(graph_type='concentration', col_to_plot='mean intensity normalized', fluorophore_label=fluor_label,
              trendline_lib='statsmodels', save_plot=save_path)
