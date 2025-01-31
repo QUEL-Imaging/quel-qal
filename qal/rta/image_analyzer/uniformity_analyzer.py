@@ -108,6 +108,7 @@ class UniformityAnalyzer:
                 "save_output": self.save_output,
                 "image_dir": image_dir
             }
+        print("  Done")
 
         # Optionally save the output
         if self.save_output:

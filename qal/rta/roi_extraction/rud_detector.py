@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from skimage import io
-from roipoly import RoiPoly
 from scipy.ndimage import label
 from skimage.measure import regionprops
 from matplotlib.patches import Circle, Rectangle
@@ -27,6 +26,8 @@ class RudDetector:
 
         :param params:      Parameters for class methods (optional)
         """
+
+        self.environment = self.check_environment()
 
         # Default parameters for class methods
         if params is None:
@@ -102,6 +103,7 @@ class RudDetector:
             elif len(im_dots) < 500:
                 print("  WARNING: Less than 500 dots found. May affect results")
             dots.extend(im_dots)
+        print("Data extraction complete")
 
         self.dots = pd.DataFrame(dots)
 
@@ -143,6 +145,7 @@ class RudDetector:
                 print("  WARNING: Less than 500 dots found. May affect results")
             dots = pd.DataFrame(im_dots)
             dots_dfs.append(dots)
+        print("Data extraction complete")
 
         self.dots = dots_dfs
 
@@ -210,19 +213,21 @@ class RudDetector:
         :return:        Images same size as input, but with zeros outside the "cropped" regions
         """
 
-        cropped_images = []
-
-        for im in self.images:
-            fig, ax = plt.subplots(figsize=self.FIG_SIZE)
-            ax.imshow(im, cmap=self.IM_COLORMAP)
-            ax.set_axis_off()
-            ax.set_title('Crop desired region. Right-click when done')
-
-            roi = RoiPoly(color='r')
-            mask = roi.get_mask(im)
-            cropped_images.append((mask * im).astype(np.uint16))
-
-        return cropped_images
+        if self.environment == "Standard Python":
+            from roipoly import RoiPoly
+            cropped_images = []
+            for im in self.images:
+                fig, ax = plt.subplots(figsize=self.FIG_SIZE)
+                ax.imshow(im, cmap=self.IM_COLORMAP)
+                ax.set_axis_off()
+                ax.set_title('Crop desired region. Right-click when done')
+                roi = RoiPoly(color='r')
+                mask = roi.get_mask(im)
+                cropped_images.append((mask * im).astype(np.uint16))
+            return cropped_images
+        else:
+            print(f"Image cropping currently not supported for {self.environment}")
+            return self.images
 
     def find_dots(self, im, im_name, show_images=False):
         """
@@ -466,6 +471,24 @@ class RudDetector:
         # Make sure length of threshold multipliers is compatible with number of passes
         if len(self.th_mult) > 1:
             assert len(self.th_mult) == self.n_pass, "Length of TH_MULT should be same as N_PASS if greater than 1"
+
+    @staticmethod
+    def check_environment():
+        """
+        Return the Python environment type.
+        """
+        try:
+            from IPython import get_ipython
+            get_ipython()
+            if 'IPKernelApp' in get_ipython().config:
+                get_ipython().magic('matplotlib widget')
+                get_ipython().run_line_magic('matplotlib', 'ipympl')
+                return "Jupyter Notebook"
+            else:
+                get_ipython().run_line_magic('matplotlib', 'ipympl')
+                return "JupyterLab"
+        except AttributeError:
+            return "Standard Python"
 
     @staticmethod
     def cvt_to_uint16(im_array):
