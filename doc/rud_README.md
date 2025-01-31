@@ -1,12 +1,16 @@
-# Reference Uniformity and Distortion Target Analysis   
+# Reference Uniformity and Distortion Target Analysis
 This document details analysis methods for QUEL Imaging's reference uniformity and distortion (RUD) target using the qal library. At a high level, the document is structured into three parts: a brief description of the target, followed by analysis for fluorescence uniformity with examples, and finally, analysis for local geometric distortion with examples.
 
-# <br/>Target Description   
-The RUD target consists of a grid of fluorescent wells on a square background of non-fluorescent material. It allows characterization of an imaging system's fluorescence uniformity and local geometric distortion. See the use guide (available here: https://shop.quelimaging.com/resources/) for more information on the target, including imaging recommendations.   
-   
-# <br/>Uniformity Analysis   
+<br/>
+
+# Target Description
+The RUD target consists of a grid of fluorescent wells on a square background of non-fluorescent material. It allows characterization of an imaging system's fluorescence uniformity and local geometric distortion. See the use guide (available here: https://shop.quelimaging.com/resources/) for more information on the target, including imaging recommendations.
+
+<br/>
+
+# Uniformity Analysis
 ## Quick Start
-The following block of code can be used to obtain fluorescence uniformity profiles from well-taken images (see the RUD use guide) on a reasonably-uniform imaging system. The outputs will be stored a subfolder called "Surface Representation" created within the input data folder. The input folder must contain images of the same size. Continue reading this document for an understanding of the process and how to adapt it. If working in an iPython notebook, see note at the bottom of [Step 3 - Visualization](#brstep-3---visualization-) before running this block of code.
+The following block of code can be used to obtain fluorescence uniformity profiles from well-taken images (see the RUD use guide) on a reasonably-uniform imaging system. The outputs will be stored a subfolder called "Surface Representation" created within the input data folder. The input folder must contain images of the same size. Continue reading this document for an understanding of the process and how to adapt it. If working in an iPython notebook, see note at the bottom of [Step 3 - Visualization](#step-3---visualization) before running this block of code.
 ```python
 from qal.data import rud_example_1
 from qal import RudDetector, UniformityAnalyzer, UniformityVisualizer
@@ -28,15 +32,16 @@ Here is an example of the output that can be expected from the code:
 <p align="center">
 <img src="./images/Fluorescence_uniformity_example_1.png" width="700"/>
 </p>
+<br/>
 
 ## Methodology
 Following is a general overview of the process of assessing fluorescence uniformity using the qal library. It involves a three-step process:   
 - Identification, localization, and quantification of fluorescent wells   
 - Fitting fluorescence intensity data to a 2D representation   
 - Visualization of the generated surface representation   
+<br/>
    
-   
-### <br/>Step 1 - Well identification, localization and quantification   
+### Step 1 - Well identification, localization and quantification
 This is achieved using the `detect_dots_uniformity()` method of the `RudDetector` class. It requires a single input, which is the path to the folder where the images to be analyzed are stored. Images in this folder must be of the same dimensions. It is assumed that all images in the folder are to be used in generating the fluorescence uniformity profile across the imaging system's field of view - hence, if only analyzing one image, ensure that that is the only image in the folder. Say the path to the directory containing the input image(s) is `image_dir`, the process is as simple as:   
 ```python
 detector = RudDetector()
@@ -151,8 +156,9 @@ detector.update_params({
     "Show images": True
 })
 ```
-   
-### <br/>Step 2 - 2D surface representation of fluorescent well intensities   
+<br/>
+
+### Step 2 - 2D surface representation of fluorescent well intensities
 After obtaining locations and intensities of fluorescent wells, a 2D surface representation is generated using the `generate_surf_rep()` method of the `UniformityAnalyzer` class. This method takes as input the output of a `RudDetector` object after calling `detect_dots_uniformity()`. In the simplest case, this requires two lines of code:   
 ```python
 analyzer = UniformityAnalyzer()
@@ -271,8 +277,9 @@ analyzer.update_params({
     "Zero outside data range": True
 })
 ```
-   
-### <br/>Step 3 - Visualization   
+<br/>
+
+### Step 3 - Visualization
 Final visualization is performed using the `visualize_fluorescence_profiles()` method of the `UniformityVisualizer` class. It requires the output of a `UniformityAnalyzer` object as input. To generate figures visualizing the results:   
 ```python
 visualizer = UniformityVisualizer()
@@ -342,15 +349,16 @@ visualizer.update_params({
     "Alpha scaling": [1, 1, 1, 1, 1, 1]
 })
 ```
-<span style="color:darkorange">**NOTE:** If you are working with an iPython notebook and want to visualize the animated 3D plot, you will need to call the `make_animation()` method. Do the following:</span>
+<span style="color:darkorange">**NOTE: If you are working with an iPython notebook and want to visualize the animated 3D plot, you will need to call the `make_animation()` method. Do the following**:</span>
 ```python
 visualizer = UniformityVisualizer()
 anim = visualizer.make_animation(analyzer.output)
 visualizer.visualize_fluorescence_profiles(analyzer.output)
 ```
-   
-## <br/>Examples   
-### Visualize fluorescence profile for a reasonably flat imaging system   
+<br/>
+
+## Examples
+### Visualize fluorescence profile for a reasonably flat imaging system
 This example shows the process and outputs for analyzing images from a reasonably flat (in terms of fluorescence uniformity) imaging system. The images used in this example are downloaded from the repository, and can also be found at: **qal/data/rud_targets/example_1**. First, the necessary imports are made:   
 ```python
 from qal.data import rud_example_1
@@ -373,7 +381,7 @@ analyzer.update_params({
 analyzer.generate_surf_rep(rud_dots)
 analyzer_output = analyzer.output
 ```
-Finally, the results are visualized. Since the outputs are not being saved in this example, the figures will be displayed as they are generated (if working in an iPython notebook, see note at the bottom of [Step 3 - Visualization](#brstep-3---visualization-)).   
+Finally, the results are visualized. Since the outputs are not being saved in this example, the figures will be displayed as they are generated (if working in an iPython notebook, see note at the bottom of [Step 3 - Visualization](#step-3---visualization)).   
 ```python
 visualizer = UniformityVisualizer()
 visualizer.update_params({
@@ -422,9 +430,10 @@ The final two figures are a contour map showing regions of the field of view tha
 </p>
 <p align="center">
 <img src="./images/Iso_maps_table_example_1.png" width="700"/>
-</p> 
+</p>
+<br/>
 
-### <br/>Visualize fluorescence profile for a highly non-uniform imaging system   
+### Visualize fluorescence profile for a highly non-uniform imaging system
 This example shows a more challenging case where the fluorescence collection profile of the imaging system is highly non-uniform. As a result, parameters needed to be adjusted in order to obtain a good representation. The images used in this example are located in **qal/data/rud_targets/example_2**. If the same code in the previous example is run on these images, the generated fluorescence profile will look like this:   
 <p align="center">
 <img src="./images/No_param_change_uniformity_example_2.png" width="700"/>
@@ -506,9 +515,10 @@ The results show that this imaging system has a narrow gaussian-shaped fluoresce
 </p>
 <p align="center">
 <img src="./images/Iso_maps_table_example_2.png" width="700"/>
-</p> 
+</p>
+<br/>
    
-### <br/>Visualize fluorescence profile using RBF interpolation   
+### Visualize fluorescence profile using RBF interpolation
 Some detailed structures may not be captured by the B-spline fitting method. In this example, the images from the first example are reanalyzed using the alternative RBF interpolation method. This requires one small change to the code:
 ```python
 from qal.data import rud_example_1
@@ -555,9 +565,10 @@ GENERATING FIGURES...
 And the figures displayed show that there is a double border to the uniformity profile (evident on the left and right edges) that was not captured by the default B-spline method.
 <p align="center">
 <img src="./images/Fluorescence_uniformity_example_1_rbf.png" width="700"/>
-</p> 
+</p>
+<br/>
 
-### <br/>Happy accidents
+### Happy accidents
 Trial and error is sometimes unavoidable when it comes to R&D. We at QUEL Imaging believe it is important to look for the silver lining in every mistake &ndash; like Bob Ross said, "We don't make mistakes, just happy little accidents". With that being said, this example introduces you to the happy result of one of our failed early R&D efforts in manufacturing the RUD target. The image used can be found in the repository at **qal/data/rud_targets/example_4**. Run the following lines of code to see the unexpected ghost we found lurking in this target:
 ```python
 from qal.data import rud_example_4
@@ -588,7 +599,9 @@ We named him Paul (what better name for a RUD?). Try playing around with the vis
 
 Remember, "You too can paint almighty pictures."
 
-# <br/>Distortion Analysis
+<br/>
+
+# Distortion Analysis
 ## Quick Start
 The following block of code can be used to obtain geometric distortion assessment from well-taken images (see the RUD use guide) spanning the field of view of the imaging system. The outputs will be stored a subfolder called "Distortion Figures" created within the input data folder. The input folder must contain images of the same size. Continue reading this document for an understanding of the process and how to adapt it.
 ```python
@@ -612,6 +625,7 @@ Here is an example of the output that can be expected from the code:
 <p align="center">
 <img src="./images/Fitted_distortion_vs_image_height_example_1.png" width="700"/>
 </p>
+<br/>
 
 ## Methodology
 Following is a general overview of the process of calculating local geometric distortion from images of the RUD target using the qal library. Similar to uniformity analysis, it involves a three-step process:   
@@ -621,8 +635,9 @@ Following is a general overview of the process of calculating local geometric di
 
 Note that distortion analysis using the qal library is meant to assess radial (barrel and pincushion) distortion, though the presence of keystone distortion may be highlighted (see the RUD use guide). This should be corrected, if possible, prior to re-imaging and re-analyzing.
 
+<br/>
 
-### <br/>Step 1 - Well identification and localization   
+### Step 1 - Well identification and localization
 This is achieved using the `detect_dots_distortion()` method of the `RudDetector` class presented in the uniformity analysis section of this document. Similar to its counterpart, it requires a single input, which is the path to the folder where the images to be analyzed are stored. Images in this folder must be of the same dimensions, and it is assumed that all images in the folder are to be used in calculating distortion across the imaging system's field of view - hence, if only analyzing one image, ensure that this is the only image in the folder. This step can be performed with the following commands:
 ```python
 detector = RudDetector()
@@ -713,8 +728,9 @@ Whether to display the intermediate steps in finding fluorescent wells, and the 
 </td>
 </tr>
 </table>
+<br/>
 
-### <br/>Step 2 - Computing local geometric distortion  
+### Step 2 - Computing local geometric distortion
 In this step, local geometric distortion is calculated following the principles of ISO 17850:2015 (note that strict adherence to the standard also puts constraints on the target and how it is imaged - see the standard for more information). This is done using the `compute_distortion()` method of the `DistortionAnalyzer` class. It takes one required and three optional inputs. The required input is the output of a `RudDetector` object after calling `detect_dots_distortion()`. In the simplest case, distortion can be computed using:
 ```python
 analyzer = DistortionAnalyzer()
@@ -762,8 +778,9 @@ Example use:
 ```python
 analyzer.compute_distortion(detector.output, show_dots=True, ignore_extra=True, save_output=True)
 ```
+<br/>
 
-### <br/>Step 3 - Visualization  
+### Step 3 - Visualization
 Final visualization is performed using the `visualize_distortion()` method of the `DistortionAnalyzer` class. It requires the output of a `DistortionAnalyzer` object as input. Visualize analysis results using the following:
 ```python
 visualizer = DistortionVisualizer()
@@ -793,9 +810,9 @@ Example use:
 ```python
 visualizer.visualize_distortion(analyzer.output, save=False)
 ```
+<br/>
 
-
-## <br/>Examples   
+## Examples
 ### Assess distortion across the entire field of view
 In this example, distortion is analyzed from a set of images that span the field of view of the imaging system. The images used are downloaded from the repository, but can also be found at: **qal/data/rud_targets/example_1**. First, the necessary imports are made:
 ```python
@@ -851,8 +868,9 @@ The final figure is a fitted 2D map of the distortion across the field of view. 
 <p align="center">
 <img src="./images/Distortion_map_example_1.png" width="700"/>
 </p>
+<br/>
 
-### <br/>Assess distortion across a portion of the field of view
+### Assess distortion across a portion of the field of view
 In this example, there is only one input image which does not span the field of view. The image for this example can be found in **qal/data/rud_targets/example_3**. Running the code from the previous example unchanged will result in larger values towards the edges of the field of view in the distortion map. To avoid this, a small change needs to be made to the `compute_distortion` call:
 ```python
 from qal.data import rud_example_3

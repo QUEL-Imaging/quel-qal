@@ -1,10 +1,14 @@
-# Reference Depth Target Analysis   
+# Reference Depth Target Analysis
 This document details analysis methods for QUEL Imaging's reference depth sensitivity (RDS) target using the qal library. At a high level, the document is structured into four sections: a brief description of the target, followed by a "quick start" section showing basic use of the code, then a more detailed overview of how the code works, and finally, some examples.
 
-# <br/>Target Description   
+<br/>
+
+# Target Description
 The RDS target consists of nine wells of fluorescent material buried beneath varying thicknesses of non-fluorescent tissue-mimicking material, all embedded within a non-fluorescent and light-absorbing mold. It enables probing the fluorescence depth sensitivity of an imaging system. See the use guide (available here: https://shop.quelimaging.com/resources/) for more information on the target, including imaging recommendations.
 
-# <br/>Quick Start   
+<br/>
+
+# Quick Start
 Below is a block of code that can be used to analyze an image of the RDS target. It assumes the fluorophore in the depth target is "ICG-equivalent" and labels it as such. For a different fluorophore, change `fluorophore_label` in the last line (this only affects labeling on the plot). In addition to using the qal library, the code uses the scikit-image library (https://scikit-image.org/) to read in the image.
 ```python
 from skimage import io
@@ -41,13 +45,17 @@ CNR falls below 3 at 4.7 mm on the fitted curve.
 ```
 Continue reading for a better understanding of the code and how to use it.
 
-# <br/>Methodology   
+<br/>
+
+# Methodology
 Analyzing an image of the RDS target involves a three-step process of:
 * Identifying, localizing, and quantifying average intensities of fluorescent wells
 * Data processing - Intensity normalization and contrast-to-noise calculation
 * Visualization of results
 
-## <br/>Step 1 - Well identification, localization, and quantification
+<br/>
+
+## Step 1 - Well identification, localization, and quantification
 This step is accomplished using the `WellDetector` class. Two methods are used sequentially to obtain a dataframe containing information on the nine wells, including their centroid locations and average intensities. The first is `detect_wells()`, which identifies as many fluorescent wells as it can, based on their intensity. Often this may not be sufficient to identify all nine wells, so the second method, `estimate_remaining_wells_3x3()` is needed. This uses the already identified well positions and knowledge of the physical dimensions of the RDS target to estimate the locations of any remaining wells.
 
 In its simplest form, the code for well identification for an RDS target looks like the following (where `depth_im` is an image of the RDS target):
@@ -179,8 +187,9 @@ In addition to outputting the complete dataframe, this will produce a figure lik
 <p align="center">
 <img src="./images/Detected_wells_depth.png" width="700"/>
 </p>
+<br/>
 
-## <br/>Step 2 - Data processing
+## Step 2 - Data processing
 This step is accomplished by using the `WellAnalyzer` class. `WellAnalyzer` must be initialized with two inputs. They are:
 <table>
 <tr>
@@ -222,8 +231,9 @@ The output of the `get_stats()` method is also a dataframe which now contains ad
 7  463.875084  670.528296    129.333333   64.666667   6.0 mm    6.0              64.666667        0.100939            0.006312                  0.001256                   0.002057                       0.008203    0.201108
 8  650.939617  672.236551    129.333333   64.666667  Control    0.0              64.666667        0.099683            0.006247                  0.000000                   0.000898                            NaN    0.000000
 ```
+<br/>
 
-## <br/>Step 3 - Visualization
+## Step 3 - Visualization
 This final visualization step involves calling the `plot()` method of the `WellPlotter` class. This will plot relevant data (e.g., normalized mean intensity) versus depth. A `WellPlotter` object must be initialized with a dataframe containing statistics about the nine wells of the RDS target - i.e., the output from calling the `get_stats()` method of `WellAnalyzer`. For example, if `depth_df` is the dataframe containing well statistics, create a `WellPlotter` object as:
 ```python
 plotter = WellPlotter(depth_df)
@@ -301,8 +311,9 @@ A figure like the following will be produced:
 <p align="center">
 <img src="./images/ROI_final_visual_depth.png" width="700"/>
 </p>
+<br/>
 
-# <br/>Examples   
+# Examples
 
 ## Normalized depth sensitivity curve
 This example processes an image of the RDS target to produce a plot of the normalized mean well intensity versus depth. The image used is downloaded from the repository but can also be located at: **qal/data/depth_targets/depth_sample_1.tiff**. First, the necessary modules are imported:
@@ -365,6 +376,7 @@ Additionally, the following will be printed to the screen, identifying a depth o
 ```
 CNR falls below 3 at 4.7 mm on the fitted curve.
 ```
+<br/>
 
 ## Depth sensitivity curve with error bars
 This example processes an image of the RDS target to produce a plot of baselined (i.e., mean intensity of control well subtracted) mean well intensity with error bars. The image used is located in the repository at: **qal/data/depth_targets/depth_sample_2.tiff**. Imports and reading in the image are similar to the first example:
