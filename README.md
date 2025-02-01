@@ -10,18 +10,25 @@ This guide will help you get started with setting up and using **quel-qal**. Fol
 
 ### Prerequisites
 - **Quel-qal** requires Python version ≥ 3.12.
-- It is also recommended (though not required) to set up a separate virtual environment to install to. Create and activate a new virtual environment as follows.</br></br>
+- It is also recommended (though not required) to set up a separate virtual environment to install to. On your terminal, navigate to the directory where you would like to install the virtual environment. Create and activate a new virtual environment as follows.</br></br>
 
-    On macOS/Linux:
-    ```
-    python3 -m venv env
-    source env/bin/activate
-    ```
-    On Windows:
-    ```
-    python -m venv env
-    env\Scripts\activate
-    ```
+  On macOS/Linux:
+  ```
+  python3 -m venv env
+  source env/bin/activate
+  ```
+  On Windows:
+  ```
+  python -m venv env
+  env\Scripts\activate
+  ```
+  If you will be working in an iPython environment (Jupyter notebook, JupyterLab), create and activate a virtual environment as described above, then do the following to install your virtual environment as a kernel for Jupyter (change `python` to `python3` in the last line accordingly):
+  ```
+  pip install jupyter
+  pip install ipykernel
+  python -m ipykernel install --user --name=env --display-name="quel-qal_env"
+  ```
+  When you launch Jupyter you will see "quel-qal_env" as an option in the available kernels.
 
 ### PyPI Installation
 You can install **quel-qal** directly from PyPI using:
