@@ -167,7 +167,6 @@ class WellDetector:
                 mask = abs(df['ROI Radius'] - mean_radius) > threshold
             # Remove those rows
             df_filtered = df[~mask]
-            print(df_filtered)
 
             return df_filtered
 
