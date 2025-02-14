@@ -141,7 +141,7 @@ class WellDetector:
         df = self.compute_well_positions(im_src, binary_image, labeled_image)
         return df
 
-    def get_clusters_from_points(self, df, threshold=15):
+    def get_clusters_from_points(self, df, threshold=15, use_std=False):
         if df is None or df.empty:
             print("Error: Empty DataFrame passed to clustering.")
             return None
@@ -159,11 +159,15 @@ class WellDetector:
             mean_radius = df['ROI Radius'].mean()
             std_dev_radius = df['ROI Radius'].std()
             # Any value more than 2 times the std dev from the mean
-            thresh = threshold * std_dev_radius
+            thresh = 0.1 * threshold * std_dev_radius
             # Determine rows where the radius is significantly different from the mean
-            mask = abs(df['ROI Radius'] - mean_radius) > threshold
+            if use_std:
+                mask = abs(df['ROI Radius'] - mean_radius) > thresh
+            else:
+                mask = abs(df['ROI Radius'] - mean_radius) > threshold
             # Remove those rows
             df_filtered = df[~mask]
+            print(df_filtered)
 
             return df_filtered
 
@@ -365,6 +369,8 @@ class WellDetector:
 
             if df_features is not None:
                 df_feature_clusters = self.get_clusters_from_points(df_features)
+                if df_feature_clusters.empty or len(df_feature_clusters) < 3:
+                    df_feature_clusters = self.get_clusters_from_points(df_features, use_std=True)
                 df_clusters, roi_size = self.get_cluster_id(im, df_feature_clusters, set_consistent_roi_region, wells=well_ids)
 
                 # Replace the cluster index with the id column
