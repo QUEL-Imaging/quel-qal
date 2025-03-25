@@ -253,10 +253,12 @@ class WellPlotter:
         y_data = df_plot[col_to_plot].values
         cnr_data = df_plot['CNR'].values
         if graph_type == 'concentration':
-            linear_min_idx = np.argmin(np.abs(cnr_data - 3))
-            if cnr_data[linear_min_idx] < 3:
-                linear_min_idx -= 1
+            x_at_good_cnr = x_data[cnr_data >= 3]
+            linear_min = np.min(x_at_good_cnr)
+            linear_min_idx = np.where(x_data == linear_min)[0][0]
             x_hat = np.geomspace(x_data[linear_min_idx], np.max(x_data), 100)
+            x_data = x_data[linear_min_idx::-1]
+            y_data = y_data[linear_min_idx::-1]
         else:
             x_hat = np.linspace(np.min(x_data), np.max(x_data), 100)
         self.add_trendline_and_annotation(fit_type, x_data, y_data, x_hat, library=trendline_lib, graph_type=graph_type)
