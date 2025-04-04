@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from skimage import io
 from scipy.ndimage import label
+from skimage.transform import rescale
 from skimage.measure import regionprops
 import pandas as pd
 import cv2
@@ -14,6 +15,7 @@ class WellDetector:
     def __init__(self, parallel_processing=True):
         self.use_parallel_processing = parallel_processing
         self.environment = self.check_environment()
+        self.scale_factor = 1
 
     def get_colormap(self, unique_ids, cmap='gist_rainbow'):
         plt_cmap = plt.get_cmap(cmap)
@@ -117,11 +119,11 @@ class WellDetector:
                     average_intensity = np.mean(non_zero_pixels)
 
                 pts.append({
-                    'x': well_pos[1],
-                    'y': well_pos[0],
-                    'area': prop.area,
-                    'ROI Diameter': estimated_radius*2,
-                    'ROI Radius': estimated_radius,
+                    'x': well_pos[1] / self.scale_factor,
+                    'y': well_pos[0] / self.scale_factor,
+                    'area': prop.area / (self.scale_factor ** 2),
+                    'ROI Diameter': estimated_radius * 2 / self.scale_factor,
+                    'ROI Radius': estimated_radius / self.scale_factor,
                     'mean_intensity': float(average_intensity)
                 })
             
@@ -247,6 +249,9 @@ class WellDetector:
                 wells = self.get_well_positions(im_src, thresh_im)
                 return wells
 
+            if self.scale_factor != 1:
+                im_src = rescale(im_src, self.scale_factor, anti_aliasing=True, preserve_range=True)
+
             if self.use_parallel_processing:
                 wells_list = Parallel(n_jobs=-1)(delayed(process_thresh_im)(thresh_im) for thresh_im in thresh_im_array)
             else:
@@ -362,7 +367,9 @@ class WellDetector:
             plt.tight_layout()
             plt.show()
 
-    def detect_wells(self, im, well_ids=None, show_detected_wells=False, debug=False, set_consistent_roi_region=False):
+    def detect_wells(self, im, well_ids=None, show_detected_wells=False, debug=False, set_consistent_roi_region=False,
+                     downscale=1):
+        self.scale_factor = downscale
         try:
             im_copy = im.copy()
 
@@ -371,6 +378,9 @@ class WellDetector:
 
             # Convert 16 bit log scale image to 8-bit using WellDetector's method
             log_im_uint8 = self.cvt_to_uint8(log_im)
+            if self.scale_factor != 1:
+                log_im_uint8 = rescale(log_im_uint8, self.scale_factor, anti_aliasing=True, preserve_range=True).astype(
+                    np.uint8)
 
             # Using WellDetector's methods for further processing
             thresh_im_array = self.get_thresh_rolling_window_binary(log_im_uint8)
