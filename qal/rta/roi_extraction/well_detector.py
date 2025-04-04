@@ -11,7 +11,8 @@ import re
 from joblib import Parallel, delayed
 
 class WellDetector:
-    def __init__(self):
+    def __init__(self, parallel_processing=True):
+        self.use_parallel_processing = parallel_processing
         self.environment = self.check_environment()
 
     def get_colormap(self, unique_ids, cmap='gist_rainbow'):
@@ -80,7 +81,10 @@ class WellDetector:
             thresh_img = cv2.morphologyEx(thresh_img, cv2.MORPH_OPEN, kernel)
             return thresh_img
 
-        images = Parallel(n_jobs=2)(delayed(process_thresh)(thresh) for thresh in thresholds)
+        if self.use_parallel_processing:
+            images = Parallel(n_jobs=2)(delayed(process_thresh)(thresh) for thresh in thresholds)
+        else:
+            images = [process_thresh(thresh) for thresh in thresholds]
 
         return images
 
@@ -192,9 +196,12 @@ class WellDetector:
                 intensity = 0  # or any default value you want to assign when intensity is NaN
             return intensity
 
-        intensities = Parallel(n_jobs=-1)(
-            delayed(compute_intensity)(row) for idx, row in df.iterrows()
-        )
+        if self.use_parallel_processing:
+            intensities = Parallel(n_jobs=-1)(
+                delayed(compute_intensity)(row) for idx, row in df.iterrows()
+            )
+        else:
+            intensities = [compute_intensity(row) for idx, row in df.iterrows()]
 
         df['mean_intensity'] = np.array(intensities, dtype=np.float64)  # Ensure float64
 
@@ -240,7 +247,10 @@ class WellDetector:
                 wells = self.get_well_positions(im_src, thresh_im)
                 return wells
 
-            wells_list = Parallel(n_jobs=-1)(delayed(process_thresh_im)(thresh_im) for thresh_im in thresh_im_array)
+            if self.use_parallel_processing:
+                wells_list = Parallel(n_jobs=-1)(delayed(process_thresh_im)(thresh_im) for thresh_im in thresh_im_array)
+            else:
+                wells_list = [process_thresh_im(thresh_im) for thresh_im in thresh_im_array]
 
             df = pd.DataFrame()
             for wells in wells_list:
