@@ -186,23 +186,23 @@ class WellPlotter:
                         fontsize=self.FONT_SIZE,
                         color="black")
 
-    def add_depth_detection_limit(self, fit_type, x_data, y_data, x_hat, library):
+    def add_depth_detection_limit(self, fit_type, x_data, y_data, x_hat, cnr_threshold, library):
         fitted, equation, r_squared = self.fit_data(fit_type, x_data, y_data, x_hat, library=library)
-        depth_lim_idx = np.argmin(np.abs(fitted - 3))  # Index where CNR = 3
+        depth_lim_idx = np.argmin(np.abs(fitted - cnr_threshold))  # Index where CNR = cnr_threshold
         depth_lim = x_hat[depth_lim_idx]
-        if (y_data > 3).all():
-            print("\nCNR is above 3 for all data.")
+        if (y_data > cnr_threshold).all():
+            print(f"\nCNR is above {cnr_threshold} for all data.")
         elif depth_lim == x_data[-1]:
-            print("\nCNR is above 3 for all points on the fitted curve.")
+            print(f"\nCNR is above {cnr_threshold} for all points on the fitted curve.")
         else:
-            print(f"\nCNR falls below 3 at {depth_lim:.1f} mm on the fitted curve.")
+            print(f"\nCNR falls below {cnr_threshold} at {depth_lim:.1f} mm on the fitted curve.")
             if depth_lim > 0.75 * np.max(x_data):
                 annotation_x_loc = (depth_lim / np.max(x_data)) - 0.25
             else:
                 annotation_x_loc = (depth_lim / np.max(x_data)) - 0.02
             y_lim = self.ax.get_ylim()
             self.ax.axvline(x=depth_lim, ymin=y_lim[0], ymax=y_lim[1], color='#454545', linewidth=2, linestyle=':')
-            self.ax.annotate("(CNR = 3)",
+            self.ax.annotate(f"(CNR = {cnr_threshold})",
                              xy=(annotation_x_loc, 0.2),
                              xycoords='axes fraction',
                              fontsize=12,
@@ -213,7 +213,8 @@ class WellPlotter:
         self.ax.set_xlabel(x_axis_title)
         self.ax.set_ylabel(y_axis_title)
 
-    def plot(self, graph_type='concentration', col_to_plot='mean intensity', fluorophore_label='ICG-eq', plot_error_bars=False, trendline_lib='statsmodels', save_plot=None):
+    def plot(self, graph_type='concentration', col_to_plot='mean intensity', fluorophore_label='ICG-eq',
+             plot_error_bars=False, trendline_lib='statsmodels', save_plot=None, cnr_threshold=3):
         """
         Plot the graph using the provided or default column and labels.
         
@@ -253,7 +254,7 @@ class WellPlotter:
         y_data = df_plot[col_to_plot].values
         cnr_data = df_plot['CNR'].values
         if graph_type == 'concentration':
-            x_at_good_cnr = x_data[cnr_data >= 3]
+            x_at_good_cnr = x_data[cnr_data >= cnr_threshold]
             linear_min = np.min(x_at_good_cnr)
             linear_min_idx = np.where(x_data == linear_min)[0][0]
             x_hat = np.geomspace(x_data[linear_min_idx], np.max(x_data), 100)
@@ -263,7 +264,7 @@ class WellPlotter:
             x_hat = np.linspace(np.min(x_data), np.max(x_data), 100)
         self.add_trendline_and_annotation(fit_type, x_data, y_data, x_hat, library=trendline_lib, graph_type=graph_type)
         if graph_type == 'depth':
-            self.add_depth_detection_limit(fit_type, x_data, cnr_data, x_hat, library=trendline_lib)
+            self.add_depth_detection_limit(fit_type, x_data, cnr_data, x_hat, cnr_threshold, library=trendline_lib)
 
         self.apply_plot_settings(graph_type)
 
