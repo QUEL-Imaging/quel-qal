@@ -262,7 +262,10 @@ class WellPlotter:
             y_data = y_data[linear_min_idx::-1]
         else:
             x_hat = np.linspace(np.min(x_data), np.max(x_data), 100)
-        self.add_trendline_and_annotation(fit_type, x_data, y_data, x_hat, library=trendline_lib, graph_type=graph_type)
+        if len(x_data) > 1:
+            self.add_trendline_and_annotation(fit_type, x_data, y_data, x_hat, library=trendline_lib, graph_type=graph_type)
+        else:
+            print(f"Unable to generate trendline. CNR threshold of {cnr_threshold} is too high.")
         if graph_type == 'depth':
             self.add_depth_detection_limit(fit_type, x_data, cnr_data, x_hat, cnr_threshold, library=trendline_lib)
 
