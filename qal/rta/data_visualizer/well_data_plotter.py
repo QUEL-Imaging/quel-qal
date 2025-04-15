@@ -255,7 +255,7 @@ class WellPlotter:
         cnr_data = df_plot['CNR'].values
         if graph_type == 'concentration':
             x_at_good_cnr = x_data[cnr_data >= cnr_threshold]
-            if not x_at_good_cnr:
+            if x_at_good_cnr.size == 0:
                 x_data = []
                 y_data = []
             else:
