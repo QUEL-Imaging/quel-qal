@@ -255,11 +255,15 @@ class WellPlotter:
         cnr_data = df_plot['CNR'].values
         if graph_type == 'concentration':
             x_at_good_cnr = x_data[cnr_data >= cnr_threshold]
-            linear_min = np.min(x_at_good_cnr)
-            linear_min_idx = np.where(x_data == linear_min)[0][0]
-            x_hat = np.geomspace(x_data[linear_min_idx], np.max(x_data), 100)
-            x_data = x_data[linear_min_idx::-1]
-            y_data = y_data[linear_min_idx::-1]
+            if not x_at_good_cnr:
+                x_data = []
+                y_data = []
+            else:
+                linear_min = np.min(x_at_good_cnr)
+                linear_min_idx = np.where(x_data == linear_min)[0][0]
+                x_hat = np.geomspace(x_data[linear_min_idx], np.max(x_data), 100)
+                x_data = x_data[linear_min_idx::-1]
+                y_data = y_data[linear_min_idx::-1]
         else:
             x_hat = np.linspace(np.min(x_data), np.max(x_data), 100)
         if len(x_data) > 1:
