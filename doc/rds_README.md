@@ -56,7 +56,12 @@ Analyzing an image of the RDS target involves a three-step process of:
 <br/>
 
 ## Step 1 - Well identification, localization, and quantification
-This step is accomplished using the `WellDetector` class. Two methods are used sequentially to obtain a dataframe containing information on the nine wells, including their centroid locations and average intensities. The first is `detect_wells()`, which identifies as many fluorescent wells as it can, based on their intensity. Often this may not be sufficient to identify all nine wells, so the second method, `estimate_remaining_wells_3x3()` is needed. This uses the already identified well positions and knowledge of the physical dimensions of the RDS target to estimate the locations of any remaining wells.
+This step is accomplished using the `WellDetector` class. Note that by default, `WellDetector` uses parallel processing to speed up the detection of wells, which for a large image, can take a long time otherwise. For smaller images, the overhead involved with setting up parallel processing might make it less efficient than single thread processing. To disable parallel processing for a `WellDetector` object, set the `parallel_processing` attribute to `False` during initialization:
+```python
+detector = WellDetector(parallel_processing=False)
+```
+
+Two methods are used sequentially to obtain a dataframe containing information on the nine wells, including their centroid locations and average intensities. The first is `detect_wells()`, which identifies as many fluorescent wells as it can, based on their intensity. Often this may not be sufficient to identify all nine wells, so the second method, `estimate_remaining_wells_3x3()` is needed. This uses the already identified well positions and knowledge of the physical dimensions of the RDS target to estimate the locations of any remaining wells.
 
 In its simplest form, the code for well identification for an RDS target looks like the following (where `depth_im` is an image of the RDS target):
 ```python
@@ -109,6 +114,14 @@ set_consistent_roi_region
 </td>
 <td width="75%">
 <i>Optional</i>. If <code>True</code>, the ROIs within which average fluorescence intensity is calculated will have the same radius (otherwise the size of each ROI depends on the size of the region identified). Note that in <code>estimate_remaining_wells_3x3()</code>, all ROIs will be set to have the same radius. Default is <code>False</code>.
+</td>
+</tr>
+<tr>
+<td width="25%" align="right" valign="top">
+downscale
+</td>
+<td width="75%">
+<i>Optional</i>. An alternative to parallel processing to improve speed. Setting <code>downscale=0.5</code> means that the input image will be rescaled by a factor of one half before performing well detection. Since this step is only used to find the locations of the wells, it should not significantly alter results (subsequent analysis is still performed on the full resolution image). Default is <code>1</code>.
 </td>
 </tr>
 </table>
@@ -291,6 +304,14 @@ save_plot
 </td>
 <td width="75%">
 If provided, the path (directory + filename) to which to save the plot. Default is <code>None</code>.
+</td>
+</tr>
+<tr>
+<td width="25%" align="right" valign="top">
+cnr_threshold
+</td>
+<td width="75%">
+If provided for RDS targets, the CNR value to use in defining the depth detection limit line. The recommended and default value is <code>3</code>.
 </td>
 </tr>
 </table>
