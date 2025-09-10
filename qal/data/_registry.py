@@ -23,6 +23,7 @@ registry = {
     # Depth Resolution Targets
     "depth_resolution_targets/dr_sample1.tiff": "58790cc0f3b17e008260337b3ae24457f61fd41d77baaae16570516147439990",
     "depth_resolution_targets/dr_sample2.tiff": "08ff21d678db1b0f29a3ed09fe4e3062d20a6541d32dccfb737e748aa586f49c",
+    "depth_resolution_targets/dr_sample3.tiff": "5b3b720f97a8419b3931da8010719307ebe94d13de39f81113bbe63637854cc2",
 
     # Lung Test Image
     "lung_test_image/lung_test_image.tiff": "fb8bc5a98428cf0acb19693b241805f07c4cd888186820f60fb485d686b3a0fe",
