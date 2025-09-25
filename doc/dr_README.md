@@ -5,9 +5,9 @@ This document details analysis methods for QUEL Imaging's depth resolution targe
 
 # Target Description
 The depth resolution target consists of a block of non-fluorescent material of specified optical properties, with a hollowed out channel that varies in depth through the center for either a liquid fluorophore to be flowed through the channel (FluoFlow phantom, pictured below) or for an embedded fluorescent inclusion (custom phantom). It enables probing of an imaging system's fluorescence depth resolution with customizable bulk optical properties. See the use guide for FluoFlow phantoms (available here: https://shop.quelimaging.com/resources/) for more information on the phantom, including storage and cleaning procedures to use this phantom with fluorophores.
-
+<p align="center">
 <img src="./images/FluoFlowStandard.png" width="400"/>
-
+</p>
 <br/>
 
 # Quick Start
@@ -16,7 +16,7 @@ The following block of code can be used to analyze an image of a depth resolutio
 ```python
 
 import numpy as np
-from qal.data import dr_sample1, dr_sample2
+from qal.data import dr_sample1
 from qal import PhantomCropper, DepthAnalyzer, DepthDataPlotter
 from skimage import io
 import matplotlib.pyplot as plt
@@ -58,14 +58,24 @@ A new plot with the cropped phantom will be shown, with text saying "Close figur
 
 Full execution of this code will generate the following plots:
 * Intensity (a.u.) vs distance (mm) along channel
+<p align="center">
 <img src="./images/DepthRes_IntensityvsDistance.png" width="500"/>
-* Normalized intensity (a.u.) vs channel depth with trendline fit
-<img src="./images/DepthRes_NormalizedIntensityvsDepth.png" width="500"/>
-* Intensity spread profiles: (Intensity (a.u.) vs distance from channel center (mm) at varying depths)
-<img src="./images/DepthRes_IntensitySpreadProfiles.png" width="500"/>
-* Fluorescence full-width-half-max vs channel depth of the intensity spread profiles
-<img src="./images/DepthRes_FWHMvsDepth.png" width="500"/>
+</p>
 
+* Normalized intensity (a.u.) vs channel depth with trendline fit
+<p align="center">
+<img src="./images/DepthRes_NormalizedIntensityvsDepth.png" width="500"/>
+</p>
+
+* Intensity spread profiles: (Intensity (a.u.) vs distance from channel center (mm) at varying depths)
+<p align="center">
+<img src="./images/DepthRes_IntensitySpreadProfiles.png" width="500"/>
+</p>
+
+* Fluorescence full-width-half-max vs channel depth of the intensity spread profiles
+<p align="center">
+<img src="./images/DepthRes_FWHMvsDepth.png" width="500"/>
+</p>
 <br/>
 
 # Methodology
@@ -87,45 +97,45 @@ analyzer.phantom_dimensions = [35, 50] # y, x dimensions
 
 The following metrics are then obtained:
 
-Intensity profiles:
-    Overview:
+## Intensity profiles:
+Overview:
 
-    The intensity through the center of the channel of the phantom is found and smoothed. This is plotted against the x-dimension units (mm) of the phantom.
+The intensity through the center of the channel of the phantom is found and smoothed. This is plotted against the x-dimension units (mm) of the phantom.
+
+The intensity profile is also cropped to the descending portion of the phantom, which is mapped to the varying depth of the phantom. This cropped intensity is normalized and fit to an exponential function and is plotted.
+
+Full list of variables that are obtained and stored:
+
+| Output  | Description |
+| ------------- | ------------- |
+| Depths  | Chosen depths for which to evaluate intensity spread |
+| Peak max | Maximum peak of intensity profile|
+| Intensity profile | Array of intensity values along center of channel |
+| Smoothed intensity profile | Smoothed values of intensity profile |
+| Distance in mm | X-axis values of the phantom converted to distance in mm |
+| Descent distance | The exponential decay of the intensity profile that is masked between the descent start and descent end |
+| Descent depth | Depths of the descent (between the descent start and end)  |
+| Intensities along descent | Intensities between the descent start and end |
+| Smoothed intensities along descent | Smoothed intensities between the descent start and end |
+| Vertical distance | Y-axis values of the phantom converted to distance in mm  |
+
+## Spread profiles & FWHM:
     
-    The intensity profile is also cropped to the descending portion of the phantom, which is mapped to the varying depth of the phantom. This cropped intensity is normalized and fit to an exponential function and is plotted.
+Overview:
 
-    Full list of variables that are obtained and stored:
+For n points between the start and ending depths, the intensity spread profile (the intensity across the y-axis), is obtained, smoothed, and plotted. This shows how the spread varies with depth. 
 
-    | Output  | Description |
-    | ------------- | ------------- |
-    | Depths  | Chosen depths for which to evaluate intensity spread |
-    | Peak max | Maximum peak of intensity profile|
-    | Intensity profile | Array of intensity values along center of channel |
-    | Smoothed intensity profile | Smoothed values of intensity profile |
-    | Distance in mm | X-axis values of the phantom converted to distance in mm |
-    | Descent distance | The exponential decay of the intensity profile that is masked between the descent start and descent end |
-    | Descent depth | Depths of the descent (between the descent start and end)  |
-    | Intensities along descent | Intensities between the descent start and end |
-    | Smoothed intensities along descent | Smoothed intensities between the descent start and end |
-    | Vertical distance | Y-axis values of the phantom converted to distance in mm  |
-
-Spread profiles & FWHM:
+The full-width-half-max (FWHM) is calculated for each spread profile. As the depth increases, this value typically also increases, indicating a more diffuse spread. The FWHM vs depth is plotted.
     
-    Overview:
-    
-    For n points between the start and ending depths, the intensity spread profile (the intensity across the y-axis), is obtained, smoothed, and plotted. This shows how the spread varies with depth. 
-
-    The full-width-half-max (FWHM) is calculated for each spread profile. As the depth increases, this value typically also increases, indicating a more diffuse spread. The FWHM vs depth is plotted.
-    
-    For each depth, the following outputs are obtained and stored:
-     | Output  | Description |
-    | ------------- | ------------- |
-    | Spread profile  | Intensity spread values across y-axis |
-    | Smoothed spread profile | Smoothed intensity spread values |
-    | FWHM (smoothed)  | Full-width-half-max for the spread profile, smoothed |
-    | AUC (smoothed)  |  Area under the spread curve, smoothed |
-    | FWHM  | Full-width-half-max for the spread profile |
-    | AUC | Area under the spread curve |
+For each depth, the following outputs are obtained and stored:
+| Output  | Description |
+| ------------- | ------------- |
+| Spread profile  | Intensity spread values across y-axis |
+| Smoothed spread profile | Smoothed intensity spread values |
+| FWHM (smoothed)  | Full-width-half-max for the spread profile, smoothed |
+| AUC (smoothed)  |  Area under the spread curve, smoothed |
+| FWHM  | Full-width-half-max for the spread profile |
+| AUC | Area under the spread curve |
 
 
 `plot_data()` uses the `DepthDataPlotter` class to generate all the plots as mentioned above, using analyzer.outputs as the inputs for plotting.
@@ -140,6 +150,11 @@ The first example uses the image found at **qal/data/depth_resolution_targets/dr
 
 
 ```python
+import numpy as np
+from qal.data import dr_sample1
+from qal import PhantomCropper, DepthAnalyzer, DepthDataPlotter
+from skimage import io
+import matplotlib.pyplot as plt
 # EXAMPLE 1
 # ------------------------------------------------------------------------------------------------------------------
 # Load the example image of the depth resolution phantom
@@ -163,6 +178,11 @@ depth_data_plotter.plot_data(graph_type='All', plot_smoothed=True, save_dir=save
 The second example uses the image found at **qal/data/depth_resolution_targets/dr_sample2**. This code generates the plots for a FluoFlow phantom, but in this case the intensity along the channel drops below 2%, so an additional line is added the to the FWHM plot to indicate this.
 
 ```python
+import numpy as np
+from qal.data import dr_sample2
+from qal import PhantomCropper, DepthAnalyzer, DepthDataPlotter
+from skimage import io
+import matplotlib.pyplot as plt
 # EXAMPLE 2
 # ------------------------------------------------------------------------------------------------------------------
 # FOR THE SECOND IMAGE, INTENSITY ALONG THE CHANNEL DROPS BELOW 2% SO AN ADDITIONAL LINE INDICATING THIS IS ADDED TO
@@ -192,6 +212,11 @@ The third example uses the image found at **qal/data/depth_resolution_targets/dr
 
 
 ```python
+import numpy as np
+from qal.data import dr_sample3
+from qal import PhantomCropper, DepthAnalyzer, DepthDataPlotter
+from skimage import io
+import matplotlib.pyplot as plt
 
 # Custom image
 im3 = dr_sample3()
