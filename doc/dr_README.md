@@ -11,7 +11,7 @@ The depth resolution target consists of a block of non-fluorescent material of s
 <br/>
 
 # Quick Start
-The following block of code can be used to analyze an image of a depth resolution phantom and calculate/plot metrics about the intensity and spread. In addition to the qal library, it uses the scikit-image library (https://scikit-image.org/) to read in the image. This sample code and two other examples can be found in qal/examples/depth_resolution_example.py.
+The following block of code can be used to analyze an image of a depth resolution phantom to calculate and plot metrics about the intensity and spread. In addition to the qal library, it uses the scikit-image library (https://scikit-image.org/) to read in the image. This sample code and two other examples can be found in qal/examples/depth_resolution_example.py.
 
 ```python
 
@@ -83,9 +83,9 @@ Full execution of this code will generate the following plots:
 
 `get_profiles()` uses the `DepthAnalyzer` class and is the main function used for analysis. The required inputs are:
 
-    | Input  | Description |
-    | ------------- | ------------- |
-    | Depths  | Chosen depths for which to evaluate intensity spread |
+| Input  | Description |
+| ------------- | ------------- |
+| Depths  | Chosen depths for which to evaluate intensity spread |
 
 Optionally, to change the dimensions of the phantom, the following code should be changed (also shown above in the example code):
 
@@ -95,10 +95,9 @@ analyzer.descent_start_end = [6, 44] # x-positions (mm)
 analyzer.phantom_dimensions = [35, 50] # y, x dimensions
 ```
 
-The following metrics are then obtained:
+The intensity, spread, and FWHM profiles are then obtained:
 
 ## Intensity profiles:
-Overview:
 
 The intensity through the center of the channel of the phantom is found and smoothed. This is plotted against the x-dimension units (mm) of the phantom.
 
@@ -120,8 +119,6 @@ Full list of variables that are obtained and stored:
 | Vertical distance | Y-axis values of the phantom converted to distance in mm  |
 
 ## Spread profiles & FWHM:
-    
-Overview:
 
 For n points between the start and ending depths, the intensity spread profile (the intensity across the y-axis), is obtained, smoothed, and plotted. This shows how the spread varies with depth. 
 
