@@ -11,7 +11,7 @@ The depth resolution target consists of a block of non-fluorescent material of s
 <br/>
 
 # Quick Start
-The following block of code can be used to analyze an image of a depth resolution phantom to calculate and plot metrics about the intensity and spread. In addition to the qal library, it uses the scikit-image library (https://scikit-image.org/) to read in the image. This sample code and two other examples can be found in qal/examples/depth_resolution_example.py.
+The following block of code can be used to analyze an image of a depth resolution phantom to calculate and plot metrics about the intensity and spread. In addition to the QUEL-QAL library, it uses the scikit-image library (https://scikit-image.org/) to read in the image. This sample code and two other examples can be found in qal/examples/depth_resolution_example.py.
 
 ```python
 
