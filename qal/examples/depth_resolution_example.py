@@ -59,6 +59,9 @@ def main():
     # Directories to save plots to if desired (change from None)
     save_dir3 = None
 
+    # Rotate the phantom image 90 degrees if needed to ensure channels are horizontal
+    rotate_image_90 = False
+
     # Crop the image
     cropper = PhantomCropper()
     cropper.crop_image(im3)
@@ -71,22 +74,22 @@ def main():
     right = cropper.borders["right"]
 
     cropped = img[int(top):int(bottom), int(left):int(right)]
-    if (bottom - top) > (right - left):     # Check whether phantom orientation is vertical
-        cropped = cropped.T
+    if rotate_image_90 == True:
+            cropped = cropped.T
 
-    plt.imshow(np.rot90(cropped, 2), extent=[0, 50, 0 , 35], cmap='inferno') # change extent to x and y dimensions (mm)
+    plt.imshow(cropped, extent=[0, 50, 0 , 35], cmap='inferno') # change extent to x and y dimensions (mm)
     plt.xlabel('X-axis (mm)', fontsize=16, fontweight='bold')
     plt.ylabel('Y-axis (mm)', fontsize=16, fontweight='bold')
     plt.title('Cropped Fluorescence Image', fontsize=16)
     plt.show()
 
 
-    # Set dimensions and analyze CROPPER for relevant information
+    # # Set dimensions and analyze CROPPER for relevant information
     analyzer = DepthAnalyzer(cropper)
     analyzer.depth_start_end = [1.3, 7.3] # z-depths (mm)
     analyzer.descent_start_end = [6, 44] # x-positions (mm)
     analyzer.phantom_dimensions = [35, 50] # y, x dimensions
-    analyzer.get_profiles(depths=np.linspace(1.3, 7.3, 10)) # same as depth_start_end, 10 points in between
+    analyzer.get_profiles(rotate_image_90, channel_distance_from_top = 0.5, depths=np.linspace(1.3, 7.3, 10)) # channel_distance_from_top = percent (as fraction) from the top where the channel is (0.5 for 50%), depths = same as depth_start_end, 10 points in between
 
     # Plot data in ANALYZER
     depth_data_plotter = DepthDataPlotter(analyzer.outputs)

@@ -22,11 +22,12 @@ class DepthAnalyzer:
             "Polynomial order": 3
         }
 
-    def get_profiles(self, depths=None):
+    def get_profiles(self, rotate_image_90 = False, channel_distance_from_top = 0.5, depths=None):
         """
         Analyze the image from CROPPER to produce an intensity profile and spread profile.
-
-        :param depths:              Depths for which to evaluate intensity spread
+        :param rotate_image_90                 True or False, if the image needs to be rotated so that channels are horizontal
+        :param channel_distance_from_top       Percent (in fraction format [0 to 1] ) from the top that indicates the channel position, default = 0.5
+        :param depths:                         Depths for which to evaluate intensity spread
         :return:
         """
 
@@ -49,7 +50,8 @@ class DepthAnalyzer:
 
         # Obtain region of image to be analyzed
         cropped = img[int(top):int(bottom), int(left):int(right)]
-        if (bottom - top) > (right - left):     # Check whether phantom orientation is vertical
+        # if (bottom - top) > (right - left):     # Check whether phantom orientation is vertical
+        if rotate_image_90 == True:
             cropped = cropped.T
 
         # Check if phantom is oriented such that it has higher intensity on the right. If so, flip
@@ -64,8 +66,7 @@ class DepthAnalyzer:
         )
 
         # Get the intensity profile and peak intensity along the channel (The intensity profile is the row at the center of the image)
-        channel_row_index = round(cropped.shape[0]*0.5)
-        print(channel_row_index)
+        channel_row_index = round(cropped.shape[0]*channel_distance_from_top)
         intensity_profile = cropped[channel_row_index, :]
         peak_max = np.max(intensity_profile)
 
