@@ -84,7 +84,7 @@ def main():
     plt.show()
 
 
-    # # Set dimensions and analyze CROPPER for relevant information
+    # Set dimensions and analyze CROPPER for relevant information
     analyzer = DepthAnalyzer(cropper)
     analyzer.depth_start_end = [1.3, 7.3] # z-depths (mm)
     analyzer.descent_start_end = [6, 44] # x-positions (mm)
