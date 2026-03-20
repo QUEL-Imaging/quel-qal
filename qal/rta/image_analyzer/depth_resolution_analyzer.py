@@ -163,7 +163,10 @@ class DepthAnalyzer:
         # Optionally smooth the input data, the calculate AUC
         if smooth:
             curve = self.smooth_data(curve)
-        auc = np.trapz(curve)
+        integrate = getattr(np, "trapezoid", None)
+        if integrate is None:
+            integrate = getattr(np, "trapz")
+        auc = integrate(curve)
 
         return auc
 

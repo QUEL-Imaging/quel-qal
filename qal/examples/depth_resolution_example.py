@@ -1,3 +1,12 @@
+import platform
+import matplotlib
+
+if platform.system() == "Darwin":
+    try:
+        matplotlib.use("TkAgg", force=True)
+    except Exception:
+        pass
+
 import numpy as np
 from qal.data import dr_sample1, dr_sample2, dr_sample3
 from qal import PhantomCropper, DepthAnalyzer, DepthDataPlotter
@@ -77,11 +86,13 @@ def main():
     if rotate_image_90 == True:
             cropped = cropped.T
 
-    plt.imshow(cropped, extent=[0, 50, 0 , 35], cmap='inferno') # change extent to x and y dimensions (mm)
-    plt.xlabel('X-axis (mm)', fontsize=16, fontweight='bold')
-    plt.ylabel('Y-axis (mm)', fontsize=16, fontweight='bold')
-    plt.title('Cropped Fluorescence Image', fontsize=16)
-    plt.show()
+    fig, ax = plt.subplots()
+    ax.imshow(cropped, extent=[0, 50, 0 , 35], cmap='inferno') # change extent to x and y dimensions (mm)
+    ax.set_xlabel('X-axis (mm)', fontsize=16, fontweight='bold')
+    ax.set_ylabel('Y-axis (mm)', fontsize=16, fontweight='bold')
+    ax.set_title('Cropped Fluorescence Image', fontsize=16)
+    plt.show(block=False)
+    plt.pause(0.01)
 
 
     # Set dimensions and analyze CROPPER for relevant information
