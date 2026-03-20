@@ -25,13 +25,17 @@ class PhantomCropper:
         fig, ax = plt.subplots(figsize=[11, 7.5])
         ax.imshow(self.log_img, cmap='gray')
         ax.set_axis_off()
+        fig.canvas.draw_idle()
+        plt.show(block=False)
+        self._focus_figure_window(fig)
+        plt.pause(0.15)
         use_word = ['top', 'bottom', 'left', 'right']
         pts = []
         self.borders = {}
         for i in range(4):
             ax.set_title(f"Select a point on the {use_word[i]} edge of the phantom")
-            plt.draw()
-            pt = plt.ginput(timeout=-1)[0]
+            fig.canvas.draw_idle()
+            pt = fig.ginput(1, timeout=-1)[0]
             pts.append(pt)
             if i < 2:
                 ax.plot([0, x_ext - 1], [pt[1], pt[1]], color='r')
@@ -61,3 +65,32 @@ class PhantomCropper:
         c = uint16_max / np.log(1 + np.max(image))
         log_image = c * (np.log(image + 1.0))
         self.log_img = np.array(log_image, dtype=np.uint16)
+
+    @staticmethod
+    def _focus_figure_window(fig):
+        """
+        Best-effort figure focus so the first click is captured on GUI backends.
+        """
+        manager = getattr(fig.canvas, 'manager', None)
+        window = getattr(manager, 'window', None)
+
+        for obj, method_name in (
+            (manager, 'show'),
+            (window, 'show'),
+            (window, 'raise_'),
+            (window, 'activateWindow'),
+            (window, 'setFocus'),
+            (window, 'focus_force'),
+            (window, 'focus_set'),
+            (window, 'makeKeyAndOrderFront_'),
+            (window, 'orderFrontRegardless'),
+        ):
+            if obj is None:
+                continue
+            method = getattr(obj, method_name, None)
+            if method is None:
+                continue
+            try:
+                method()
+            except Exception:
+                pass

@@ -85,7 +85,9 @@ Full execution of this code will generate the following plots:
 
 | Input  | Description |
 | ------------- | ------------- |
-| Depths  | Chosen depths for which to evaluate intensity spread |
+| rotate_image_90 | (True or False) Parameter to rotate image 90 degrees so that channels run horizontal, default = False |
+| channel_distance_from_top | Percent (in fraction format [0 to 1] ) from the top that indicates the channel position, default = 0.5 |
+| depths  | Chosen depths for which to evaluate intensity spread |
 
 Optionally, to change the dimensions of the phantom, the following code should be changed (also shown above in the example code):
 
@@ -99,7 +101,7 @@ The intensity, spread, and FWHM profiles are then obtained:
 
 ## Intensity profiles:
 
-The intensity through the center of the channel of the phantom is found and smoothed. This is plotted against the x-dimension units (mm) of the phantom.
+The intensity through the channel (indicated by channel_distance_from_top, default = 0.5 for the center row) of the phantom is found and smoothed. This is plotted against the x-dimension units (mm) of the phantom.
 
 The intensity profile is also cropped to the descending portion of the phantom, which is mapped to the varying depth of the phantom. This cropped intensity is normalized and fit to an exponential function and is plotted.
 
@@ -214,12 +216,15 @@ from qal.data import dr_sample3
 from qal import PhantomCropper, DepthAnalyzer, DepthDataPlotter
 from skimage import io
 import matplotlib.pyplot as plt
-
-# Custom image
+# Load example image 3 or custom image
+# im3 = io.imread('***replace-with-path-to-your-image***')
 im3 = dr_sample3()
 
 # Directories to save plots to if desired (change from None)
 save_dir3 = None
+
+# Rotate the phantom image 90 degrees if needed to ensure channels are horizontal
+rotate_image_90 = False
 
 # Crop the image
 cropper = PhantomCropper()
@@ -233,20 +238,22 @@ left = cropper.borders["left"]
 right = cropper.borders["right"]
 
 cropped = img[int(top):int(bottom), int(left):int(right)]
-if (bottom - top) > (right - left):     # Check whether phantom orientation is vertical
-    cropped = cropped.T
-plt.imshow(np.rot90(cropped, 2), extent=[0, 50, 0 , 35], cmap='inferno') # change extent to x and y dimensions (mm)
+if rotate_image_90 == True:
+        cropped = cropped.T
+
+plt.imshow(cropped, extent=[0, 50, 0 , 35], cmap='inferno') # change extent to x and y dimensions (mm)
 plt.xlabel('X-axis (mm)', fontsize=16, fontweight='bold')
 plt.ylabel('Y-axis (mm)', fontsize=16, fontweight='bold')
+plt.title('Cropped Fluorescence Image', fontsize=16)
 plt.show()
 
 
-# Set dimensions and analyze CROPPER for relevant information
+# # Set dimensions and analyze CROPPER for relevant information
 analyzer = DepthAnalyzer(cropper)
 analyzer.depth_start_end = [1.3, 7.3] # z-depths (mm)
 analyzer.descent_start_end = [6, 44] # x-positions (mm)
 analyzer.phantom_dimensions = [35, 50] # y, x dimensions
-analyzer.get_profiles(depths=np.linspace(1.3, 7.3, 10)) # same as depth_start_end, 10 points in between
+analyzer.get_profiles(rotate_image_90, channel_distance_from_top = 0.5, depths=np.linspace(1.3, 7.3, 10)) # channel_distance_from_top = percent (as fraction) from the top where the channel is (0.5 for 50%), depths = same as depth_start_end, 10 points in between
 
 # Plot data in ANALYZER
 depth_data_plotter = DepthDataPlotter(analyzer.outputs)
