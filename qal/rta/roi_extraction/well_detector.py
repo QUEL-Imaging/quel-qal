@@ -11,6 +11,8 @@ from sklearn.cluster import AgglomerativeClustering
 import re
 from joblib import Parallel, delayed
 
+from qal.util import mean_in_circular_roi
+
 class WellDetector:
     def __init__(self, parallel_processing=True):
         self.use_parallel_processing = parallel_processing
@@ -211,6 +213,287 @@ class WellDetector:
             df = df.sort_values(by='mean_intensity', ascending=False) 
         return df
 
+    def select_single_well(self, im, df, selection='brightest'):
+        """Reduce detected wells to the first or brightest circular ROI.
+
+        Parameters
+        ----------
+        im : numpy.ndarray
+            Source image used when selecting by intensity.
+        df : pandas.DataFrame
+            Detection table containing ``x``, ``y``, and ``ROI Diameter``.
+        selection : {'brightest', 'first'}
+            Selection strategy when more than one well was detected.
+        """
+        if df is None or df.empty:
+            return pd.DataFrame()
+        if selection not in ('brightest', 'first'):
+            raise ValueError("selection must be 'brightest' or 'first'")
+
+        required = {'x', 'y', 'ROI Diameter'}
+        missing = required.difference(df.columns)
+        if missing:
+            raise ValueError(f"Detection table is missing columns: {sorted(missing)}")
+
+        wells = df.reset_index(drop=True).copy()
+        if len(wells) == 1 or selection == 'first':
+            return wells.iloc[[0]].copy()
+
+        radii = (
+            wells['ROI Radius']
+            if 'ROI Radius' in wells
+            else wells['ROI Diameter'] / 2
+        )
+        wells['_selection_mean'] = [
+            mean_in_circular_roi(im, (row.x, row.y), radius)
+            for (_, row), radius in zip(wells.iterrows(), radii)
+        ]
+        selected = wells.nlargest(1, '_selection_mean')
+        return selected.drop(columns='_selection_mean').copy()
+
+    def refine_well_at_coordinate(
+        self,
+        im,
+        coordinate,
+        search_radius=None,
+        min_area=None,
+        max_eccentricity=0.85,
+        intensity_fractions=(0.25, 0.15, 0.08, 0.04),
+        seed_neighborhood=3,
+    ):
+        """Refine one approximate click to a local well centroid and diameter.
+
+        Full-image ``detect_wells`` can miss low-contrast wells because its
+        rolling global thresholds keep only the most persistent regions. This
+        method instead thresholds a window around the click relative to the
+        local background, keeps the connected component containing the seed,
+        and returns that region's centroid.
+
+        Parameters
+        ----------
+        im : numpy.ndarray
+            Two-dimensional source image.
+        coordinate : sequence of float
+            Approximate ``(x, y)`` well center in image coordinates.
+        search_radius : float, optional
+            Half-width of the local search window in pixels. Defaults to 10% of
+            the smaller image dimension, with a minimum of 32 pixels.
+        min_area : float, optional
+            Minimum connected-component area in pixels. Defaults to a fraction
+            of the search window.
+        max_eccentricity : float
+            Reject elongated components above this eccentricity.
+        intensity_fractions : sequence of float
+            Candidate thresholds of the form
+            ``background + fraction * (seed - background)``, tried in order.
+        seed_neighborhood : int
+            Radius used to pick the brightest nearby seed when the click is
+            slightly off-center.
+        """
+        if im.ndim != 2:
+            raise ValueError(f"Expected a 2-D image, got shape {im.shape}")
+        if len(coordinate) != 2:
+            raise ValueError("coordinate must be an (x, y) pair")
+
+        height, width = im.shape
+        x, y = map(float, coordinate)
+        if not np.isfinite((x, y)).all():
+            raise ValueError("coordinate must contain finite values")
+        if not (0 <= x < width and 0 <= y < height):
+            raise ValueError(
+                f"coordinate ({x}, {y}) is outside image bounds "
+                f"(width={width}, height={height})"
+            )
+
+        radius = (
+            float(search_radius)
+            if search_radius is not None
+            else max(0.1 * min(height, width), 32.0)
+        )
+        if radius <= 0:
+            raise ValueError("search_radius must be positive")
+
+        x0 = max(0, int(np.floor(x - radius)))
+        x1 = min(width, int(np.ceil(x + radius)) + 1)
+        y0 = max(0, int(np.floor(y - radius)))
+        y1 = min(height, int(np.ceil(y + radius)) + 1)
+        crop = np.asarray(im[y0:y1, x0:x1], dtype=float)
+        if crop.size == 0:
+            raise RuntimeError("Local search window is empty")
+
+        seed_x = int(np.clip(round(x) - x0, 0, crop.shape[1] - 1))
+        seed_y = int(np.clip(round(y) - y0, 0, crop.shape[0] - 1))
+        neighborhood = max(int(seed_neighborhood), 0)
+        y_lo = max(0, seed_y - neighborhood)
+        y_hi = min(crop.shape[0], seed_y + neighborhood + 1)
+        x_lo = max(0, seed_x - neighborhood)
+        x_hi = min(crop.shape[1], seed_x + neighborhood + 1)
+        local = crop[y_lo:y_hi, x_lo:x_hi]
+        local_offset = np.unravel_index(np.argmax(local), local.shape)
+        seed_y = y_lo + int(local_offset[0])
+        seed_x = x_lo + int(local_offset[1])
+        seed = float(crop[seed_y, seed_x])
+
+        border = np.concatenate(
+            (crop[0, :], crop[-1, :], crop[:, 0], crop[:, -1])
+        )
+        background = float(np.median(border))
+        dynamic_range = seed - background
+        if not np.isfinite(dynamic_range) or dynamic_range <= 0:
+            raise RuntimeError(
+                f"No brighter well signal than the local background near "
+                f"({x:.1f}, {y:.1f})"
+            )
+
+        area_floor = (
+            float(min_area)
+            if min_area is not None
+            else max(0.02 * crop.size, 25.0)
+        )
+        area_ceiling = 0.85 * crop.size
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+        last_error = None
+
+        for fraction in intensity_fractions:
+            threshold = background + float(fraction) * dynamic_range
+            binary = (crop >= threshold).astype(np.uint8)
+            binary = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel)
+            labeled_image, num_features = label(binary)
+            if num_features == 0:
+                last_error = "No connected region survived local thresholding"
+                continue
+
+            component_id = int(labeled_image[seed_y, seed_x])
+            if component_id == 0:
+                ys, xs = np.where(labeled_image > 0)
+                distances = (xs - seed_x) ** 2 + (ys - seed_y) ** 2
+                nearest = int(np.argmin(distances))
+                if distances[nearest] > (0.35 * radius) ** 2:
+                    last_error = (
+                        "No connected region is close enough to the click"
+                    )
+                    continue
+                component_id = int(labeled_image[ys[nearest], xs[nearest]])
+
+            component = labeled_image == component_id
+            props = regionprops(component.astype(np.int32))
+            if not props:
+                last_error = "Connected region could not be measured"
+                continue
+            prop = props[0]
+            if prop.area < area_floor or prop.area > area_ceiling:
+                last_error = (
+                    f"Connected region area {prop.area:.0f} is outside "
+                    f"[{area_floor:.0f}, {area_ceiling:.0f}]"
+                )
+                continue
+            if prop.eccentricity > max_eccentricity:
+                last_error = (
+                    f"Connected region eccentricity {prop.eccentricity:.3f} "
+                    f"exceeds {max_eccentricity}"
+                )
+                continue
+
+            cy, cx = prop.centroid
+            bbox_height = prop.bbox[2] - prop.bbox[0]
+            bbox_width = prop.bbox[3] - prop.bbox[1]
+            estimated_radius = min(bbox_height, bbox_width) / 2.0
+            if estimated_radius <= 0:
+                last_error = "Connected region has a non-positive radius"
+                continue
+
+            well_x = float(cx + x0)
+            well_y = float(cy + y0)
+            if np.hypot(well_x - x, well_y - y) > radius:
+                last_error = (
+                    "Refined centroid left the local search window"
+                )
+                continue
+
+            mean_intensity = mean_in_circular_roi(
+                im,
+                (well_x, well_y),
+                estimated_radius,
+            )
+            return pd.Series(
+                {
+                    "x": well_x,
+                    "y": well_y,
+                    "area": float(prop.area),
+                    "ROI Diameter": float(2.0 * estimated_radius),
+                    "ROI Radius": float(estimated_radius),
+                    "mean_intensity": float(mean_intensity),
+                }
+            )
+
+        raise RuntimeError(
+            last_error
+            or f"Could not refine a well near ({x:.1f}, {y:.1f})"
+        )
+
+    def get_pseudo_dark_roi_for_testing(
+        self,
+        im,
+        well_df,
+        region_of_well_to_analyze=0.5,
+    ):
+        """Place a background ROI for explicit testing only.
+
+        This helper must not be used to produce a production analysis. A
+        measured dark frame is the appropriate baseline for RET analysis.
+        """
+        selected = self.select_single_well(im, well_df, selection='first')
+        if selected.empty:
+            raise ValueError("A detected signal well is required")
+
+        well = selected.iloc[0]
+        analyzed_radius = (
+            float(well['ROI Diameter']) * region_of_well_to_analyze / 2
+        )
+        height, width = im.shape[:2]
+        margin = max(int(np.ceil(2.5 * analyzed_radius)), 1)
+        candidates = (
+            (margin, margin),
+            (width - margin - 1, margin),
+            (width - margin - 1, height - margin - 1),
+            (margin, height - margin - 1),
+            (margin, height / 2),
+            (width - margin - 1, height / 2),
+            (width / 2, margin),
+            (width / 2, height - margin - 1),
+        )
+
+        signal_x, signal_y = float(well['x']), float(well['y'])
+        valid = []
+        for x, y in candidates:
+            inside = (
+                analyzed_radius <= x < width - analyzed_radius
+                and analyzed_radius <= y < height - analyzed_radius
+            )
+            separated = (
+                np.hypot(x - signal_x, y - signal_y)
+                >= 4 * analyzed_radius
+            )
+            if inside and separated:
+                mean = mean_in_circular_roi(
+                    im,
+                    (x, y),
+                    analyzed_radius,
+                )
+                valid.append((mean, float(x), float(y)))
+
+        if not valid:
+            raise ValueError(
+                "No valid pseudo-dark ROI exists outside the signal well"
+            )
+
+        _, x, y = min(valid)
+        pseudo_dark = selected.copy()
+        pseudo_dark.loc[:, 'x'] = x
+        pseudo_dark.loc[:, 'y'] = y
+        pseudo_dark.loc[:, 'well'] = 'Pseudo Dark (Testing Only)'
+        return pseudo_dark
+
     def set_consistent_roi_region(self, df, df_source=None):
         # Set the radius for all rows to the largest radius from the input df
         if df_source is None:
@@ -409,21 +692,36 @@ class WellDetector:
             return None
 
     def compute_transformed_points(self, source_points, target_points):
-        # Function to compute the transformation matrix
+        """Map the canonical 3x3 grid through a fitted similarity transform."""
+
         def compute_transformation_matrix(source_points, target_points):
-            A = np.array([
-                [source_points[0][0], -source_points[0][1], 1, 0],
-                [source_points[0][1], source_points[0][0], 0, 1],
-                [source_points[1][0], -source_points[1][1], 1, 0],
-                [source_points[1][1], source_points[1][0], 0, 1],
-                [source_points[2][0], -source_points[2][1], 1, 0],
-                [source_points[2][1], source_points[2][0], 0, 1]
-            ])
-            B = np.array(target_points).flatten()
+            source = np.asarray(source_points, dtype=float)
+            target = np.asarray(target_points, dtype=float)
+            if source.shape != target.shape or source.ndim != 2 or source.shape[1] != 2:
+                raise ValueError(
+                    "source_points and target_points must be matching (n, 2) arrays"
+                )
+            if len(source) < 2:
+                raise ValueError("At least two corresponding points are required")
+
+            rows = []
+            values = []
+            for (source_x, source_y), (target_x, target_y) in zip(source, target):
+                rows.extend(
+                    (
+                        [source_x, -source_y, 1, 0],
+                        [source_y, source_x, 0, 1],
+                    )
+                )
+                values.extend((target_x, target_y))
+            A = np.asarray(rows, dtype=float)
+            B = np.asarray(values, dtype=float)
             X, _, _, _ = np.linalg.lstsq(A, B, rcond=None)
             s_cos_theta, s_sin_theta, tx, ty = X
             theta = np.arctan2(s_sin_theta, s_cos_theta)
             s = np.sqrt(s_cos_theta**2 + s_sin_theta**2)
+            if not np.isfinite(s) or s <= 0:
+                raise ValueError("Anchor points do not define a valid grid scale")
             T = np.array([
                 [s * np.cos(theta), -s * np.sin(theta), tx],
                 [s * np.sin(theta), s * np.cos(theta), ty],
@@ -480,14 +778,27 @@ class WellDetector:
 
     def estimate_remaining_wells_3x3(self, im, df, well_ids=None, show_detected_wells=False):
         try:
-            # Define the source points
-            source_points = [(0, 0), (15, 0), (30, 0)]
-
-            # Extract the target points from the first three rows of df
-            target_points = df.iloc[:3][['x', 'y']].apply(tuple, axis=1).tolist()
+            if df is None or len(df) < 3:
+                raise ValueError(
+                    "At least three row-major anchor wells are required"
+                )
+            canonical_grid = [
+                (0, 0), (15, 0), (30, 0),
+                (0, 15), (15, 15), (30, 15),
+                (0, 30), (15, 30), (30, 30),
+            ]
+            anchor_count = min(len(df), len(canonical_grid))
+            source_points = canonical_grid[:anchor_count]
+            target_points = (
+                df.iloc[:anchor_count][['x', 'y']]
+                .apply(tuple, axis=1)
+                .tolist()
+            )
             
-            # Compute the transformed points
-            transformed_grid = self.compute_transformed_points(source_points, target_points[:3])
+            transformed_grid = self.compute_transformed_points(
+                source_points,
+                target_points,
+            )
             
             # Create a new DataFrame from the transformed points
             transformed_df = pd.DataFrame(transformed_grid, columns=['x', 'y'])
