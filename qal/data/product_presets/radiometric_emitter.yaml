@@ -1,0 +1,51 @@
+schema_version: 1
+family: radiometric_emitter
+product_code: RET
+qal_workflow: WellDetector -> RetAnalyzer
+source: https://shop.quelimaging.com/product/radiometric-target/
+adjustable_radiance_range_uW_cm2_sr: [0.05, 300]
+calibration_file_per_unit: true
+well_ids:
+  - RET
+
+presets:
+  q700:
+    display_name: Radiometric Emitter Target for SGM-101 / Q700 channel
+    old_sku: RRL-720-PW01-QUEL01
+    current_sku: S_RET_PWR_720_rA
+    serial_template: 720-PW01-RRLxxx
+    alternate_skus:
+      - S_RET_PLG_720_rA
+    fluorophore_code: 70Q
+    fluorophore_label: Q700-01
+    form_code: PW01
+    status: current
+    peak_wavelength_nm: 720
+
+  q800:
+    display_name: Radiometric Emitter Target for Q800 / OTL38 / IRDye800 channel
+    old_sku: RRL-800-PW01-QUEL01
+    current_sku: S_RET_PWR_800_rA
+    serial_template: 800-PW01-RRLxxx
+    alternate_skus:
+      - RRL-800-WR01-QUEL01
+      - S_RET_PLG_800_rA
+    fluorophore_code: 80Q
+    fluorophore_label: Q800-01
+    form_code: PW01
+    status: current
+    peak_wavelength_nm: 805
+
+  icg:
+    display_name: Radiometric Emitter Target for ICG channel
+    old_sku: RRL-825-PW01-QUEL01
+    current_sku: S_RET_PWR_825_rA
+    serial_template: 825-PW01-RRLxxx
+    alternate_skus:
+      - RRL-825-WR01-QUEL01
+      - S_RET_PLG_825_rA
+    fluorophore_code: ICG
+    fluorophore_label: ICG-eq
+    form_code: PW01
+    status: current
+    peak_wavelength_nm: 825

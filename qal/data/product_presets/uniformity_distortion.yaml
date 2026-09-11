@@ -1,0 +1,23 @@
+schema_version: 1
+family: reference_uniformity_distortion
+product_code: RUD
+qal_workflow: RudDetector -> UniformityAnalyzer / DistortionAnalyzer
+
+presets:
+  s800:
+    display_name: S800 Reference Uniformity & Distortion (RUD) target
+    old_sku: RUD_STD_S800-01_TSR-01_r0
+    current_sku: RUD_STD_S800-01_TS-01_rA
+    serial_template: RUD-S-S8-T1-0-Pxx
+    fluorophore_code: S800
+    fluorophore_label: S800
+    size: standard
+    form_code: TSR-01
+    status: current
+    excitation_max_nm: 790
+    emission_range_nm: [700, 900]
+    emission_center_nm: 820
+    array_size_mm: [100, 100]
+    dot_diameter_mm: 1
+    dot_spacing_mm: 2
+    source: https://shop.quelimaging.com/product/s800-reference-uniformity-distortion-rud-target/
