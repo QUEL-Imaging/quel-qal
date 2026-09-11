@@ -204,6 +204,53 @@ def test_similarity_grid_fit_uses_more_than_three_anchors():
     assert np.allclose(result, expected)
 
 
+def test_single_point_live_preview_can_be_dragged():
+    session = WellSelectionSession(
+        np.zeros((80, 80)),
+        expected_count=1,
+        well_ids=["RET"],
+        coordinate_mode="manual",
+        manual_roi_diameter=20,
+        enable_live_grid_preview=True,
+        close_on_confirm=False,
+    )
+    session.figure.canvas.draw()
+    session.points.append((30, 28))
+    session._redraw()
+
+    display_x, display_y = session.image_axis.transData.transform((30, 28))
+    session._on_click(
+        SimpleNamespace(
+            inaxes=session.image_axis,
+            xdata=30,
+            ydata=28,
+            x=display_x,
+            y=display_y,
+            button=1,
+            dblclick=False,
+        )
+    )
+    assert session._drag_index == 0
+    assert session.points == [(30, 28)]
+
+    session._on_motion(
+        SimpleNamespace(inaxes=session.image_axis, xdata=36, ydata=33)
+    )
+    session._on_release(SimpleNamespace(button=1))
+
+    assert session.points[0] == (36, 33)
+    assert session._drag_index is None
+    circles = [
+        artist
+        for artist in session._artists
+        if type(artist).__name__ == "Circle"
+    ]
+    assert len(circles) == 1
+    assert circles[0].center == (36, 33)
+    assert circles[0].radius == 10
+    plt.close(session.figure)
+
+
 def test_live_preview_anchor_can_be_dragged():
     session = WellSelectionSession(
         np.zeros((100, 100)),
@@ -236,6 +283,97 @@ def test_live_preview_anchor_can_be_dragged():
         label_color = session._artists[11 + 3 * index].get_color()
         assert np.allclose(circle_color, crosshair_color)
         assert np.allclose(circle_color, label_color)
+    plt.close(session.figure)
+
+
+def test_notebook_detection_helpers_recognize_widget_backends():
+    from qal.rta.roi_extraction import well_detector_gui as gui
+
+    assert gui._running_in_notebook() is False
+    assert gui._is_notebook_widget_backend("module://ipympl.backend_nbagg")
+    assert gui._is_notebook_widget_backend("nbAgg")
+    assert gui._is_notebook_widget_backend("widget")
+    assert not gui._is_notebook_widget_backend(
+        "module://matplotlib_inline.backend_inline"
+    )
+    assert not gui._is_notebook_widget_backend("Agg")
+    assert gui._prepare_gui_backend() is False
+
+
+def test_prepare_gui_backend_switches_notebook_inline(monkeypatch):
+    from qal.rta.roi_extraction import well_detector_gui as gui
+
+    monkeypatch.setattr(gui, "_running_in_notebook", lambda: True)
+    monkeypatch.setattr(gui, "_running_in_vscode_jupyter", lambda: False)
+    monkeypatch.setattr(gui, "_is_desktop_gui_backend", lambda backend=None: False)
+    state = {"widget": False}
+
+    def is_widget(backend=None):
+        return state["widget"]
+
+    def magic(name):
+        if name in {"widget", "ipympl"}:
+            state["widget"] = True
+            return True
+        return False
+
+    monkeypatch.setattr(gui, "_is_notebook_widget_backend", is_widget)
+    monkeypatch.setattr(gui, "_run_matplotlib_magic", magic)
+    assert gui._prepare_gui_backend() is True
+
+
+def test_prepare_gui_backend_errors_when_notebook_cannot_go_interactive(
+    monkeypatch,
+):
+    from qal.rta.roi_extraction import well_detector_gui as gui
+
+    monkeypatch.setattr(gui, "_running_in_notebook", lambda: True)
+    monkeypatch.setattr(gui, "_running_in_vscode_jupyter", lambda: False)
+    monkeypatch.setattr(gui, "_ipympl_frontend_available", lambda: True)
+    monkeypatch.setattr(gui, "_is_notebook_widget_backend", lambda backend=None: False)
+    monkeypatch.setattr(gui, "_is_desktop_gui_backend", lambda backend=None: False)
+    monkeypatch.setattr(gui, "_run_matplotlib_magic", lambda name: False)
+    monkeypatch.setattr(gui, "_switch_backend", lambda name: False)
+    monkeypatch.setattr(gui, "_activate_desktop_gui_backend", lambda: False)
+    with pytest.raises(RuntimeError, match="interactive Matplotlib"):
+        gui._prepare_gui_backend()
+
+
+def test_prepare_gui_backend_skips_ipympl_in_vscode(monkeypatch):
+    from qal.rta.roi_extraction import well_detector_gui as gui
+
+    monkeypatch.setattr(gui, "_running_in_notebook", lambda: True)
+    monkeypatch.setattr(gui, "_running_in_vscode_jupyter", lambda: True)
+    monkeypatch.setattr(gui, "_is_notebook_widget_backend", lambda backend=None: True)
+    monkeypatch.setattr(gui, "_is_desktop_gui_backend", lambda backend=None: False)
+    activated = []
+    monkeypatch.setattr(
+        gui,
+        "_activate_desktop_gui_backend",
+        lambda: activated.append(True) or True,
+    )
+    assert gui._prepare_gui_backend() is False
+    assert activated
+
+
+def test_notebook_controls_confirm_resolves_manual_points():
+    session = WellSelectionSession(
+        np.zeros((40, 40)),
+        expected_count=3,
+        well_ids=["A", "B", "C"],
+        coordinate_mode="manual",
+        manual_roi_diameter=10,
+        notebook_controls=True,
+        resolve_in_background=False,
+        close_on_confirm=False,
+    )
+    assert session._confirm_button is not None
+    assert session._remove_button is not None
+    session.points.extend([(5, 5), (20, 5), (35, 5)])
+    result = session.confirm()
+    assert result is not None
+    assert list(result["well"]) == ["A", "B", "C"]
+    assert session.confirmed
     plt.close(session.figure)
 
 
