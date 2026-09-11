@@ -12,6 +12,10 @@ import cv2
 import os
 
 class RrtROI:
+    # Trial order for comparing USAF-target feature matchers. BRISK/AKAZE are
+    # the closest classical pair, but they are not in opencv-python 5.x.
+    FEATURE_DETECTOR_TRIAL_ORDER = ("brisk", "akaze", "orb", "sift", "affine_sift")
+
     def __init__(self):
         self.fig = None
         self.ax = None
@@ -21,6 +25,54 @@ class RrtROI:
         self.group_coordinates = None
 
         self.environment = self.check_environment()
+
+    @staticmethod
+    def create_feature_detector(name):
+        """Create a Feature2D detector and the BFMatcher norm it expects.
+
+        Parameters:
+        - name (str): One of ``brisk``, ``akaze``, ``orb``, ``sift``,
+          ``affine_sift``.
+
+        Returns:
+        - tuple: ``(detector, norm)`` where ``norm`` is ``cv2.NORM_HAMMING``
+          for binary descriptors and ``cv2.NORM_L2`` for float descriptors.
+
+        Raises:
+        - ValueError: If ``name`` is not a supported detector.
+        - AttributeError: If the detector is not in this OpenCV build.
+        """
+        key = name.lower().replace("-", "_")
+
+        def factory(attr_name):
+            if hasattr(cv2, attr_name):
+                return getattr(cv2, attr_name)
+            xfeat = getattr(cv2, "xfeatures2d", None)
+            if xfeat is not None and hasattr(xfeat, attr_name):
+                return getattr(xfeat, attr_name)
+            raise AttributeError(attr_name)
+
+        creators = {
+            "brisk": lambda: (factory("BRISK_create")(), cv2.NORM_HAMMING),
+            "akaze": lambda: (factory("AKAZE_create")(), cv2.NORM_HAMMING),
+            "orb": lambda: (factory("ORB_create")(nfeatures=4000), cv2.NORM_HAMMING),
+            "sift": lambda: (factory("SIFT_create")(), cv2.NORM_L2),
+            "affine_sift": lambda: (
+                factory("AffineFeature_create")(factory("SIFT_create")()),
+                cv2.NORM_L2,
+            ),
+        }
+        if key not in creators:
+            supported = ", ".join(RrtROI.FEATURE_DETECTOR_TRIAL_ORDER)
+            raise ValueError(f"Unknown feature detector {name!r}. Supported: {supported}")
+        try:
+            return creators[key]()
+        except AttributeError as exc:
+            raise AttributeError(
+                f"{key} is not available in this OpenCV build "
+                f"(cv2 {cv2.__version__}). On OpenCV 5, BRISK and AKAZE live in "
+                "opencv-contrib-python as cv2.xfeatures2d."
+            ) from exc
 
     def check_environment(self):
         try:
@@ -112,14 +164,23 @@ class RrtROI:
         self.image = im
         self.fig, self.ax = plt.subplots()
         self.fig.canvas.manager.set_window_title('Keypoint Selection')
-        self.fig.suptitle("Keypoint Selection", fontsize=16)
-        self.fig.text(0.5, 0.91, "(Select points, then close window to continue)", 
-                    ha='center', fontsize=10, color='gray')
-        self.fig.subplots_adjust(top=0.85)  # Add padding between title/message and plot
+        self.fig.suptitle("Keypoint Selection", fontsize=16, y=0.98)
+        self.fig.text(
+            0.5, 0.93,
+            "Click to place two points, then close the window to continue:\n"
+            "1: top-left of Group 0 Element 2 top bar\n"
+            "2: bottom-right of Group 0 Element 1 bottom bar",
+            ha='center', va='top', fontsize=9, color='gray',
+        )
+        self.fig.subplots_adjust(top=0.78)  # Leave room for title and instructions
         self.ax.imshow(self.image, cmap='gray')
         plt.ion()
         plt.show()
-        print("Please make the following selections. \n1: Upper left corner of Group 0 Element 2 \n2: Bottom right corner of Group 0 Element 1")
+        print(
+            "Please make the following selections.\n"
+            "1: Top-left corner of the top horizontal bar of Group 0 Element 2\n"
+            "2: Bottom-right corner of the bottom horizontal bar of Group 0 Element 1"
+        )
         self.points = plt.ginput(2)
         self.roi_corners = self.detect_roi_corners(self.points, self.image)
         self.visualize_corners(self.roi_corners)
@@ -224,7 +285,16 @@ class RrtROI:
             im_array = im_array.astype(np.uint16)
         return im_array
 
-    def get_resolution_target_cropped(self, im_src, show_kp=False, min_good_matches=10, min_kp_dist_threshold=0.45, save_cropped_im=None):
+    def get_resolution_target_cropped(
+        self,
+        im_src,
+        show_kp=False,
+        min_good_matches=10,
+        min_kp_dist_threshold=0.45,
+        save_cropped_im=None,
+        detector="brisk",
+        return_debug=False,
+    ):
         """
         Detects and extracts a resolution target (USAF 1951) from the input image using template matching, 
         keypoints detection, and homography transformation. Optionally saves the cropped image.
@@ -247,14 +317,38 @@ class RrtROI:
             If provided, the path (with or without an extension) to save the cropped resolution target image.
             Defaults to saving as a TIFF file if no extension is specified.
 
+        - detector (str, optional):
+            Feature detector/descriptor used for matching. One of ``brisk``,
+            ``akaze``, ``orb``, ``sift``, ``affine_sift``. Default is ``brisk``.
+
+        - return_debug (bool, optional):
+            If True, return a dict of match statistics and visualization
+            images instead of only the cropped ROI.
+
         Returns:
         - roi (numpy.ndarray or None): 
             The cropped region of interest (ROI) containing the resolution target.
             Returns None if the resolution target is not detected due to insufficient matches.
+            If ``return_debug`` is True, returns a dict that includes ``roi``.
         """
+        detector_name = detector.lower().replace("-", "_")
+        debug = {
+            "detector": detector_name,
+            "available": False,
+            "error": None,
+            "n_keypoints_src": 0,
+            "n_keypoints_template": 0,
+            "n_matches": 0,
+            "n_good_matches": 0,
+            "n_inliers": 0,
+            "roi": None,
+            "img_keypoints": None,
+            "template_keypoints": None,
+            "img_matches": None,
+        }
+
         # template_path = "USAF1951_template/res_source.png"
         template_path = '../rta/roi_extraction/USAF1951_template/res_source.png'
-        t_pad, b_pad, l_pad, r_pad = 20, 30, 25, 30
 
         # Load the template image
         if os.path.exists(template_path):
@@ -269,65 +363,85 @@ class RrtROI:
         img_gray = cv2.cvtColor(numpy_image, cv2.COLOR_BGR2GRAY) if len(numpy_image.shape) >= 3 else numpy_image
         template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY) if len(template.shape) >= 3 else template
 
-        # Detect keypoints and descriptors in both the template and the image
-        brisk = cv2.BRISK_create()
-        kp1, des1 = brisk.detectAndCompute(img_gray, None)
-        kp2, des2 = brisk.detectAndCompute(template_gray, None)
+        try:
+            feature_detector, norm = self.create_feature_detector(detector_name)
+        except (AttributeError, ValueError) as exc:
+            debug["error"] = str(exc)
+            if return_debug:
+                return debug
+            raise
 
-        # Match descriptors
-        bf = cv2.BFMatcher()
-        matches = bf.match(des1, des2)
-        matches = sorted(matches, key=lambda x: x.distance)
+        debug["available"] = True
+
+        empty_kp = []
+        kp1, des1 = feature_detector.detectAndCompute(img_gray, None)
+        kp2, des2 = feature_detector.detectAndCompute(template_gray, None)
+        kp1 = empty_kp if kp1 is None else kp1
+        kp2 = empty_kp if kp2 is None else kp2
+        debug["n_keypoints_src"] = len(kp1)
+        debug["n_keypoints_template"] = len(kp2)
+
+        matches = []
+        if des1 is not None and des2 is not None and len(des1) and len(des2):
+            bf = cv2.BFMatcher(norm)
+            matches = bf.match(des1, des2)
+            matches = sorted(matches, key=lambda x: x.distance)
+        debug["n_matches"] = len(matches)
 
         # Apply ratio test to filter good matches
         good_matches = []
-        for m in matches:
-            if m.distance < min_kp_dist_threshold * matches[-1].distance:
-                good_matches.append(m)
+        if matches:
+            worst_distance = matches[-1].distance
+            for m in matches:
+                if m.distance < min_kp_dist_threshold * worst_distance:
+                    good_matches.append(m)
+        debug["n_good_matches"] = len(good_matches)
 
-        # Confidence level check
-        if len(good_matches) < min_good_matches:
-            # print("Resolution target not detected. Insufficient good matches.")
-            return None
+        img_keypoints = cv2.drawKeypoints(img_gray, kp1, None, color=(255, 0, 0))
+        template_keypoints = cv2.drawKeypoints(template_gray, kp2, None, color=(255, 0, 0))
+        img_matches = cv2.drawMatches(
+            img_gray,
+            kp1,
+            template_gray,
+            kp2,
+            good_matches[:10],
+            None,
+            flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS,
+        )
+        debug["img_keypoints"] = img_keypoints
+        debug["template_keypoints"] = template_keypoints
+        debug["img_matches"] = img_matches
 
-        # Extract matching points
-        src_pts = np.float32([kp1[m.queryIdx].pt for m in good_matches]).reshape(-1, 1, 2)
-        dst_pts = np.float32([kp2[m.trainIdx].pt for m in good_matches]).reshape(-1, 1, 2)
+        roi = None
+        if len(good_matches) >= min_good_matches:
+            src_pts = np.float32([kp1[m.queryIdx].pt for m in good_matches]).reshape(-1, 1, 2)
+            dst_pts = np.float32([kp2[m.trainIdx].pt for m in good_matches]).reshape(-1, 1, 2)
 
-        # Compute homography matrix
-        M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+            M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+            debug["n_inliers"] = 0 if mask is None else int(mask.sum())
 
-        # Convert OpenCV Homography matrix to scikit-image format
-        tform = sk_transform.ProjectiveTransform(M)
+            if M is not None:
+                tform = sk_transform.ProjectiveTransform(M)
+                im_src_warped = sk_transform.warp(
+                    im_src,
+                    tform.inverse,
+                    output_shape=(im_src.shape[0], im_src.shape[1]),
+                    preserve_range=True,
+                )
+                im_src_warped = im_src_warped.astype(im_src.dtype)
+                roi = self.crop_using_keypoints(im_src_warped, dst_pts, padding_percentage=0.2)
 
-        # Warp the source image using scikit-image
-        im_src_warped = sk_transform.warp(im_src, tform.inverse, output_shape=(im_src.shape[0], im_src.shape[1]), preserve_range=True)
-        im_src_warped = im_src_warped.astype(im_src.dtype)
+        debug["roi"] = roi
 
-        # Crop the ROI using keypoints
-        roi = self.crop_using_keypoints(im_src_warped, dst_pts, padding_percentage=0.2)
-
-        # Save the cropped image if save_cropped_im is provided
-        if save_cropped_im is not None:
-            # Extract the file extension
+        if save_cropped_im is not None and roi is not None:
             base, ext = os.path.splitext(save_cropped_im)
-            
-            # Default to '.tiff' if no valid extension is provided
             if ext == "":
                 ext = ".tiff"
-
-            # Define the save path
             save_path = base + ext
-
-            # Save the image
             io.imsave(save_path, roi)
             print(f"Saved cropped image at: {save_path}")
-        
-        if show_kp:
-            # Draw keypoints and matches for visualization
-            img_keypoints = cv2.drawKeypoints(img_gray, kp1, None, color=(255, 0, 0))
-            template_keypoints = cv2.drawKeypoints(template_gray, kp2, None, color=(255, 0, 0))
-            img_matches = cv2.drawMatches(img_gray, kp1, template_gray, kp2, good_matches[:10], None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+
+        if show_kp and img_matches is not None:
             plt.figure(figsize=(12, 6))
             plt.subplot(1, 3, 1)
             plt.title("Image Keypoints")
@@ -340,6 +454,8 @@ class RrtROI:
             plt.imshow(img_matches)
             plt.show()
 
+        if return_debug:
+            return debug
         return roi
 
     def crop_using_keypoints(self, im, dst_pts, padding_percentage=0.2):
