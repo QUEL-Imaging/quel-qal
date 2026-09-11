@@ -11,7 +11,7 @@ from sklearn.cluster import AgglomerativeClustering
 import re
 from joblib import Parallel, delayed
 
-from qal.util import mean_in_circular_roi
+from qal.util import mean_in_circular_roi, to_log_scale
 
 class WellDetector:
     def __init__(self, parallel_processing=True):
@@ -195,7 +195,14 @@ class WellDetector:
     def get_well_intensities(self, im, df, sort_by_intensity=True):
         # Compute mean_intensity for each circle in well list
         def compute_intensity(row):
-            intensity = self.get_well_mean_intensity(im, (row['x'], row['y']), row['ROI Diameter'])
+            radius = (
+                float(row["ROI Radius"])
+                if "ROI Radius" in row.index and np.isfinite(row["ROI Radius"])
+                else float(row["ROI Diameter"]) / 2
+            )
+            intensity = self.get_well_mean_intensity(
+                im, (row["x"], row["y"]), radius
+            )
             if np.isnan(intensity):
                 intensity = 0  # or any default value you want to assign when intensity is NaN
             return intensity
@@ -511,7 +518,12 @@ class WellDetector:
 
         if set_consistent_roi_region:
             avg_centers = self.set_consistent_roi_region(avg_centers)
-        avg_centers = self.get_well_intensities(im, avg_centers)
+        avg_centers = self.get_well_intensities(
+            im, avg_centers, sort_by_intensity=False
+        )
+        avg_centers = avg_centers.sort_values(
+            by=["y", "x"], kind="mergesort"
+        )
         
         # If labels are provided, assign them; otherwise, assign numeric labels
         if wells is not None:
@@ -789,8 +801,12 @@ class WellDetector:
             ]
             anchor_count = min(len(df), len(canonical_grid))
             source_points = canonical_grid[:anchor_count]
+            # Pair the canonical row-major grid with spatially ordered anchors.
+            # detect_wells returns intensity order, which can swap nearby wells
+            # and shrink the fitted grid if used as-is.
             target_points = (
-                df.iloc[:anchor_count][['x', 'y']]
+                df.sort_values(by=["y", "x"], kind="mergesort")
+                .iloc[:anchor_count][["x", "y"]]
                 .apply(tuple, axis=1)
                 .tolist()
             )
@@ -823,12 +839,22 @@ class WellDetector:
         """
         try:
             from IPython import get_ipython
-            get_ipython()
-            if 'IPKernelApp' in get_ipython().config:
-                get_ipython().run_line_magic('matplotlib', 'ipympl')
+            import os
+
+            ipython = get_ipython()
+            if ipython is None:
+                return "Standard Python"
+            # VS Code/Cursor cannot load ipympl's jupyter-matplotlib widget.
+            if (
+                os.environ.get("VSCODE_PID")
+                or os.environ.get("VSCODE_CWD")
+                or os.environ.get("CURSOR_TRACE_ID")
+            ):
                 return "Jupyter Notebook"
-            else:
-                get_ipython().run_line_magic('matplotlib', 'ipympl')
-                return "JupyterLab"
-        except AttributeError:
+            if "IPKernelApp" in ipython.config:
+                ipython.run_line_magic("matplotlib", "ipympl")
+                return "Jupyter Notebook"
+            ipython.run_line_magic("matplotlib", "ipympl")
+            return "JupyterLab"
+        except Exception:
             return "Standard Python"
