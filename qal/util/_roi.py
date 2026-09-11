@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Literal, Sequence
 
 import numpy as np
@@ -40,6 +41,23 @@ def circular_mask(
     return (xx - x) ** 2 + (yy - y) ** 2 <= float(radius) ** 2
 
 
+def _finite_roi_values(
+    image: np.ndarray,
+    center: Sequence[float],
+    radius: float,
+    *,
+    center_order: CenterOrder = "xy",
+) -> np.ndarray:
+    mask = circular_mask(image.shape, center, radius, center_order=center_order)
+    # Cast after masking so uint16 samples such as 200 stay 200.0.
+    # Do not scale by the container's integer limit.
+    values = np.asarray(image, dtype=float)[mask]
+    values = values[np.isfinite(values)]
+    if values.size == 0:
+        raise ValueError("Circular ROI contains no finite pixels")
+    return values
+
+
 def mean_in_circular_roi(
     image: np.ndarray,
     center: Sequence[float],
@@ -48,11 +66,9 @@ def mean_in_circular_roi(
     center_order: CenterOrder = "xy",
 ) -> float:
     """Return the finite-pixel mean inside a circular ROI."""
-    mask = circular_mask(image.shape, center, radius, center_order=center_order)
-    values = np.asarray(image, dtype=float)[mask]
-    if values.size == 0 or not np.isfinite(values).any():
-        raise ValueError("Circular ROI contains no finite pixels")
-    return float(np.nanmean(values))
+    return float(np.mean(_finite_roi_values(
+        image, center, radius, center_order=center_order
+    )))
 
 
 def std_in_circular_roi(
@@ -63,8 +79,43 @@ def std_in_circular_roi(
     center_order: CenterOrder = "xy",
 ) -> float:
     """Return the finite-pixel population standard deviation in a circular ROI."""
-    mask = circular_mask(image.shape, center, radius, center_order=center_order)
-    values = np.asarray(image, dtype=float)[mask]
-    if values.size == 0 or not np.isfinite(values).any():
-        raise ValueError("Circular ROI contains no finite pixels")
-    return float(np.nanstd(values))
+    return float(np.std(_finite_roi_values(
+        image, center, radius, center_order=center_order
+    )))
+
+
+@dataclass(frozen=True)
+class CircularRoiStats:
+    """Stored-sample statistics for one circular ROI.
+
+    ``std_sample`` is the sample standard deviation (``n-1``). ``std`` is the
+    population standard deviation used by existing QAL CNR calculations.
+    """
+
+    mean: float
+    std: float
+    std_sample: float
+    min_value: float
+    max_value: float
+    count: int
+
+
+def raw_stats_in_circular_roi(
+    image: np.ndarray,
+    center: Sequence[float],
+    radius: float,
+    *,
+    center_order: CenterOrder = "xy",
+) -> CircularRoiStats:
+    """Return stored-sample statistics for a circular ROI."""
+    values = _finite_roi_values(
+        image, center, radius, center_order=center_order
+    )
+    return CircularRoiStats(
+        mean=float(np.mean(values)),
+        std=float(np.std(values)),
+        std_sample=float(np.std(values, ddof=1)) if values.size > 1 else 0.0,
+        min_value=float(np.min(values)),
+        max_value=float(np.max(values)),
+        count=int(values.size),
+    )
