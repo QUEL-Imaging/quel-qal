@@ -30,6 +30,9 @@ from .rta.roi_extraction.well_detector_gui import (
     select_wells_from_coordinates as select_wells_from_coordinates,
     select_wells_gui as select_wells_gui,
 )
+from .rta.roi_extraction.concentration_grid import (
+    select_concentration_grid as select_concentration_grid,
+)
 from .vpa.quel_lung_phantom import LungPhantom
 
 # __all__ reflects classes at qal level
@@ -58,5 +61,6 @@ __all__ = [
     "WellSelectionSession",
     "select_wells_from_coordinates",
     "select_wells_gui",
+    "select_concentration_grid",
     "LungPhantom"
 ]
