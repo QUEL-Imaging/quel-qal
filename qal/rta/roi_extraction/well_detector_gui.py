@@ -12,10 +12,13 @@ from dataclasses import dataclass, field
 from queue import Empty, Queue
 from threading import Thread
 from typing import Literal, Optional
+import os
+import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.widgets import Button
 
 from qal.util import load_grayscale_image
 
@@ -239,9 +242,180 @@ def select_wells_from_coordinates(
     return selected
 
 
-def _is_notebook_backend() -> bool:
-    backend = plt.get_backend().lower()
-    return "ipympl" in backend or "widget" in backend or "nbagg" in backend
+_NOTEBOOK_BACKEND_TOKENS = ("ipympl", "nbagg", "widget")
+_DESKTOP_BACKEND_TOKENS = ("qt", "tkagg", "gtk", "wx", "macosx", "webagg")
+
+
+def _get_ipython():
+    try:
+        from IPython import get_ipython
+    except ImportError:
+        return None
+    try:
+        return get_ipython()
+    except Exception:
+        return None
+
+
+def _running_in_vscode_jupyter() -> bool:
+    """Return True when the kernel is owned by VS Code or Cursor Jupyter.
+
+    Those frontends ship ipywidgets but do not register the
+    ``jupyter-matplotlib`` module required by ipympl, so widget canvases
+    fail with ``MPLCanvasModel``.
+    """
+    env = os.environ
+    if any(
+        env.get(key)
+        for key in (
+            "VSCODE_PID",
+            "VSCODE_CWD",
+            "VSCODE_NLS_CONFIG",
+            "VSCODE_IPC_HOOK",
+            "CURSOR_TRACE_ID",
+        )
+    ):
+        return True
+    try:
+        return any(
+            "vscode" in argument.lower() or "cursor" in argument.lower()
+            for argument in sys.argv
+        )
+    except Exception:
+        return False
+
+
+def _ipympl_frontend_available() -> bool:
+    """ipympl only works when the notebook UI registered jupyter-matplotlib."""
+    return not _running_in_vscode_jupyter()
+
+
+def _running_in_notebook() -> bool:
+    """Return True inside a Jupyter, JupyterLab, VS Code, or Cursor kernel."""
+    ipython = _get_ipython()
+    if ipython is None:
+        return False
+    shell = type(ipython).__name__
+    if shell == "TerminalInteractiveShell":
+        return False
+    if shell == "ZMQInteractiveShell":
+        return True
+    config = getattr(ipython, "config", None)
+    try:
+        return bool(config) and "IPKernelApp" in config
+    except Exception:
+        return False
+
+
+def _is_notebook_widget_backend(backend: Optional[str] = None) -> bool:
+    name = (backend or plt.get_backend()).lower()
+    return any(token in name for token in _NOTEBOOK_BACKEND_TOKENS)
+
+
+def _is_desktop_gui_backend(backend: Optional[str] = None) -> bool:
+    name = (backend or plt.get_backend())
+    lowered = name.lower()
+    if _is_notebook_widget_backend(lowered):
+        return False
+    try:
+        from matplotlib.rcsetup import interactive_bk
+
+        if name in interactive_bk:
+            return True
+    except Exception:
+        pass
+    return any(token in lowered for token in _DESKTOP_BACKEND_TOKENS)
+
+
+def _run_matplotlib_magic(name: str) -> bool:
+    ipython = _get_ipython()
+    if ipython is None or not hasattr(ipython, "run_line_magic"):
+        return False
+    try:
+        ipython.run_line_magic("matplotlib", name)
+        return True
+    except Exception:
+        return False
+
+
+def _switch_backend(name: str) -> bool:
+    try:
+        plt.switch_backend(name)
+        return True
+    except Exception:
+        return False
+
+
+def _activate_desktop_gui_backend() -> bool:
+    magics = []
+    backends = []
+    if sys.platform == "darwin":
+        magics.append("osx")
+        backends.append("MacOSX")
+    magics.extend(("qt", "qt5", "tk"))
+    backends.extend(("QtAgg", "Qt5Agg", "TkAgg"))
+    for magic in magics:
+        _run_matplotlib_magic(magic)
+        if _is_desktop_gui_backend():
+            return True
+    for name in backends:
+        if _switch_backend(name) and _is_desktop_gui_backend():
+            return True
+    return False
+
+
+def _prepare_gui_backend() -> bool:
+    """Make the Matplotlib backend interactive for well selection.
+
+    Returns True when the GUI should run as a non-blocking Jupyter widget
+    session. Desktop GUI backends keep the blocking window behavior, even if
+    the caller is a notebook kernel.
+
+    VS Code and Cursor cannot load ipympl's ``MPLCanvasModel``, so those
+    kernels are switched to a native window instead.
+    """
+    vscode = _running_in_vscode_jupyter()
+    if vscode and (
+        _is_notebook_widget_backend()
+        or (
+            _running_in_notebook()
+            and not _is_desktop_gui_backend()
+        )
+    ):
+        if _is_desktop_gui_backend() or _activate_desktop_gui_backend():
+            return False
+        raise RuntimeError(
+            "Interactive well selection needs a native Matplotlib window in "
+            "VS Code/Cursor. The notebook widget renderer does not include "
+            "jupyter-matplotlib, so ipympl cannot be used. Install a GUI "
+            "backend such as macOS or Tk, or run the example as a script."
+        )
+
+    if _is_notebook_widget_backend():
+        return True
+    if _is_desktop_gui_backend():
+        return False
+    if not _running_in_notebook():
+        return False
+
+    if _ipympl_frontend_available():
+        for magic in ("widget", "ipympl"):
+            _run_matplotlib_magic(magic)
+            if _is_notebook_widget_backend():
+                return True
+        if _switch_backend("module://ipympl.backend_nbagg") and (
+            _is_notebook_widget_backend()
+        ):
+            return True
+
+    if _activate_desktop_gui_backend():
+        return False
+
+    raise RuntimeError(
+        "Interactive well selection requires an interactive Matplotlib "
+        "backend. In JupyterLab install ipympl, or use a native GUI "
+        "backend such as Qt, Tk, or macOS."
+    )
 
 
 @dataclass(eq=False)
@@ -261,6 +435,8 @@ class WellSelectionSession:
     assume_last_control: bool = False
     remove_tolerance_points: float = 15.0
     close_on_confirm: bool = True
+    notebook_controls: bool = False
+    resolve_in_background: bool = True
     result: Optional[pd.DataFrame] = field(default=None, init=False)
     points: list[Coordinate] = field(default_factory=list, init=False)
     control_indices: set[int] = field(default_factory=set, init=False)
@@ -310,9 +486,31 @@ class WellSelectionSession:
             raise ValueError("A 3x3 preview accepts at most nine anchors")
 
         self.figure = plt.figure(figsize=(11, 7))
-        grid = self.figure.add_gridspec(1, 2, width_ratios=(4, 1.35))
-        self.image_axis = self.figure.add_subplot(grid[0, 0])
-        self.table_axis = self.figure.add_subplot(grid[0, 1])
+        if self.notebook_controls:
+            grid = self.figure.add_gridspec(
+                3,
+                2,
+                height_ratios=(10, 1, 1),
+                width_ratios=(4, 1.35),
+                hspace=0.18,
+                wspace=0.25,
+            )
+            self.image_axis = self.figure.add_subplot(grid[0:3, 0])
+            self.table_axis = self.figure.add_subplot(grid[0, 1])
+            remove_axis = self.figure.add_subplot(grid[1, 1])
+            confirm_axis = self.figure.add_subplot(grid[2, 1])
+            self._remove_button = Button(remove_axis, "Remove last")
+            self._confirm_button = Button(confirm_axis, "Confirm")
+            self._remove_button.on_clicked(
+                lambda _event: self._remove_last_point()
+            )
+            self._confirm_button.on_clicked(lambda _event: self.confirm())
+        else:
+            grid = self.figure.add_gridspec(1, 2, width_ratios=(4, 1.35))
+            self.image_axis = self.figure.add_subplot(grid[0, 0])
+            self.table_axis = self.figure.add_subplot(grid[0, 1])
+            self._remove_button = None
+            self._confirm_button = None
         self.image_axis.imshow(self.image, cmap="gray")
         self.image_axis.set_title(
             self._instructions(),
@@ -359,7 +557,7 @@ class WellSelectionSession:
             count = f"Select up to {self.max_total_count} total well region(s)"
         else:
             count = "Select signal wells"
-        lines = [count, "Left-click: add signal  |  Right-click: remove"]
+        lines = [count, "Left-click: add point  |  Right-click: remove"]
         if self.allow_control_click:
             lines.append("Double left-click: add background Control")
         if self.assume_last_control:
@@ -367,8 +565,15 @@ class WellSelectionSession:
                 f"No double-click: point {self.max_total_count} is Control"
             )
         if self.enable_live_grid_preview:
-            lines.append("Drag a +: adjust grid preview")
-        lines.append("Delete: remove last  |  Enter: confirm")
+            if self.expected_count == 1:
+                lines.append("Left-click and drag marker: reposition the selected point")
+            else:
+                lines.append("Left-click and drag marker: adjust grid preview")
+        if self.notebook_controls:
+            lines.append("Remove last / Confirm: use the buttons")
+            lines.append("Delete also removes last if the figure has focus")
+        else:
+            lines.append("Delete: remove last marker |  Enter: confirm")
         return "\n".join(lines)
 
     def _signal_indices(self) -> list[int]:
@@ -395,13 +600,31 @@ class WellSelectionSession:
         manager = getattr(self.figure.canvas, "manager", None)
         toolbar = getattr(manager, "toolbar", None)
         mode = getattr(toolbar, "mode", "")
-        return bool(getattr(mode, "value", mode))
+        if hasattr(mode, "value"):
+            mode = mode.value
+        return str(mode).strip().lower() not in {"", "none"}
+
+    def _event_in_image_axis(self, event) -> bool:
+        if event.xdata is None or event.ydata is None:
+            return False
+        if event.inaxes is self.image_axis:
+            return True
+        if event.inaxes is not None:
+            return False
+        contains = getattr(self.image_axis, "contains", None)
+        if not callable(contains):
+            return False
+        try:
+            inside, _ = self.image_axis.contains(event)
+            return bool(inside)
+        except Exception:
+            return False
 
     def _on_click(self, event) -> None:
         if (
             self.confirmed
             or self._processing
-            or event.inaxes is not self.image_axis
+            or not self._event_in_image_axis(event)
         ):
             return
         if self._toolbar_is_active():
@@ -512,9 +735,9 @@ class WellSelectionSession:
     def _on_motion(self, event) -> None:
         if (
             self._drag_index is None
-            or self.confirmed
+            or             self.confirmed
             or self._processing
-            or event.inaxes is not self.image_axis
+            or not self._event_in_image_axis(event)
             or event.xdata is None
             or event.ydata is None
         ):
@@ -537,14 +760,31 @@ class WellSelectionSession:
     def _on_key(self, event) -> None:
         if self.confirmed or self._processing:
             return
-        if event.key in ("delete", "backspace"):
-            if self.points:
-                self._remove_point(len(self.points) - 1)
-                self._set_status("Removed most recent point")
-                self._redraw()
+        key = str(event.key or "").lower()
+        if key in {"delete", "backspace"}:
+            self._remove_last_point()
             return
-        if event.key not in ("enter", "return"):
+        if key in {"enter", "return"}:
+            self.confirm()
+
+    def _remove_last_point(self) -> None:
+        if self.confirmed or self._processing or not self.points:
             return
+        self._remove_point(len(self.points) - 1)
+        self._set_status("Removed most recent point")
+        self._redraw()
+
+    def confirm(self) -> Optional[pd.DataFrame]:
+        """Confirm the current points and resolve well coordinates.
+
+        Notebook widget backends resolve immediately and return the DataFrame.
+        Desktop backends refine in the background and populate ``result``
+        when detection finishes.
+        """
+        if self.confirmed:
+            return self.result
+        if self._processing:
+            return None
         if (
             self.expected_count is not None
             and len(self._signal_indices()) != self.expected_count
@@ -553,38 +793,56 @@ class WellSelectionSession:
                 f"Select exactly {self.expected_count} signal point(s) "
                 "before confirming"
             )
-            return
+            self.figure.canvas.draw_idle()
+            return None
         if not self._signal_indices():
             self._set_status(
                 "Select at least one signal point before confirming"
             )
-            return
+            self.figure.canvas.draw_idle()
+            return None
+
+        status = (
+            "Using clicked coordinates…"
+            if self.coordinate_mode == "manual"
+            else "Refining clicked wells…"
+        )
+        if not self.resolve_in_background:
+            self._set_status(status)
+            self.figure.canvas.draw_idle()
+            try:
+                result = self._selection_from_points()
+            except Exception as exc:
+                self._set_status(str(exc))
+                self.figure.canvas.draw_idle()
+                return None
+            self._apply_result(result)
+            return self.result
 
         self._processing = True
-        status = (
-            "◐ Using clicked coordinates…"
-            if self.coordinate_mode == "manual"
-            else "◐ Refining clicked wells…"
-        )
-        self._set_status(status)
+        self._set_status(f"◐ {status}")
         self.figure.canvas.draw_idle()
         self._processing_timer = self.figure.canvas.new_timer(interval=100)
         self._processing_timer.add_callback(self._poll_detection)
         self._processing_timer.start()
         Thread(target=self._resolve_points, daemon=True).start()
+        return None
+
+    def _selection_from_points(self) -> pd.DataFrame:
+        return select_wells_from_coordinates(
+            self.image,
+            tuple(self.points),
+            well_ids=self.well_ids,
+            detector=self.detector,
+            search_radius=self.search_radius,
+            coordinate_mode=self.coordinate_mode,
+            manual_roi_diameter=self.manual_roi_diameter,
+            control_indices=tuple(sorted(self.control_indices)),
+        )
 
     def _resolve_points(self) -> None:
         try:
-            result = select_wells_from_coordinates(
-                self.image,
-                tuple(self.points),
-                well_ids=self.well_ids,
-                detector=self.detector,
-                search_radius=self.search_radius,
-                coordinate_mode=self.coordinate_mode,
-                manual_roi_diameter=self.manual_roi_diameter,
-                control_indices=tuple(sorted(self.control_indices)),
-            )
+            result = self._selection_from_points()
         except Exception as exc:
             self._result_queue.put((False, exc))
         else:
@@ -614,8 +872,13 @@ class WellSelectionSession:
             self.figure.canvas.draw_idle()
             return False
 
-        self.result = value
+        self._apply_result(value)
+        return False
+
+    def _apply_result(self, result: pd.DataFrame) -> None:
+        self.result = result
         self.confirmed = True
+        self._processing = False
         self._set_status("Selection confirmed")
         self._disconnect()
         if self.close_on_confirm:
@@ -623,7 +886,6 @@ class WellSelectionSession:
         else:
             self.image_axis.set_title("Selection confirmed")
             self.figure.canvas.draw_idle()
-        return False
 
     def _set_status(self, message: str) -> None:
         self._status.set_text(message)
@@ -660,6 +922,29 @@ class WellSelectionSession:
                     linewidth=1.5 if is_anchor else 1,
                     linestyle="-" if is_anchor else "--",
                     alpha=1 if is_anchor else 0.8,
+                )
+                self.image_axis.add_patch(circle)
+                self._artists.append(circle)
+        elif (
+            self.enable_live_grid_preview
+            and self.manual_roi_diameter is not None
+            and signal_points
+        ):
+            preview_radius = float(self.manual_roi_diameter) / 2
+            signal_number = 0
+            for point_index, (x, y) in enumerate(self.points):
+                if point_index in self.control_indices:
+                    color = "#00ff7f"
+                else:
+                    color = grid_colors[signal_number]
+                    signal_number += 1
+                circle = plt.Circle(
+                    (x, y),
+                    preview_radius,
+                    edgecolor=color,
+                    facecolor="none",
+                    linewidth=1.5,
+                    linestyle="-",
                 )
                 self.image_axis.add_patch(circle)
                 self._artists.append(circle)
@@ -748,12 +1033,15 @@ def select_wells_gui(
     """Open the interactive picker and collect or refine well centroids.
 
     Desktop Matplotlib backends block until the window closes and return a
-    DataFrame. Jupyter widget backends return a session immediately; inspect
-    ``session.result`` after pressing Enter. Set
-    ``enable_live_grid_preview=True`` to drag row-major anchors while viewing
-    the inferred 3x3 geometry.
+    DataFrame. JupyterLab can use ``ipympl`` with Confirm/Remove buttons and
+    returns a session immediately. VS Code and Cursor do not register
+    ``jupyter-matplotlib``, so those kernels open a native window instead.
+    Set ``enable_live_grid_preview=True`` to drag placed ``+`` markers.
+    With two or more row-major anchors this also shows the inferred 3x3
+    geometry. A single point with ``manual_roi_diameter`` shows that ROI
+    circle.
     """
-    notebook = _is_notebook_backend()
+    notebook = _prepare_gui_backend()
     session = WellSelectionSession(
         image=image,
         expected_count=expected_count,
@@ -767,7 +1055,15 @@ def select_wells_gui(
         max_total_count=max_total_count,
         assume_last_control=assume_last_control,
         close_on_confirm=not notebook,
+        notebook_controls=notebook,
+        resolve_in_background=not notebook,
     )
+    if not notebook and _running_in_notebook():
+        print(
+            "Opening a native Matplotlib window. Click the wells, then "
+            "press Enter. VS Code/Cursor cannot load ipympl's "
+            "jupyter-matplotlib widget."
+        )
     plt.show(block=not notebook)
     if notebook:
         return session
