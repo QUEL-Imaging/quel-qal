@@ -3,10 +3,11 @@ lazy-loader
 matplotlib==3.9.2
 numba
 numpy
-opencv-python
+opencv-contrib-python
 openpyxl
 pandas
 pooch
+pyyaml
 roipoly
 scikit-image
 scikit-learn

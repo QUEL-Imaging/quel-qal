@@ -42,10 +42,11 @@ dependencies = [
     "matplotlib==3.9.2",
     "numba",
     "numpy",
-    "opencv-python",
+    "opencv-contrib-python",
     "openpyxl",
     "pandas",
     "pooch",
+    "pyyaml",
     "roipoly",
     "scikit-image",
     "scikit-learn",
@@ -63,6 +64,9 @@ package = "qal"
 
 [tool.setuptools.packages.find]
 where = ["."]
+
+[tool.setuptools.package-data]
+"qal.data" = ["product_presets/*.yaml", "product_presets/*.md"]
 
 [project.urls]
 homepage = "https://github.com/QUEL-Imaging/quel-qal/wiki"
