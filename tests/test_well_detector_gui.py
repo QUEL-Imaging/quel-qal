@@ -204,6 +204,23 @@ def test_similarity_grid_fit_uses_more_than_three_anchors():
     assert np.allclose(result, expected)
 
 
+def test_selection_image_hides_matplotlib_grid():
+    previous = plt.rcParams["axes.grid"]
+    plt.rcParams["axes.grid"] = True
+    try:
+        session = WellSelectionSession(
+            np.zeros((40, 40)),
+            expected_count=1,
+            coordinate_mode="manual",
+            close_on_confirm=False,
+        )
+        assert not any(line.get_visible() for line in session.image_axis.get_xgridlines())
+        assert not any(line.get_visible() for line in session.image_axis.get_ygridlines())
+        plt.close(session.figure)
+    finally:
+        plt.rcParams["axes.grid"] = previous
+
+
 def test_single_point_live_preview_can_be_dragged():
     session = WellSelectionSession(
         np.zeros((80, 80)),
