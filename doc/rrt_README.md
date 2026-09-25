@@ -15,7 +15,7 @@ where $I_{max}$ is the maximum intensity along a line profile crossing a set of 
 <br/>
 
 # Quick Start
-Use the following block of code to analyze an image of the RRT target and produce a plot of contrast versus spatial resolution. In addition to using the qal library, the code uses the scikit-image library (https://scikit-image.org/) to read in the image. If working in an iPython notebook, see note at the bottom of [Semi-automated ROI selection](#semi-automated-roi-selection) before running this block of code.
+Use the following block of code to analyze an image of the RRT target and produce a plot of contrast versus spatial resolution. In addition to using the qal library, the code uses the scikit-image library (https://scikit-image.org/) to read in the image. If working in an iPython notebook, see note at the bottom of [Semi-automated ROI selection](#semi-automated-roi-selection) before running this block of code. This sample code and other examples can be found in `qal/examples/resolution_rrt/`.
 ```python
 from skimage import io
 from qal.data import res_sample_1
@@ -268,9 +268,14 @@ visualizer.plot_percentage_contrast(percentage_contrast_df)
 <br/>
 
 # Examples
+Runnable scripts for the RRT target are in `qal/examples/resolution_rrt/`:
+
+- `rrt_semi-automatic_example.py`
+- `rrt_manual_example.py`
+- `rrt_feature_matching_example.py`
 
 ## Semi-automated example
-This example uses the semi-automated process to analyze an image of the RRT target. The image used is downloaded from the repository but can also be found at: **qal/data/resolution_targets/res_sample_1.tiff**. First, the necessary modules are imported:
+This example uses the semi-automated process to analyze an image of the RRT target. The matching script is `qal/examples/resolution_rrt/rrt_semi-automatic_example.py`. The image used is downloaded from the repository but can also be found at: **qal/data/resolution_targets/res_sample_1.tiff**. First, the necessary modules are imported:
 ```python
 import matplotlib.pyplot as plt
 from qal.data import res_sample_1
@@ -346,7 +351,7 @@ Finally, the line profiles are displayed, followed by the plot of contrast versu
 <br/>
 
 ## Manual example
-This example uses the manual process to define line profiles for analysis. Line profiles are defined for Groups 0 through 3 of the resolution pattern. The image used in this example is downloaded but can also be located in the repository at: **qal/data/resolution_targets/resolution_target_cropped.tiff**. First, the necessary modules are imported (note that this does not include the `RrtROI` class since it is not needed):
+This example uses the manual process to define line profiles for analysis. Line profiles are defined for Groups 0 through 3 of the resolution pattern. The matching script is `qal/examples/resolution_rrt/rrt_manual_example.py`. The image used in this example is downloaded but can also be located in the repository at: **qal/data/resolution_targets/resolution_target_cropped.tiff**. First, the necessary modules are imported (note that this does not include the `RrtROI` class since it is not needed):
 ```python
 import pandas as pd
 from qal.data import resolution_target_cropped

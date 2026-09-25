@@ -10,7 +10,7 @@ The RUD target consists of a grid of fluorescent wells on a square background of
 
 # Uniformity Analysis
 ## Quick Start
-The following block of code can be used to obtain fluorescence uniformity profiles from well-taken images (see the RUD use guide) on a reasonably-uniform imaging system. The outputs will be stored a subfolder called "Surface Representation" created within the input data folder. The input folder must contain images of the same size. Continue reading this document for an understanding of the process and how to adapt it. If working in an iPython notebook, see note at the bottom of [Step 3 - Visualization](#step-3---visualization) before running this block of code.
+The following block of code can be used to obtain fluorescence uniformity profiles from well-taken images (see the RUD use guide) on a reasonably-uniform imaging system. The outputs will be stored a subfolder called "Surface Representation" created within the input data folder. The input folder must contain images of the same size. Continue reading this document for an understanding of the process and how to adapt it. If working in an iPython notebook, see note at the bottom of [Step 3 - Visualization](#step-3---visualization) before running this block of code. This sample code and other uniformity examples can be found in `qal/examples/uniformity_distortion_rud/`.
 ```python
 from qal.data import rud_example_1
 from qal import RudDetector, UniformityAnalyzer, UniformityVisualizer
@@ -358,8 +358,13 @@ visualizer.visualize_fluorescence_profiles(analyzer.output)
 <br/>
 
 ## Examples
+Runnable uniformity scripts are in `qal/examples/uniformity_distortion_rud/`:
+
+- `uniformity_good_system_example.py`
+- `uniformity_poor_system_example.py`
+
 ### Visualize fluorescence profile for a reasonably flat imaging system
-This example shows the process and outputs for analyzing images from a reasonably flat (in terms of fluorescence uniformity) imaging system. The images used in this example are downloaded from the repository, and can also be found at: **qal/data/rud_targets/example_1**. First, the necessary imports are made:   
+This example shows the process and outputs for analyzing images from a reasonably flat (in terms of fluorescence uniformity) imaging system. The matching script is `qal/examples/uniformity_distortion_rud/uniformity_good_system_example.py`. The images used in this example are downloaded from the repository, and can also be found at: **qal/data/rud_targets/example_1**. First, the necessary imports are made:   
 ```python
 from qal.data import rud_example_1
 from qal import RudDetector, UniformityAnalyzer, UniformityVisualizer
@@ -434,7 +439,7 @@ The final two figures are a contour map showing regions of the field of view tha
 <br/>
 
 ### Visualize fluorescence profile for a highly non-uniform imaging system
-This example shows a more challenging case where the fluorescence collection profile of the imaging system is highly non-uniform. As a result, parameters needed to be adjusted in order to obtain a good representation. The images used in this example are located in **qal/data/rud_targets/example_2**. If the same code in the previous example is run on these images, the generated fluorescence profile will look like this:   
+This example shows a more challenging case where the fluorescence collection profile of the imaging system is highly non-uniform. As a result, parameters needed to be adjusted in order to obtain a good representation. The matching script is `qal/examples/uniformity_distortion_rud/uniformity_poor_system_example.py`. The images used in this example are located in **qal/data/rud_targets/example_2**. If the same code in the previous example is run on these images, the generated fluorescence profile will look like this:   
 <p align="center">
 <img src="./images/No_param_change_uniformity_example_2.png" width="700"/>
 </p> 
@@ -603,7 +608,7 @@ Remember, "You too can paint almighty pictures."
 
 # Distortion Analysis
 ## Quick Start
-The following block of code can be used to obtain geometric distortion assessment from well-taken images (see the RUD use guide) spanning the field of view of the imaging system. The outputs will be stored a subfolder called "Distortion Figures" created within the input data folder. The input folder must contain images of the same size. Continue reading this document for an understanding of the process and how to adapt it.
+The following block of code can be used to obtain geometric distortion assessment from well-taken images (see the RUD use guide) spanning the field of view of the imaging system. The outputs will be stored a subfolder called "Distortion Figures" created within the input data folder. The input folder must contain images of the same size. Continue reading this document for an understanding of the process and how to adapt it. This sample code and other distortion examples can be found in `qal/examples/uniformity_distortion_rud/`.
 ```python
 from qal.data import rud_example_1
 from qal import RudDetector, DistortionAnalyzer, DistortionVisualizer
@@ -813,8 +818,13 @@ visualizer.visualize_distortion(analyzer.output, save=False)
 <br/>
 
 ## Examples
+Runnable distortion scripts are in `qal/examples/uniformity_distortion_rud/`:
+
+- `distortion_full_fov_example.py`
+- `distortion_sub_fov_example.py`
+
 ### Assess distortion across the entire field of view
-In this example, distortion is analyzed from a set of images that span the field of view of the imaging system. The images used are downloaded from the repository, but can also be found at: **qal/data/rud_targets/example_1**. First, the necessary imports are made:
+In this example, distortion is analyzed from a set of images that span the field of view of the imaging system. The matching script is `qal/examples/uniformity_distortion_rud/distortion_full_fov_example.py`. The images used are downloaded from the repository, but can also be found at: **qal/data/rud_targets/example_1**. First, the necessary imports are made:
 ```python
 from qal.data import rud_example_1
 from qal import RudDetector, DistortionAnalyzer, DistortionVisualizer
@@ -871,7 +881,7 @@ The final figure is a fitted 2D map of the distortion across the field of view. 
 <br/>
 
 ### Assess distortion across a portion of the field of view
-In this example, there is only one input image which does not span the field of view. The image for this example can be found in **qal/data/rud_targets/example_3**. Running the code from the previous example unchanged will result in larger values towards the edges of the field of view in the distortion map. To avoid this, a small change needs to be made to the `compute_distortion` call:
+In this example, there is only one input image which does not span the field of view. The matching script is `qal/examples/uniformity_distortion_rud/distortion_sub_fov_example.py`. The image for this example can be found in **qal/data/rud_targets/example_3**. Running the code from the previous example unchanged will result in larger values towards the edges of the field of view in the distortion map. To avoid this, a small change needs to be made to the `compute_distortion` call:
 ```python
 from qal.data import rud_example_3
 from qal import RudDetector, DistortionAnalyzer, DistortionVisualizer

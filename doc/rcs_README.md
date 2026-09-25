@@ -9,7 +9,7 @@ The RCS target consists of nine wells with varying concentrations of fluorescent
 <br/>
 
 # Quick Start
-Below is a block of code that can be used to analyze an image of the RCS target. It assumes the fluorophore in the concentration target is "ICG-equivalent" and labels it as such. For a different fluorophore, change `fluorophore_label` in the last line (this only affects labeling on the plot). In addition to using the qal library, the code uses the scikit-image library (https://scikit-image.org/) to read in the image.
+Below is a block of code that can be used to analyze an image of the RCS target. It assumes the fluorophore in the concentration target is "ICG-equivalent" and labels it as such. For a different fluorophore, change `fluorophore_label` in the last line (this only affects labeling on the plot). In addition to using the qal library, the code uses the scikit-image library (https://scikit-image.org/) to read in the image. GUI and SKU-lookup scripts are in `qal/examples/concentration_rcs/`. A combined concentration and depth well-analysis script is in `qal/examples/general/well_analyzer_example.py`.
 ```python
 from skimage import io
 from qal.data import cn_sample_1
@@ -327,6 +327,12 @@ A figure like the following will be produced:
 <br/>
 
 # Examples
+Runnable scripts for the RCS target are in `qal/examples/concentration_rcs/`:
+
+- `concentration_gui_example.py`
+- `concentration_sku_gui_example.py`
+
+A combined concentration and depth well-analysis script is `qal/examples/general/well_analyzer_example.py`. The well-selection GUI guide is `qal/examples/general/well_detector_gui_README.md`.
 
 ## Normalized concentration sensitivity curve
 This example processes an image of the RCS target to produce a plot of the normalized mean well intensity versus fluorophore concentration. The image used is downloaded from the repository and is located at: **qal/data/concentration_targets/cn_sample_1.tiff**. First, the necessary modules are imported:
