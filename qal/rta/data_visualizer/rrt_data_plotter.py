@@ -20,7 +20,7 @@ class RrtDataPlotter:
                 # print("Running in JupyterLab")
                 self.line_profile_fig_size = (10, 5)
                 return "JupyterLab"
-        except AttributeError:
+        except Exception:
             # print("Running in a standard Python environment")
             return "Standard Python"
 

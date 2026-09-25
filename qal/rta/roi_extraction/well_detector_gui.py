@@ -512,6 +512,7 @@ class WellSelectionSession:
             self._remove_button = None
             self._confirm_button = None
         self.image_axis.imshow(self.image, cmap="gray")
+        self.image_axis.grid(False)
         self.image_axis.set_title(
             self._instructions(),
             fontsize=10,

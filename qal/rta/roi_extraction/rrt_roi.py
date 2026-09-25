@@ -87,7 +87,7 @@ class RrtROI:
                 # print("Running in JupyterLab")
                 get_ipython().run_line_magic('matplotlib', 'ipympl')
                 return "JupyterLab"
-        except AttributeError:
+        except Exception:
             # print("Running in a standard Python environment")
             return "Standard Python"
 

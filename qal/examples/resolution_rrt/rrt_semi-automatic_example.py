@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 def main():
     # Create an instance of RrtROI
     rrt_roi = RrtROI()
+    # rrt_roi = io.imread("path/to/image.tiff")
 
     # Load the image of the resolution target
     image = res_sample_1()

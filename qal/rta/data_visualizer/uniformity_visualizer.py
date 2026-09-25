@@ -139,7 +139,7 @@ class UniformityVisualizer:
             fit_in_fov[yq_start:yq_end + 1, xq_start:xq_end + 1] = surf_rep
         else:
             fit_in_fov = surf_rep.copy()
-        fit_in_fov /= np.max(fit_in_fov)
+        fit_in_fov = fit_in_fov / np.max(fit_in_fov)
 
         if self.environment == "Standard Python":
             anim = self.make_animation(self.analyzer_outputs)

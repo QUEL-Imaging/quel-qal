@@ -801,12 +801,11 @@ class WellDetector:
             ]
             anchor_count = min(len(df), len(canonical_grid))
             source_points = canonical_grid[:anchor_count]
-            # Pair the canonical row-major grid with spatially ordered anchors.
-            # detect_wells returns intensity order, which can swap nearby wells
-            # and shrink the fitted grid if used as-is.
+            # Use the supplied row-major order. GUI clicks and spatially
+            # sorted detect_wells results are already in that order; sorting
+            # here would remap a slightly tilted top row and collapse the grid.
             target_points = (
-                df.sort_values(by=["y", "x"], kind="mergesort")
-                .iloc[:anchor_count][["x", "y"]]
+                df.iloc[:anchor_count][["x", "y"]]
                 .apply(tuple, axis=1)
                 .tolist()
             )

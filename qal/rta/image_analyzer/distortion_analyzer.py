@@ -145,7 +145,7 @@ class DistortionAnalyzer:
             closest_four_dists = np.sort(distances_to_closest)[1:5]
             av_dist += np.mean(closest_four_dists)
 
-        av_dist /= len(self.dots)
+        av_dist = av_dist / len(self.dots)
 
         return av_dist
 
