@@ -5,10 +5,13 @@ concern, following the organization used by :mod:`skimage.util`.
 """
 
 from ._image import (
+    GrayscaleMethod,
     ImageInput,
     StoredValueInfo,
     describe_stored_values,
     load_grayscale_image,
+    remove_corner_overlays,
+    to_grayscale,
     to_log_scale,
 )
 from ._roi import (
@@ -29,6 +32,7 @@ from ._target_lookup import (
 __all__ = [
     "CenterOrder",
     "CircularRoiStats",
+    "GrayscaleMethod",
     "ImageInput",
     "StoredValueInfo",
     "circular_mask",
@@ -39,7 +43,9 @@ __all__ = [
     "lookup_target_preset",
     "mean_in_circular_roi",
     "raw_stats_in_circular_roi",
+    "remove_corner_overlays",
     "std_in_circular_roi",
     "target_data_labels",
+    "to_grayscale",
     "to_log_scale",
 ]
