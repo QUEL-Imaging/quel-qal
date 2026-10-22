@@ -248,27 +248,19 @@ class RrtROI:
         return ((x, y1), (x, y2))
 
     def process_resolution_target(self, roi_corners):
-        top_left = [roi_corners[0][1], roi_corners[0][0]]
-        bottom_right = [roi_corners[1][1], roi_corners[1][0]]
+        from .rrt_gui import group_coordinates_from_lines, lines_from_registration
 
-        group_0_lp_x_per, group_0_lp_y_per = 0.06, 0.035
-        group_0_line = self.calculate_group_0_line(top_left, bottom_right, group_0_lp_x_per, group_0_lp_y_per)
-
-        group_1_lp_x_per, group_1_lp_y_per = 0.98, 0.02
-        group_1_lp_length_per = 0.65
-        group_1_line = self.calculate_group_1_line(top_left, bottom_right, group_1_lp_x_per, group_1_lp_y_per, group_1_lp_length_per)
-
-        group_2_lp_x_per, group_2_lp_y_per = 0.517, 0.015
-        group_2_lp_y_start_offset = 0.36
-        group_2_lp_length_per = 0.252
-        group_2_line = self.calculate_group_2_line(top_left, bottom_right, group_2_lp_x_per, group_2_lp_y_per, group_2_lp_length_per, group_2_lp_y_start_offset)
-
-        self.group_coordinates = {
-            0: {'coordinates': group_0_line, 'elements': range(2, 7)},
-            1: {'coordinates': group_1_line, 'elements': range(1, 7)},
-            2: {'coordinates': group_2_line, 'elements': range(2, 7)}
-        }
-
+        if len(roi_corners) != 2:
+            raise ValueError(
+                "Two registration corners are required; Harris detection found "
+                f"{len(roi_corners)}. Use select_rrt_lines(mode="
+                "'manual_live_preview') to place them exactly."
+            )
+        top_left = (roi_corners[0][1], roi_corners[0][0])
+        bottom_right = (roi_corners[1][1], roi_corners[1][0])
+        self.group_coordinates = group_coordinates_from_lines(
+            lines_from_registration(top_left, bottom_right)
+        )
         return self.group_coordinates
 
     def cvt_to_uint8(self, img):
@@ -345,6 +337,8 @@ class RrtROI:
             "img_keypoints": None,
             "template_keypoints": None,
             "img_matches": None,
+            "homography": None,
+            "crop_offset": None,
         }
 
         # template_path = "USAF1951_template/res_source.png"
@@ -430,6 +424,11 @@ class RrtROI:
                 )
                 im_src_warped = im_src_warped.astype(im_src.dtype)
                 roi = self.crop_using_keypoints(im_src_warped, dst_pts, padding_percentage=0.2)
+                min_x, _, min_y, _ = self._keypoint_crop_box(
+                    im_src.shape, dst_pts, padding_percentage=0.2
+                )
+                debug["homography"] = M
+                debug["crop_offset"] = (min_x, min_y)
 
         debug["roi"] = roi
 
@@ -458,6 +457,31 @@ class RrtROI:
             return debug
         return roi
 
+    def crop_resolution_target(self, im_src, **kwargs):
+        """Crop the chart for display and keep the mapping to ``im_src``.
+
+        The crop is a perspective-warped, resampled image; use it to place
+        lines, then map them back with
+        :meth:`ResolutionTargetCrop.selection_to_source` so profiles are
+        measured on the original pixels. Keyword arguments go to
+        :meth:`get_resolution_target_cropped`.
+
+        Returns ``None`` when the chart is not found.
+        """
+        from .rrt_gui import ResolutionTargetCrop
+
+        debug = self.get_resolution_target_cropped(
+            im_src, return_debug=True, **kwargs
+        )
+        if debug.get("roi") is None:
+            return None
+        return ResolutionTargetCrop(
+            image=debug["roi"],
+            source=im_src,
+            homography=np.asarray(debug["homography"], dtype=float),
+            offset=tuple(float(value) for value in debug["crop_offset"]),
+        )
+
     def crop_using_keypoints(self, im, dst_pts, padding_percentage=0.2):
         """
         Automatically crop the region of interest using keypoints.
@@ -472,7 +496,14 @@ class RrtROI:
         - Cropped region of interest.
         """
 
-        # Compute bounding box from dst_pts
+        min_x, max_x, min_y, max_y = self._keypoint_crop_box(
+            im.shape, dst_pts, padding_percentage
+        )
+        return im[min_y:max_y, min_x:max_x]
+
+    @staticmethod
+    def _keypoint_crop_box(shape, dst_pts, padding_percentage=0.2):
+        """Integer ``(min_x, max_x, min_y, max_y)`` used by the keypoint crop."""
         x_coords, y_coords = dst_pts[:, :, 0], dst_pts[:, :, 1]
         min_x, max_x = np.min(x_coords), np.max(x_coords)
         min_y, max_y = np.min(y_coords), np.max(y_coords)
@@ -492,14 +523,10 @@ class RrtROI:
 
         # Apply the margin and padding evenly in all directions from the center
         min_x = max(center_x - (max_dimension // 2) - padding, 0)
-        max_x = min(center_x + (max_dimension // 2) + padding, im.shape[1])
+        max_x = min(center_x + (max_dimension // 2) + padding, shape[1])
         min_y = max(center_y - (max_dimension // 2) - padding, 0)
-        max_y = min(center_y + (max_dimension // 2) + padding, im.shape[0])
-
-        # Crop the ROI based on the updated bounding box coordinates
-        roi = im[int(min_y):int(max_y), int(min_x):int(max_x)]
-
-        return roi
+        max_y = min(center_y + (max_dimension // 2) + padding, shape[0])
+        return int(min_x), int(max_x), int(min_y), int(max_y)
 
     def preprocess_roi(self, roi):
         # Convert the cropped ROI to float32
@@ -592,3 +619,23 @@ class RrtROI:
 
         plt.tight_layout()
         plt.show()
+
+    @staticmethod
+    def print_smallest_resolved(contrast, threshold):
+        """Print the finest bar pattern still at or above ``threshold`` percent.
+
+        ``contrast`` is the table from ``RrtAnalyzer.load_and_process_groups``.
+        Rows are read in order, so the last row at or above the threshold is
+        the finest resolved feature.
+        """
+        resolved = contrast[contrast["Percentage Contrast"] >= threshold]
+        if resolved.empty:
+            print(f"\nAll elements are below {threshold}% contrast.")
+            return
+
+        finest = resolved.iloc[-1]
+        print(
+            f"\nSmallest feature above {threshold}% contrast: "
+            f"Group {int(finest['Group'])}, Element {int(finest['Element'])}, "
+            f"{finest['Resolution (lp/mm)']:.2f} lp/mm"
+        )

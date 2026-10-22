@@ -31,7 +31,17 @@ from .rta.roi_extraction.well_detector_gui import (
     select_wells_gui as select_wells_gui,
 )
 from .rta.roi_extraction.concentration_grid import (
+    complete_concentration_grid as complete_concentration_grid,
+    load_concentration_selection as load_concentration_selection,
+    save_concentration_selection as save_concentration_selection,
     select_concentration_grid as select_concentration_grid,
+)
+from .rta.roi_extraction.rrt_gui import (
+    ResolutionTargetCrop as ResolutionTargetCrop,
+    RrtLineSelection as RrtLineSelection,
+    RrtSelectionSession as RrtSelectionSession,
+    select_rrt_lines as select_rrt_lines,
+    select_rrt_lines_from_coordinates as select_rrt_lines_from_coordinates,
 )
 from .vpa.quel_lung_phantom import LungPhantom
 
@@ -62,5 +72,13 @@ __all__ = [
     "select_wells_from_coordinates",
     "select_wells_gui",
     "select_concentration_grid",
+    "complete_concentration_grid",
+    "load_concentration_selection",
+    "save_concentration_selection",
+    "ResolutionTargetCrop",
+    "RrtLineSelection",
+    "RrtSelectionSession",
+    "select_rrt_lines",
+    "select_rrt_lines_from_coordinates",
     "LungPhantom"
 ]

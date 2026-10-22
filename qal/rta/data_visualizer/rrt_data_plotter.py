@@ -110,8 +110,9 @@ class RrtDataPlotter:
                 peak_indices = row['Peak Indices']
                 trough_indices = row['Trough Indices']
 
-                if len(peak_indices) > 0 and len(trough_indices) > 0:
+                if len(peak_indices) > 0:
                     axs[i + 1].scatter(peak_indices, [profiles['center'][index] for index in peak_indices], color='red', label=f'Element {element_number} Peaks', marker='x')
+                if len(trough_indices) > 0:
                     axs[i + 1].scatter(trough_indices, [profiles['center'][index] for index in trough_indices], color='green', label=f'Element {element_number} Troughs', marker='o')
 
             axs[i + 1].set_title(f'Group {group_number}')
