@@ -9,6 +9,7 @@ beside it, open ``concentration_gui_example.ipynb`` in this folder.
 Set ``IMAGE_PATH`` there, or leave it as ``None`` for the example image.
 
 For SKU or unit-serial lookup, use ``concentration_sku_gui_example``.
+To process a folder with fixed anchors, use ``concentration_batch_example``.
 """
 
 from __future__ import annotations
@@ -51,6 +52,11 @@ MODE = "manual_live_preview"
 
 # 3–9 row-major anchors, or None in manual_coordinates for up to nine regions.
 ANCHOR_COUNT = 3
+# Fixed anchors skip the GUI in any mode (e.g. a jig-mounted target).
+# The GUI prints these after each selection; SAVE_RESULTS also writes them
+# to selection.json for concentration_batch_example.
+COORDINATES = None  # [(x1, y1), (x2, y2), (x3, y3)]
+CONTROL_INDICES = None  # manual_coordinates only, e.g. [3]
 # None estimates diameter as 60% of grid spacing; set a pixel value to override.
 MANUAL_ROI_DIAMETER = None
 REGION_OF_WELL_TO_ANALYZE = 0.5
@@ -93,6 +99,11 @@ def main() -> None:
         mode=MODE,
         anchor_count=ANCHOR_COUNT,
         manual_roi_diameter=MANUAL_ROI_DIAMETER,
+        coordinates=COORDINATES,
+        control_indices=CONTROL_INDICES,
+        selection_path=(
+            results_dir / "selection.json" if results_dir is not None else None
+        ),
     )
     if not isinstance(wells, pd.DataFrame):
         return

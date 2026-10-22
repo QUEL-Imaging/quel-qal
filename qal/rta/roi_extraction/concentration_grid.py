@@ -2,19 +2,28 @@
 
 Example scripts choose a mode and anchor count; this module turns those
 knobs into ``select_wells_gui`` arguments, user instructions, and the
-post-confirmation grid-completion step.
+post-confirmation grid-completion step. Fixed anchor coordinates can
+replace the GUI for batch processing.
 """
 
 from __future__ import annotations
 
+import json
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Literal, Optional
+from pathlib import Path
+from typing import Literal, Optional, Union
 
 import pandas as pd
 
 from .well_detector import WellDetector
-from .well_detector_gui import CoordinateMode, WellSelectionSession, select_wells_gui
+from .well_detector_gui import (
+    Coordinate,
+    CoordinateMode,
+    WellSelectionSession,
+    select_wells_from_coordinates,
+    select_wells_gui,
+)
 
 ConcentrationGuiMode = Literal[
     "automatic_refinement",
@@ -164,6 +173,93 @@ def complete_concentration_grid(
     )
 
 
+def save_concentration_selection(
+    path: Union[str, Path],
+    anchors: pd.DataFrame,
+    *,
+    mode: str,
+    anchor_count: Optional[int],
+) -> Path:
+    """Write selected anchor coordinates as JSON for batch reuse."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    wells = anchors["well"].tolist()
+    data = {
+        "target": "concentration",
+        "mode": mode,
+        "anchor_count": anchor_count,
+        "coordinates": [
+            [float(x), float(y)] for x, y in anchors[["x", "y"]].to_numpy()
+        ],
+        "control_indices": [
+            index for index, well in enumerate(wells) if well == "Control"
+        ],
+    }
+    path.write_text(json.dumps(data, indent=2))
+    return path
+
+
+def load_concentration_selection(path: Union[str, Path]) -> dict:
+    """Read a JSON file written by :func:`save_concentration_selection`.
+
+    The returned ``coordinates`` and ``control_indices`` can be passed
+    straight to :func:`select_concentration_grid`.
+    """
+    data = json.loads(Path(path).read_text())
+    data["coordinates"] = [tuple(point) for point in data["coordinates"]]
+    data["control_indices"] = list(data.get("control_indices") or [])
+    return data
+
+
+def _anchors_from_coordinates(
+    image,
+    selection: ConcentrationGridSelection,
+    coordinates: Sequence[Coordinate],
+    control_indices: Optional[Sequence[int]],
+    *,
+    detector: WellDetector,
+    manual_roi_diameter: Optional[float],
+    search_radius: Optional[float],
+) -> pd.DataFrame:
+    controls = list(control_indices or ())
+    if (
+        selection.assume_last_control
+        and not controls
+        and len(coordinates) == selection.max_total_count
+    ):
+        controls = [len(coordinates) - 1]
+    signal_count = len(coordinates) - len(controls)
+    if (
+        selection.expected_count is not None
+        and signal_count != selection.expected_count
+    ):
+        raise ValueError(
+            f"ANCHOR_COUNT={selection.expected_count} needs exactly that many "
+            f"signal coordinates; got {signal_count}"
+        )
+    if selection.max_total_count is not None and (
+        len(coordinates) > selection.max_total_count
+    ):
+        raise ValueError(
+            f"At most {selection.max_total_count} coordinates are supported"
+        )
+    if controls and not selection.allow_control_click:
+        raise ValueError(
+            "control_indices are supported only in manual_coordinates mode "
+            "with fewer than nine anchors"
+        )
+    return select_wells_from_coordinates(
+        image,
+        coordinates,
+        well_ids=list(selection.selection_well_ids),
+        detector=detector,
+        search_radius=search_radius,
+        coordinate_mode=selection.coordinate_mode,
+        manual_roi_diameter=manual_roi_diameter,
+        control_indices=controls,
+    )
+
+
 def select_concentration_grid(
     image,
     well_ids: Sequence[str],
@@ -173,9 +269,23 @@ def select_concentration_grid(
     detector: Optional[WellDetector] = None,
     manual_roi_diameter: Optional[float] = None,
     search_radius: Optional[float] = None,
+    coordinates: Optional[Sequence[Coordinate]] = None,
+    control_indices: Optional[Sequence[int]] = None,
+    selection_path: Optional[Union[str, Path]] = None,
     verbose: bool = True,
-) -> pd.DataFrame | WellSelectionSession:
+) -> pd.DataFrame | WellSelectionSession | None:
     """Open the well-selection GUI and return completed or exact wells.
+
+    Returns ``None`` if the GUI window is closed before confirmation.
+
+    Passing ``coordinates`` (row-major anchor ``(x, y)`` pairs) skips the
+    GUI in any mode: ``automatic_refinement`` refines them locally, the
+    manual modes use them exactly, and grid completion follows the same
+    rules as GUI clicks. ``control_indices`` marks Control coordinates in
+    ``manual_coordinates`` mode.
+
+    ``selection_path`` writes the anchors as JSON; reload them with
+    :func:`load_concentration_selection` for batch processing.
 
     Desktop backends block until confirmation and return a DataFrame.
     Jupyter widget backends return a :class:`WellSelectionSession`; after
@@ -187,15 +297,36 @@ def select_concentration_grid(
     if detector is None:
         detector = WellDetector(parallel_processing=False)
 
-    if verbose:
-        print("\n".join(selection.instruction_lines()))
-    anchors = select_wells_gui(
-        image,
-        detector=detector,
-        manual_roi_diameter=manual_roi_diameter,
-        search_radius=search_radius,
-        **selection.select_wells_gui_kwargs(),
-    )
+    if coordinates is not None:
+        anchors = _anchors_from_coordinates(
+            image,
+            selection,
+            coordinates,
+            control_indices,
+            detector=detector,
+            manual_roi_diameter=manual_roi_diameter,
+            search_radius=search_radius,
+        )
+    else:
+        if control_indices is not None:
+            raise ValueError("control_indices requires coordinates")
+        if verbose:
+            print("\n".join(selection.instruction_lines()))
+        anchors = select_wells_gui(
+            image,
+            detector=detector,
+            manual_roi_diameter=manual_roi_diameter,
+            search_radius=search_radius,
+            **selection.select_wells_gui_kwargs(),
+        )
+    if anchors is None:
+        return None
+    if isinstance(anchors, pd.DataFrame) and selection_path is not None:
+        saved = save_concentration_selection(
+            selection_path, anchors, mode=mode, anchor_count=anchor_count
+        )
+        if verbose:
+            print(f"Saved selection to {saved}")
     if not isinstance(anchors, pd.DataFrame):
         if verbose:
             print(
@@ -223,4 +354,19 @@ def select_concentration_grid(
             print(anchors)
             print(heading)
             print(wells)
+        print("\nReuse these anchors without the GUI:")
+        print(format_anchor_coordinates(anchors))
     return wells
+
+
+def format_anchor_coordinates(anchors: pd.DataFrame) -> str:
+    """Format anchors as ``COORDINATES``/``CONTROL_INDICES`` script knobs."""
+    points = ", ".join(
+        f"({x:.1f}, {y:.1f})" for x, y in anchors[["x", "y"]].to_numpy()
+    )
+    controls = [
+        index
+        for index, well in enumerate(anchors["well"].tolist())
+        if well == "Control"
+    ]
+    return f"COORDINATES = [{points}]\nCONTROL_INDICES = {controls}"
