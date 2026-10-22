@@ -2,7 +2,11 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from qal import WellDetector, select_concentration_grid
+from qal import (
+    WellDetector,
+    load_concentration_selection,
+    select_concentration_grid,
+)
 from qal.rta.roi_extraction.concentration_grid import (
     complete_concentration_grid,
     prepare_concentration_grid_selection,
@@ -150,3 +154,85 @@ def test_lookup_concentration_preset_rejects_other_families():
 
 def test_select_concentration_grid_is_public():
     assert callable(select_concentration_grid)
+
+
+def _three_well_image():
+    image = np.zeros((110, 110), dtype=np.float64)
+    for x, y in [(20, 20), (50, 20), (80, 20)]:
+        image[circular_mask(image.shape, (x, y), 8)] = 80
+    return image
+
+
+def test_coordinates_skip_gui_and_complete_grid(monkeypatch):
+    monkeypatch.setattr(
+        "qal.rta.roi_extraction.concentration_grid.select_wells_gui",
+        lambda *args, **kwargs: pytest.fail("GUI opened"),
+    )
+
+    wells = select_concentration_grid(
+        _three_well_image(),
+        WELL_IDS,
+        mode="manual_live_preview",
+        coordinates=[(20, 20), (50, 20), (80, 20)],
+        detector=WellDetector(parallel_processing=False),
+        verbose=False,
+    )
+
+    assert list(wells["well"]) == WELL_IDS
+
+
+def test_manual_coordinates_with_control_are_exact(tmp_path):
+    points = [(20, 20), (50, 20), (80, 20), (5, 100)]
+    path = tmp_path / "selection.json"
+    wells = select_concentration_grid(
+        np.zeros((110, 110)),
+        WELL_IDS,
+        mode="manual_coordinates",
+        anchor_count=3,
+        coordinates=points,
+        control_indices=[3],
+        selection_path=path,
+        verbose=False,
+    )
+
+    assert np.allclose(wells[["x", "y"]], points)
+    assert wells["well"].tolist() == ["1000 nM", "300 nM", "100 nM", "Control"]
+    saved = load_concentration_selection(path)
+    assert saved["coordinates"] == [tuple(map(float, p)) for p in points]
+    assert saved["control_indices"] == [3]
+
+
+def test_open_ended_coordinates_make_ninth_point_control():
+    points = [(10 + 10 * i, 10) for i in range(9)]
+    wells = select_concentration_grid(
+        np.zeros((50, 120)),
+        WELL_IDS,
+        mode="manual_coordinates",
+        anchor_count=None,
+        coordinates=points,
+        verbose=False,
+    )
+
+    assert wells["well"].iloc[-1] == "Control"
+
+
+def test_coordinates_must_match_anchor_count():
+    with pytest.raises(ValueError, match="ANCHOR_COUNT=3"):
+        select_concentration_grid(
+            np.zeros((50, 50)),
+            WELL_IDS,
+            mode="manual_live_preview",
+            coordinates=[(10, 10), (20, 10)],
+            verbose=False,
+        )
+
+
+def test_closing_concentration_gui_returns_none(monkeypatch):
+    monkeypatch.setattr(
+        "qal.rta.roi_extraction.concentration_grid.select_wells_gui",
+        lambda *args, **kwargs: None,
+    )
+
+    assert select_concentration_grid(
+        np.zeros((50, 50)), WELL_IDS, verbose=False
+    ) is None

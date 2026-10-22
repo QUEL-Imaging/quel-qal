@@ -441,6 +441,7 @@ class WellSelectionSession:
     points: list[Coordinate] = field(default_factory=list, init=False)
     control_indices: set[int] = field(default_factory=set, init=False)
     confirmed: bool = field(default=False, init=False)
+    closed: bool = field(default=False, init=False)
 
     def __post_init__(self) -> None:
         self.image = load_grayscale_image(self.image)
@@ -548,6 +549,7 @@ class WellSelectionSession:
                 "button_release_event", self._on_release
             ),
             self.figure.canvas.mpl_connect("key_press_event", self._on_key),
+            self.figure.canvas.mpl_connect("close_event", self._on_close),
         ]
         self._redraw()
 
@@ -782,7 +784,7 @@ class WellSelectionSession:
         Desktop backends refine in the background and populate ``result``
         when detection finishes.
         """
-        if self.confirmed:
+        if self.confirmed or self.closed:
             return self.result
         if self._processing:
             return None
@@ -850,6 +852,9 @@ class WellSelectionSession:
             self._result_queue.put((True, result))
 
     def _poll_detection(self) -> bool:
+        if self.closed:
+            self._processing = False
+            return False
         try:
             succeeded, value = self._result_queue.get_nowait()
         except Empty:
@@ -890,6 +895,14 @@ class WellSelectionSession:
 
     def _set_status(self, message: str) -> None:
         self._status.set_text(message)
+
+    def _on_close(self, _event=None) -> None:
+        self.closed = True
+        self._drag_index = None
+        if self._processing_timer is not None:
+            self._processing_timer.stop()
+        self._processing = False
+        self._disconnect()
 
     def _disconnect(self) -> None:
         for connection in self._connections:
@@ -1030,11 +1043,11 @@ def select_wells_gui(
     allow_control_click: bool = False,
     max_total_count: Optional[int] = None,
     assume_last_control: bool = False,
-) -> pd.DataFrame | WellSelectionSession:
+) -> pd.DataFrame | WellSelectionSession | None:
     """Open the interactive picker and collect or refine well centroids.
 
     Desktop Matplotlib backends block until the window closes and return a
-    DataFrame. JupyterLab can use ``ipympl`` with Confirm/Remove buttons and
+    DataFrame, or ``None`` if it is closed before confirmation. JupyterLab can use ``ipympl`` with Confirm/Remove buttons and
     returns a session immediately. VS Code and Cursor do not register
     ``jupyter-matplotlib``, so those kernels open a native window instead.
     Set ``enable_live_grid_preview=True`` to drag placed ``+`` markers.
@@ -1065,9 +1078,18 @@ def select_wells_gui(
             "press Enter. VS Code/Cursor cannot load ipympl's "
             "jupyter-matplotlib widget."
         )
-    plt.show(block=not notebook)
+    try:
+        plt.show(block=not notebook)
+    except KeyboardInterrupt:
+        session._on_close()
+        plt.close(session.figure)
     if notebook:
         return session
     if session.result is None:
-        raise RuntimeError("Well selection was closed before confirmation")
+        plt.close(session.figure)
+        print(
+            "Well selection was closed before confirmation; nothing was "
+            "selected."
+        )
+        return None
     return session.result

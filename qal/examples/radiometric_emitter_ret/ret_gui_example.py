@@ -12,7 +12,10 @@ from pathlib import Path
 import pandas as pd
 
 from qal import RetAnalyzer, WellDetector, WellPlotter
-from qal.rta.roi_extraction.well_detector_gui import select_wells_gui
+from qal.rta.roi_extraction.well_detector_gui import (
+    select_wells_from_coordinates,
+    select_wells_gui,
+)
 from qal.util import (
     describe_stored_values,
     load_grayscale_image,
@@ -32,6 +35,10 @@ MODE = "automatic_refinement"
 # estimate diameter, so manual mode requires an explicit pixel diameter.
 MANUAL_ROI_DIAMETER = 250.0
 
+# Fixed (x, y) for the RET well skips the GUI (e.g. a jig-mounted emitter).
+# automatic_refinement re-centers it on the well; manual uses it exactly.
+COORDINATES = None  # [(x, y)]
+
 
 def main() -> None:
     image = load_grayscale_image(IMAGE_PATH)
@@ -44,33 +51,46 @@ def main() -> None:
     )
 
     print(f"Mode: {MODE}")
-    print("Left-click the RET signal well.")
-    print("Drag the + marker to reposition the selected point.")
-    if coordinate_mode == "manual":
-        print(
-            "Optional: double left-click a background region to add a Control."
-        )
-    print("Right-click near the crosshair to remove an accidental selection.")
-    print("Press Enter/Return to confirm.")
-    selections = select_wells_gui(
-        image,
-        expected_count=1,
-        well_ids=["RET"],
-        detector=detector,
-        search_radius=300,
-        coordinate_mode=coordinate_mode,
-        manual_roi_diameter=(
-            MANUAL_ROI_DIAMETER
-            if coordinate_mode == "manual"
-            else None
-        ),
-        enable_live_grid_preview=True,
-        allow_control_click=coordinate_mode == "manual",
+    manual_roi_diameter = (
+        MANUAL_ROI_DIAMETER if coordinate_mode == "manual" else None
     )
+    if COORDINATES is not None:
+        selections = select_wells_from_coordinates(
+            image,
+            COORDINATES,
+            well_ids=["RET"],
+            detector=detector,
+            search_radius=300,
+            coordinate_mode=coordinate_mode,
+            manual_roi_diameter=manual_roi_diameter,
+        )
+    else:
+        print("Left-click the RET signal well.")
+        print("Drag the + marker to reposition the selected point.")
+        if coordinate_mode == "manual":
+            print(
+                "Optional: double left-click a background region to add a "
+                "Control."
+            )
+        print("Right-click near the crosshair to remove an accidental selection.")
+        print("Press Enter/Return to confirm.")
+        selections = select_wells_gui(
+            image,
+            expected_count=1,
+            well_ids=["RET"],
+            detector=detector,
+            search_radius=300,
+            coordinate_mode=coordinate_mode,
+            manual_roi_diameter=manual_roi_diameter,
+            enable_live_grid_preview=True,
+            allow_control_click=coordinate_mode == "manual",
+        )
 
     # Desktop backends return a DataFrame. In a Jupyter widget backend the
     # function returns a session immediately; run analysis after Confirm with:
     # result = RetAnalyzer().analyze(image, session.result)
+    if selections is None:
+        return
     if not isinstance(selections, pd.DataFrame):
         print(
             "Jupyter session started. Click Confirm (or press Enter if the "

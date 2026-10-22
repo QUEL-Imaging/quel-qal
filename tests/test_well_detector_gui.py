@@ -437,3 +437,32 @@ def test_local_refinement_rejects_empty_background_click():
             coordinate_mode="detect",
             search_radius=20,
         )
+
+
+def test_closing_well_gui_before_confirm_returns_none(monkeypatch, capsys):
+    from qal.rta.roi_extraction import well_detector_gui
+
+    monkeypatch.setattr(well_detector_gui, "_prepare_gui_backend", lambda: False)
+    monkeypatch.setattr(plt, "show", lambda **kwargs: plt.close("all"))
+
+    result = well_detector_gui.select_wells_gui(
+        np.zeros((50, 50)), expected_count=1, coordinate_mode="manual",
+        manual_roi_diameter=5,
+    )
+
+    assert result is None
+    assert "closed before confirmation" in capsys.readouterr().out
+    assert not plt.get_fignums()
+
+
+def test_closed_well_session_ignores_confirm():
+    session = WellSelectionSession(
+        np.zeros((50, 50)), expected_count=1, coordinate_mode="manual",
+        manual_roi_diameter=5, close_on_confirm=False,
+    )
+    session.points.append((10.0, 10.0))
+    session._on_close()
+
+    assert session.confirm() is None
+    assert session.closed
+    plt.close(session.figure)
