@@ -28,6 +28,8 @@ keywords = [
 ]
 classifiers = [
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "License :: OSI Approved :: GNU Affero General Public License v3",
     "Intended Audience :: Science/Research",
     "Intended Audience :: Education",
@@ -38,22 +40,22 @@ classifiers = [
 ]
 requires-python = ">=3.12"
 dependencies = [
-    "ipympl",
-    "matplotlib==3.9.2",
-    "numba",
-    "numpy",
-    "opencv-contrib-python",
-    "openpyxl",
-    "pandas",
-    "pooch",
-    "pyyaml",
-    "roipoly",
-    "scikit-image",
-    "scikit-learn",
-    "scipy",
-    "statsmodels",
-    "tqdm",
-    "lazy-loader",
+    "ipympl>=0.10.0,<0.11",
+    "matplotlib>=3.10.8,<3.11",
+    "numba>=0.68.0,<0.69",
+    "numpy>=2.5.4,<2.6",
+    "opencv-contrib-python>=4.14.0.94,<6",
+    "openpyxl>=3.1.5,<3.2",
+    "pandas>=3.1.0,<3.2",
+    "pooch>=1.9.0,<2",
+    "pyyaml>=6.0.3,<7",
+    "roipoly>=0.5.3,<0.6",
+    "scikit-image>=0.26.0,<0.27",
+    "scikit-learn>=1.9.1,<1.10",
+    "scipy>=1.18.1,<1.19",
+    "statsmodels>=0.15.0,<0.16",
+    "tqdm>=4.70.1,<5",
+    "lazy-loader>=0.6,<0.7",
 ]
 
 [tool.spin.scripts]
@@ -64,6 +66,7 @@ package = "qal"
 
 [tool.setuptools.packages.find]
 where = ["."]
+include = ["qal*"]
 
 [tool.setuptools.package-data]
 "qal.data" = ["product_presets/*.yaml", "product_presets/*.md"]
