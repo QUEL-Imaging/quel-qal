@@ -140,13 +140,14 @@ class WellDetector:
     def apply_threshold(self, image, threshold):
         return image > threshold
 
-    def get_well_positions(self, im_src, binary_image):
+    def get_well_positions(self, im_src, binary_image, *, min_area=500, min_eccentricity=0.2):
         labeled_image, num_features = self.connected_components(binary_image)
         
         if num_features == 0:
             return pd.DataFrame()
         
-        df = self.compute_well_positions(im_src, binary_image, labeled_image)
+        df = self.compute_well_positions(im_src, binary_image, labeled_image,
+                                         min_area=min_area, min_eccentricity=min_eccentricity)
         return df
 
     def get_clusters_from_points(self, df, threshold=15, use_std=False):
@@ -538,10 +539,11 @@ class WellDetector:
 
         return avg_centers, roi_size
 
-    def get_detected_features(self, im_src, thresh_im_array):
+    def get_detected_features(self, im_src, thresh_im_array, *, min_area=500, min_eccentricity=0.2):
         try:
             def process_thresh_im(thresh_im):
-                wells = self.get_well_positions(im_src, thresh_im)
+                wells = self.get_well_positions(im_src, thresh_im,
+                    min_area=min_area, min_eccentricity=min_eccentricity)
                 return wells
 
             if self.scale_factor != 1:
@@ -663,7 +665,17 @@ class WellDetector:
             plt.show()
 
     def detect_wells(self, im, well_ids=None, show_detected_wells=False, debug=False, set_consistent_roi_region=False,
-                     downscale=1):
+                     downscale=1, *, min_area=500, min_eccentricity=0.2):
+        """Detect wells, with adjustable region-area and eccentricity filters.
+
+        ``min_area`` is in pixels of the downscaled detection image.
+        ``min_eccentricity`` is the historical name for the *maximum* allowed
+        eccentricity (0 is circular, 1 is elongated). Defaults are unchanged.
+        """
+        if not np.isfinite(min_area) or min_area <= 0:
+            raise ValueError("min_area must be positive and finite")
+        if not np.isfinite(min_eccentricity) or not 0 <= min_eccentricity <= 1:
+            raise ValueError("min_eccentricity must be between 0 and 1")
         self.scale_factor = downscale
         try:
             im_copy = im.copy()
@@ -679,7 +691,8 @@ class WellDetector:
 
             # Using WellDetector's methods for further processing
             thresh_im_array = self.get_thresh_rolling_window_binary(log_im_uint8)
-            df_features = self.get_detected_features(im, thresh_im_array)
+            df_features = self.get_detected_features(im, thresh_im_array,
+                min_area=min_area, min_eccentricity=min_eccentricity)
 
             if df_features is not None:
                 df_feature_clusters = self.get_clusters_from_points(df_features)

@@ -214,13 +214,16 @@ class WellPlotter:
         self.ax.set_ylabel(y_axis_title)
 
     def plot(self, graph_type='concentration', col_to_plot='mean intensity', fluorophore_label='ICG-eq',
-             plot_error_bars=False, trendline_lib='statsmodels', save_plot=None, cnr_threshold=3):
+             plot_error_bars=False, trendline_lib='statsmodels', save_plot=None, cnr_threshold=3,
+             use_cnr=True):
         """
         Plot the graph using the provided or default column and labels.
         
         :param graph_type: Type of graph, either 'concentration' or 'depth'.
         :param col_to_plot: Column name in the dataframe used for y-axis data.
         :param fluorophore_label: Label used for the scatter plot data.
+        :param use_cnr: Filter the concentration trendline by CNR. False uses
+            every non-Control well and does not require a CNR column.
         """
         self.fig, self.ax = plt.subplots(figsize=(6, 6))  # Create a new figure and axes
 
@@ -252,8 +255,9 @@ class WellPlotter:
 
         x_data = df_plot['value'].values
         y_data = df_plot[col_to_plot].values
-        cnr_data = df_plot['CNR'].values
-        if graph_type == 'concentration':
+        if graph_type == 'depth' or use_cnr:
+            cnr_data = df_plot['CNR'].values
+        if graph_type == 'concentration' and use_cnr:
             x_at_good_cnr = x_data[cnr_data >= cnr_threshold]
             if x_at_good_cnr.size == 0:
                 x_data = []
@@ -264,6 +268,8 @@ class WellPlotter:
                 x_hat = np.geomspace(x_data[linear_min_idx], np.max(x_data), 100)
                 x_data = x_data[linear_min_idx::-1]
                 y_data = y_data[linear_min_idx::-1]
+        elif graph_type == 'concentration':
+            x_hat = np.geomspace(np.min(x_data), np.max(x_data), 100)
         else:
             x_hat = np.linspace(np.min(x_data), np.max(x_data), 100)
         if len(x_data) > 1:
@@ -300,7 +306,7 @@ class WellPlotter:
         samples = np.linspace(0.2, 0.85, len(wells))
         return {well: cmap(sample) for well, sample in zip(wells, samples)}
 
-    def visualize_roi(self, colormap='plasma'):
+    def visualize_roi(self, colormap='plasma', save_plot=None):
         """
         Overlay the analyzed ROI, and the detected well when those columns exist.
 
@@ -308,6 +314,9 @@ class WellPlotter:
         dashed circle is the detected well.
         
         :param colormap: The colormap to use for visualizing ROIs (default is 'plasma').
+        :param save_plot: Optional output path. Save the ROI figure before showing
+            it, since closing a blocking plot window unregisters it from pyplot.
+        :return: The ROI figure, which can also be saved after its window closes.
         """
         if self.image is None:
             raise ValueError("No image provided for ROI visualization.")
@@ -425,4 +434,7 @@ class WellPlotter:
         ax.axis("off")
         plt.title(f"ROI Visualization", fontsize=18, fontweight='bold')  # Larger, bold title
         plt.tight_layout()  # Adjust layout to prevent clipping
+        if save_plot is not None:
+            fig.savefig(save_plot, bbox_inches="tight")
         plt.show()
+        return fig
