@@ -1,6 +1,7 @@
 from pathlib import Path
 from types import SimpleNamespace
 
+import json
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
@@ -182,15 +183,33 @@ def test_line_count_knob_is_validated():
         select_rrt_lines(IMAGE, mode="manual_line_profiles", line_count=7)
 
 
-def test_selection_round_trips_through_json(tmp_path):
+@pytest.mark.parametrize("suffix", [".yaml", ".yml", "", ".json"])
+def test_selection_round_trips_through_saved_file(tmp_path, suffix):
     selection = select_rrt_lines_from_coordinates(
         IMAGE, registration_points=[(20, 20), (140, 110)]
     )
-    path = selection.save(tmp_path / "selection.json")
+    path = selection.save(tmp_path / "nested" / f"selection{suffix}")
+
+    assert path.suffix == (suffix or ".yaml")
+    if suffix == ".json":
+        assert json.loads(path.read_text()) == selection.to_dict()
+    else:
+        assert path.read_text().startswith("target: resolution\n")
 
     loaded = RrtLineSelection.load(path)
     assert loaded.registration_points == ((20.0, 20.0), (140.0, 110.0))
     assert np.allclose(loaded.lines, selection.lines)
+
+
+def test_load_legacy_json_selection(tmp_path):
+    path = tmp_path / "legacy.json"
+    path.write_text(
+        '{"mode": "manual_line_profiles", '
+        '"line_coordinates": [[[10, 5], [10, 80]]]}'
+    )
+    loaded = RrtLineSelection.load(path)
+    assert loaded.lines == (((10.0, 5.0), (10.0, 80.0)),)
+    assert loaded.registration_points is None
 
 
 def test_line_session_clicks_fill_lines_in_order_and_confirm():
