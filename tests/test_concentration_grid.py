@@ -1,3 +1,5 @@
+import json
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -181,9 +183,10 @@ def test_coordinates_skip_gui_and_complete_grid(monkeypatch):
     assert list(wells["well"]) == WELL_IDS
 
 
-def test_manual_coordinates_with_control_are_exact(tmp_path):
+@pytest.mark.parametrize("suffix", [".yaml", ".yml", "", ".json"])
+def test_manual_coordinates_with_control_are_exact(tmp_path, suffix):
     points = [(20, 20), (50, 20), (80, 20), (5, 100)]
-    path = tmp_path / "selection.json"
+    path = tmp_path / "nested" / f"selection{suffix}"
     wells = select_concentration_grid(
         np.zeros((110, 110)),
         WELL_IDS,
@@ -197,9 +200,23 @@ def test_manual_coordinates_with_control_are_exact(tmp_path):
 
     assert np.allclose(wells[["x", "y"]], points)
     assert wells["well"].tolist() == ["1000 nM", "300 nM", "100 nM", "Control"]
+    if not suffix:
+        path = path.with_suffix(".yaml")
+    if suffix == ".json":
+        assert json.loads(path.read_text())["target"] == "concentration"
+    else:
+        assert path.read_text().startswith("target: concentration\n")
     saved = load_concentration_selection(path)
     assert saved["coordinates"] == [tuple(map(float, p)) for p in points]
     assert saved["control_indices"] == [3]
+
+
+def test_load_legacy_json_selection(tmp_path):
+    path = tmp_path / "legacy.json"
+    path.write_text('{"coordinates": [[20, 30]], "control_indices": [0]}')
+    saved = load_concentration_selection(path)
+    assert saved["coordinates"] == [(20, 30)]
+    assert saved["control_indices"] == [0]
 
 
 def test_open_ended_coordinates_make_ninth_point_control():
