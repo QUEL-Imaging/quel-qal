@@ -13,8 +13,8 @@ from qal import RetAnalyzer, WellDetector
 from qal.util import describe_stored_values, load_grayscale_image
 
 
-# Set the RET signal image (light frame).
-IMAGE_PATH = Path("../../data/RET_images/690_nm_LP.tiff")
+# Replace with your light-frame file. Relative paths start where Python is run.
+IMAGE_PATH = Path("path/to/light_frame.tiff").expanduser()
 
 
 def main() -> None:
