@@ -16,7 +16,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import matplotlib.pyplot as plt
 import pandas as pd
 
 from qal import WellAnalyzer, WellPlotter, select_concentration_grid
@@ -114,10 +113,9 @@ def main() -> None:
     )
     analyzer.print_stats(mode=MODE)
     plotter = WellPlotter(stats, image=image)
-    plotter.visualize_roi()
+    roi_path = results_dir / "roi.png" if results_dir is not None else None
+    plotter.visualize_roi(save_plot=roi_path)
     if results_dir is not None:
-        roi_path = results_dir / "roi.png"
-        plt.savefig(roi_path, bbox_inches="tight")
         wells_path = results_dir / "wells.csv"
         stats_path = results_dir / "stats.csv"
         wells.to_csv(wells_path, index=False)
