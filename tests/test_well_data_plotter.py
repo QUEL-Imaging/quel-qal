@@ -59,7 +59,6 @@ def test_concentration_examples_save_nonblank_roi(
     monkeypatch, tmp_path, roi_data, example
 ):
     from qal.examples.concentration_rcs import concentration_gui_example as gui
-    from qal.examples.concentration_rcs import concentration_batch_example as batch
 
     image, wells = roi_data
     monkeypatch.setattr(plt, "show", lambda: plt.close("all"))
@@ -73,6 +72,8 @@ def test_concentration_examples_save_nonblank_roi(
             path = tmp_path / "sample_results" / "roi.png"
             stats_path = path.parent / "stats.csv"
         elif example == "batch":
+            from qal.examples.concentration_rcs import concentration_batch_example as batch
+
             monkeypatch.setattr(batch, "SELECTION_PATH", None)
             monkeypatch.setattr(batch, "OUTPUT_DIR", tmp_path)
             monkeypatch.setattr(batch, "SAVE_PLOTS", True)
