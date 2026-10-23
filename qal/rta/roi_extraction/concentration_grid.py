@@ -8,7 +8,6 @@ replace the GUI for batch processing.
 
 from __future__ import annotations
 
-import json
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -16,6 +15,7 @@ from typing import Literal, Optional, Union
 
 import pandas as pd
 
+from ._selection_io import load_selection, save_selection
 from .well_detector import WellDetector
 from .well_detector_gui import (
     Coordinate,
@@ -180,9 +180,10 @@ def save_concentration_selection(
     mode: str,
     anchor_count: Optional[int],
 ) -> Path:
-    """Write selected anchor coordinates as JSON for batch reuse."""
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
+    """Write anchors as YAML for batch reuse; use .json to explicitly save JSON.
+
+    Paths without an extension receive a .yaml suffix.
+    """
     wells = anchors["well"].tolist()
     data = {
         "target": "concentration",
@@ -195,17 +196,16 @@ def save_concentration_selection(
             index for index, well in enumerate(wells) if well == "Control"
         ],
     }
-    path.write_text(json.dumps(data, indent=2))
-    return path
+    return save_selection(path, data)
 
 
 def load_concentration_selection(path: Union[str, Path]) -> dict:
-    """Read a JSON file written by :func:`save_concentration_selection`.
+    """Read a YAML or legacy JSON concentration selection.
 
     The returned ``coordinates`` and ``control_indices`` can be passed
     straight to :func:`select_concentration_grid`.
     """
-    data = json.loads(Path(path).read_text())
+    data = load_selection(path)
     data["coordinates"] = [tuple(point) for point in data["coordinates"]]
     data["control_indices"] = list(data.get("control_indices") or [])
     return data
@@ -284,7 +284,8 @@ def select_concentration_grid(
     rules as GUI clicks. ``control_indices`` marks Control coordinates in
     ``manual_coordinates`` mode.
 
-    ``selection_path`` writes the anchors as JSON; reload them with
+    ``selection_path`` writes the anchors as YAML (or JSON for .json paths);
+    reload them with
     :func:`load_concentration_selection` for batch processing.
 
     Desktop backends block until confirmation and return a DataFrame.
