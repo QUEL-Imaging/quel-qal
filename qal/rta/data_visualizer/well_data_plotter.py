@@ -5,7 +5,7 @@ import matplotlib.ticker as ticker
 import statsmodels.api as sm
 from sklearn.metrics import r2_score
 from scipy.optimize import curve_fit
-from skimage.draw import disk
+from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 
 
@@ -214,13 +214,16 @@ class WellPlotter:
         self.ax.set_ylabel(y_axis_title)
 
     def plot(self, graph_type='concentration', col_to_plot='mean intensity', fluorophore_label='ICG-eq',
-             plot_error_bars=False, trendline_lib='statsmodels', save_plot=None, cnr_threshold=3):
+             plot_error_bars=False, trendline_lib='statsmodels', save_plot=None, cnr_threshold=3,
+             use_cnr=True):
         """
         Plot the graph using the provided or default column and labels.
         
         :param graph_type: Type of graph, either 'concentration' or 'depth'.
         :param col_to_plot: Column name in the dataframe used for y-axis data.
         :param fluorophore_label: Label used for the scatter plot data.
+        :param use_cnr: Filter the concentration trendline by CNR. False uses
+            every non-Control well and does not require a CNR column.
         """
         self.fig, self.ax = plt.subplots(figsize=(6, 6))  # Create a new figure and axes
 
@@ -252,8 +255,9 @@ class WellPlotter:
 
         x_data = df_plot['value'].values
         y_data = df_plot[col_to_plot].values
-        cnr_data = df_plot['CNR'].values
-        if graph_type == 'concentration':
+        if graph_type == 'depth' or use_cnr:
+            cnr_data = df_plot['CNR'].values
+        if graph_type == 'concentration' and use_cnr:
             x_at_good_cnr = x_data[cnr_data >= cnr_threshold]
             if x_at_good_cnr.size == 0:
                 x_data = []
@@ -264,6 +268,8 @@ class WellPlotter:
                 x_hat = np.geomspace(x_data[linear_min_idx], np.max(x_data), 100)
                 x_data = x_data[linear_min_idx::-1]
                 y_data = y_data[linear_min_idx::-1]
+        elif graph_type == 'concentration':
+            x_hat = np.geomspace(np.min(x_data), np.max(x_data), 100)
         else:
             x_hat = np.linspace(np.min(x_data), np.max(x_data), 100)
         if len(x_data) > 1:
@@ -279,11 +285,38 @@ class WellPlotter:
             plt.savefig(os.path.abspath(save_plot))
         plt.show()
 
-    def visualize_roi(self, colormap='plasma'):
+    @staticmethod
+    def _detected_roi_radius(row):
+        if "ROI Radius" in row.index and np.isfinite(row["ROI Radius"]):
+            radius = float(row["ROI Radius"])
+            if radius > 0:
+                return radius
+        if "ROI Diameter" in row.index and np.isfinite(row["ROI Diameter"]):
+            radius = float(row["ROI Diameter"]) / 2
+            if radius > 0:
+                return radius
+        return None
+
+    @staticmethod
+    def _well_colors(well_ids, colormap="plasma"):
+        wells = list(well_ids)
+        if len(wells) == 1:
+            return {wells[0]: "#1B3D87"}
+        cmap = plt.get_cmap(colormap)
+        samples = np.linspace(0.2, 0.85, len(wells))
+        return {well: cmap(sample) for well, sample in zip(wells, samples)}
+
+    def visualize_roi(self, colormap='plasma', save_plot=None):
         """
-        Visualize the ROI of the detected wells on the input image with distinct colors and a legend.
+        Overlay the analyzed ROI, and the detected well when those columns exist.
+
+        The inner solid circle is the region used in calculations. The outer
+        dashed circle is the detected well.
         
         :param colormap: The colormap to use for visualizing ROIs (default is 'plasma').
+        :param save_plot: Optional output path. Save the ROI figure before showing
+            it, since closing a blocking plot window unregisters it from pyplot.
+        :return: The ROI figure, which can also be saved after its window closes.
         """
         if self.image is None:
             raise ValueError("No image provided for ROI visualization.")
@@ -301,25 +334,41 @@ class WellPlotter:
             vis_image = (vis_image - np.nanmin(vis_image)) / (np.nanmax(vis_image) - np.nanmin(vis_image))  # Normalize to [0, 1]
             vis_image = (vis_image * 255).astype(np.uint8)  # Convert to 8-bit
 
-        # Assign distinct colors to each well
-        unique_wells = self.df['well'].unique()
-        cmap = plt.get_cmap(colormap)  # Dynamically get the colormap
-        colors = cmap(np.linspace(0, 1, len(unique_wells)))
-        color_map = {well: color for well, color in zip(unique_wells, colors)}
+        unique_wells = list(self.df["well"].unique())
+        color_map = self._well_colors(unique_wells, colormap=colormap)
 
         # Overlay ROIs with different colors and add crosshairs
         fig, ax = plt.subplots(figsize=(8, 8))  # Explicit figure and axes
         ax.imshow(vis_image, cmap='gray')
         legend_patches = []
+        drew_detected = False
         for _, row in self.df.iterrows():
-            rr, cc = disk(
-                (int(row['y']), int(row['x'])), int(row['Analyzed ROI Diameter'] / 2), shape=vis_image.shape
-            )
             color = color_map[row['well']]
-            
-            # Draw circle
+            analyzed_radius = float(row['Analyzed ROI Diameter']) / 2
+            detected_radius = self._detected_roi_radius(row)
+
+            if detected_radius is not None:
+                ax.add_patch(
+                    plt.Circle(
+                        (row['x'], row['y']),
+                        detected_radius,
+                        edgecolor=color,
+                        facecolor='none',
+                        lw=1.5,
+                        linestyle='--',
+                    )
+                )
+                drew_detected = True
+
             ax.add_patch(
-                plt.Circle((row['x'], row['y']), row['Analyzed ROI Diameter'] / 2, edgecolor=color, facecolor='none', lw=2)
+                plt.Circle(
+                    (row['x'], row['y']),
+                    analyzed_radius,
+                    edgecolor=color,
+                    facecolor='none',
+                    lw=2.5,
+                    linestyle='-',
+                )
             )
             
             # Draw crosshairs
@@ -332,19 +381,60 @@ class WellPlotter:
                 color=color, lw=1
             )
 
-            # Add legend if not already present
-            if row['well'] not in [patch.get_label() for patch in legend_patches]:
-                legend_patches.append(Patch(color=color, label=row['well']))
+            if (
+                len(unique_wells) > 1
+                and row["well"] not in [patch.get_label() for patch in legend_patches]
+            ):
+                legend_patches.append(Patch(color=color, label=row["well"]))
+
+        style_color = (
+            color_map[unique_wells[0]] if len(unique_wells) == 1 else "0.2"
+        )
+        if drew_detected:
+            legend_patches.extend(
+                (
+                    Line2D(
+                        [0],
+                        [0],
+                        color=style_color,
+                        lw=1.5,
+                        linestyle="--",
+                        label="Detected ROI",
+                    ),
+                    Line2D(
+                        [0],
+                        [0],
+                        color=style_color,
+                        lw=2.5,
+                        linestyle="-",
+                        label="Analyzed ROI",
+                    ),
+                )
+            )
+        elif len(unique_wells) == 1:
+            legend_patches.append(
+                Line2D(
+                    [0],
+                    [0],
+                    color=style_color,
+                    lw=2.5,
+                    linestyle="-",
+                    label="Analyzed ROI",
+                )
+            )
 
         # Add legend outside the image
         ax.legend(
             handles=legend_patches,
             loc='upper left',  # Position relative to bbox_to_anchor
             bbox_to_anchor=(1.05, 1),  # Position outside the plot area
-            title="Well IDs",
+            title="ROI" if len(unique_wells) == 1 else "Well IDs",
             fontsize=12
         )
         ax.axis("off")
         plt.title(f"ROI Visualization", fontsize=18, fontweight='bold')  # Larger, bold title
         plt.tight_layout()  # Adjust layout to prevent clipping
+        if save_plot is not None:
+            fig.savefig(save_plot, bbox_inches="tight")
         plt.show()
+        return fig

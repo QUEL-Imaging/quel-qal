@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/version-0.2.6-blue)
+![Version](https://img.shields.io/badge/version-0.3.0-blue)
 ![Python Version](https://img.shields.io/badge/python-3.12-green)
 [![PyPI](https://img.shields.io/pypi/v/quel-qal?color=green)](https://pypi.org/project/quel-qal/)
 [![DOI](https://img.shields.io/badge/DOI-10.48550/arXiv.2504.15496-blue.svg)](https://doi.org/10.48550/arXiv.2504.15496)
@@ -11,6 +11,12 @@ This guide will help you get started with setting up and using **quel-qal**. Fol
 
 ### Prerequisites
 - **Quel-qal** requires Python version ≥ 3.12.
+- The pinned source-install environment is tested on Python 3.12, 3.13 and 3.14.
+  See the [release and compatibility guide](https://github.com/QUEL-Imaging/quel-qal/blob/main/doc/release-v0.3.0.md)
+  for the exact versions, clean-install steps and Python 3.15 limitations.
+- OpenCV 4 and 5 are supported. The pinned environment uses
+  `opencv-contrib-python==5.0.0.93`, which retains BRISK for RRT registration.
+  Install only one OpenCV wheel distribution per environment.
 - It is also recommended (though not required) to set up a separate virtual environment to install to. On your terminal, navigate to the directory where you would like to install the virtual environment. Create and activate a new virtual environment as follows.</br></br>
 
   On macOS/Linux:
@@ -54,7 +60,7 @@ Alternatively, you can install the repository from GitHub by following these ste
     ```
 4. **Install quel-qal:**</br>
     ```
-    pip install -e .
+    pip install -c requirements-constraints.txt -e .
     ```
 
 ## License

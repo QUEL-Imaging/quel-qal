@@ -3,7 +3,7 @@ import cv2
 import hashlib
 import shutil
 import pooch
-from skimage import io
+from qal.util._image import load_grayscale_image
 
 try:
     from ._registry import registry
@@ -153,7 +153,7 @@ def _load(filename):
         Image read from local cache.
     """
     path = _fetch(filename)
-    return io.imread(path)
+    return load_grayscale_image(path)
 
 
 # --- Concentration samples
