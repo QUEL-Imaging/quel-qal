@@ -16,7 +16,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import matplotlib.pyplot as plt
 import pandas as pd
 
 from qal import WellAnalyzer, WellPlotter, select_concentration_grid
@@ -41,9 +40,9 @@ CUSTOM_WELL_IDS = [
 ]
 
 # None uses QAL's cn_sample_3 example image.
-IMAGE_PATH = None  # "path/to/image.tiff"
+IMAGE_PATH = '/Users/eammon/Documents/QUEL/Orders/Smith and Nephew - QUEL-QAL - Edwin/20260828 SN Images/RCS/concentration.tiff'  # "path/to/image.tiff"
 # Writes plots and CSVs to <image_stem>_results next to IMAGE_PATH.
-SAVE_RESULTS = False
+SAVE_RESULTS = True
 
 # Choose one variation by uncommenting it and commenting out the active one.
 # MODE = "automatic_refinement"
@@ -54,7 +53,7 @@ MODE = "manual_live_preview"
 ANCHOR_COUNT = 3
 # Fixed anchors skip the GUI in any mode (e.g. a jig-mounted target).
 # The GUI prints these after each selection; SAVE_RESULTS also writes them
-# to selection.json for concentration_batch_example.
+# to selection.yaml for concentration_batch_example.
 COORDINATES = None  # [(x1, y1), (x2, y2), (x3, y3)]
 CONTROL_INDICES = None  # manual_coordinates only, e.g. [3]
 # None estimates diameter as 60% of grid spacing; set a pixel value to override.
@@ -102,7 +101,7 @@ def main() -> None:
         coordinates=COORDINATES,
         control_indices=CONTROL_INDICES,
         selection_path=(
-            results_dir / "selection.json" if results_dir is not None else None
+            results_dir / "selection.yaml" if results_dir is not None else None
         ),
     )
     if not isinstance(wells, pd.DataFrame):
@@ -114,10 +113,9 @@ def main() -> None:
     )
     analyzer.print_stats(mode=MODE)
     plotter = WellPlotter(stats, image=image)
-    plotter.visualize_roi()
+    roi_path = results_dir / "roi.png" if results_dir is not None else None
+    plotter.visualize_roi(save_plot=roi_path)
     if results_dir is not None:
-        roi_path = results_dir / "roi.png"
-        plt.savefig(roi_path, bbox_inches="tight")
         wells_path = results_dir / "wells.csv"
         stats_path = results_dir / "stats.csv"
         wells.to_csv(wells_path, index=False)
