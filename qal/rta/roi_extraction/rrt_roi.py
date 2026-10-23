@@ -8,6 +8,7 @@ import numpy as np
 from skimage import io, img_as_float, img_as_ubyte, transform as sk_transform
 from skimage import io, segmentation
 from qal.data import resolution_template
+from qal.util import load_grayscale_image
 import cv2
 import os
 
@@ -45,11 +46,14 @@ class RrtROI:
         key = name.lower().replace("-", "_")
 
         def factory(attr_name):
-            if hasattr(cv2, attr_name):
-                return getattr(cv2, attr_name)
-            xfeat = getattr(cv2, "xfeatures2d", None)
-            if xfeat is not None and hasattr(xfeat, attr_name):
-                return getattr(xfeat, attr_name)
+            for namespace in (cv2, getattr(cv2, "xfeatures2d", None)):
+                if namespace is None:
+                    continue
+                if hasattr(namespace, attr_name):
+                    return getattr(namespace, attr_name)
+                feature_class = getattr(namespace, attr_name.removesuffix("_create"), None)
+                if feature_class is not None and hasattr(feature_class, "create"):
+                    return feature_class.create
             raise AttributeError(attr_name)
 
         creators = {
@@ -107,6 +111,8 @@ class RrtROI:
             self.process_resolution_target(self.roi_corners)
 
     def detect_roi_corners(self, points, image):
+        # Harris expects a scalar 2-D image, including in the legacy picker.
+        image = load_grayscale_image(image)
         # Extract the coordinates of the selected points
         x1, y1 = points[0]
         x2, y2 = points[1]
@@ -349,6 +355,10 @@ class RrtROI:
             template = cv2.imread(template_path, 0)
         else:
             template = resolution_template()
+
+        # The stored-value loader preserves uint16 templates. OpenCV feature
+        # descriptors need uint8 for both inputs, not just the source image.
+        template = self.cvt_to_uint8(template)
 
         # Convert the im_src image to uint8 if necessary
         numpy_image = self.cvt_to_uint8(im_src)

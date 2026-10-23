@@ -21,7 +21,6 @@ Passing ``registration_points`` or ``line_coordinates`` to
 
 from __future__ import annotations
 
-import json
 import warnings
 from collections.abc import Sequence
 from dataclasses import dataclass, field
@@ -37,6 +36,7 @@ from skimage.feature import corner_harris, corner_peaks
 from qal.util import load_grayscale_image
 
 from ..image_analyzer.rrt_analyzer import RrtAnalyzer
+from ._selection_io import load_selection, save_selection
 from .well_detector_gui import _prepare_gui_backend, _running_in_notebook
 
 Coordinate = tuple[float, float]
@@ -295,11 +295,11 @@ class RrtLineSelection:
         }
 
     def save(self, path: Union[str, Path]) -> Path:
-        """Write the selection as JSON and return the path."""
-        path = Path(path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(self.to_dict(), indent=2))
-        return path
+        """Write YAML and return the path; use .json to explicitly save JSON.
+
+        Paths without an extension receive a .yaml suffix.
+        """
+        return save_selection(path, self.to_dict())
 
     @classmethod
     def from_dict(cls, data: dict) -> "RrtLineSelection":
@@ -319,7 +319,8 @@ class RrtLineSelection:
 
     @classmethod
     def load(cls, path: Union[str, Path]) -> "RrtLineSelection":
-        return cls.from_dict(json.loads(Path(path).read_text()))
+        """Read a YAML selection or a legacy JSON selection."""
+        return cls.from_dict(load_selection(path))
 
     def describe(self) -> str:
         """Coordinates formatted for pasting into a batch script."""
@@ -1022,7 +1023,8 @@ def select_rrt_lines(
     :class:`RrtLineSelection`, or ``None`` if the window is closed before
     confirmation. Jupyter widget backends return an
     :class:`RrtSelectionSession`; after Confirm, use ``session.result``.
-    ``selection_path`` writes the confirmed selection as JSON for reuse.
+    ``selection_path`` writes the confirmed selection as YAML for reuse
+    (an explicit .json suffix saves JSON).
     """
     if mode not in RRT_GUI_MODES:
         raise ValueError(f"Unknown MODE: {mode}")
