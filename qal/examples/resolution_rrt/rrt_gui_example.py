@@ -5,7 +5,7 @@ Edit the settings below, then run:
     python -m qal.examples.resolution_rrt.rrt_gui_example
 
 The window prints the coordinates you chose. With SAVE_RESULTS on, it also
-writes plots, a CSV, and selection.json next to your image. Paste those
+writes plots, a CSV, and selection.yaml next to your image. Paste those
 coordinates into rrt_batch_example to measure more images without the window.
 """
 
@@ -24,7 +24,7 @@ from qal.util import load_grayscale_image
 # Or set your own file, for example "path/to/image.tiff".
 IMAGE_PATH = None
 
-# True saves plots, a CSV, and selection.json in a folder next to the image.
+# True saves plots, a CSV, and selection.yaml in a folder next to the image.
 # This needs IMAGE_PATH, because the built-in example has no folder of its own.
 SAVE_RESULTS = False
 
@@ -76,7 +76,7 @@ def main():
     if SAVE_RESULTS:
         results_dir = image_path.parent / f"{image_path.stem}_results"
         results_dir.mkdir(parents=True, exist_ok=True)
-        selection_path = results_dir / "selection.json"
+        selection_path = results_dir / "selection.yaml"
         print(f"Results folder: {results_dir}")
 
     # 3. Straighten the chart for the clicking window.
