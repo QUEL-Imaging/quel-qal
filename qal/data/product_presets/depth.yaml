@@ -1,0 +1,196 @@
+schema_version: 1
+family: depth_sensitivity
+product_code: RDS
+qal_workflow: WellDetector -> WellAnalyzer -> WellPlotter
+qal_graph_type: depth
+
+well_ids:
+  - 0.5 mm
+  - 1.0 mm
+  - 1.5 mm
+  - 2.0 mm
+  - 3.0 mm
+  - 4.0 mm
+  - 5.0 mm
+  - 6.0 mm
+  - Control
+
+presets:
+  ICG:
+    display_name: ICG-equivalent depth sensitivity target
+    old_sku: RDS-ICG-ST03-QUEL03
+    current_sku: S_RDS_STD_ICG-01_DPTH-01_rA
+    serial_template: RDS-S-IC1-D1-A-xxx
+    legacy_serial_template: V3-ICG-ST03-RDSxxx
+    legacy_serial_templates:
+      - V3-ICG-ST01-RDSxxx
+      - V3-ICG-ST02-RDSxxx
+      - V3PROTO-ICG-ST03-RDSxxx
+    fluorophore_code: ICG
+    fluorophore_label: ICG-eq
+    size: standard
+    form_code: ST03
+    superseded_skus:
+      - RDS-ICG-ST02-QUEL02
+    backwards_compatible: true
+    notes: >
+      Current ST03 supersedes RDS-ICG-ST02-QUEL02. ST01-RDS serials are earlier
+      depth iterations with the same 0.5–6 mm well IDs.
+      https://shop.quelimaging.com/product/icg-equivalent-depth-sensitivity-target/
+    status: current
+    channel_nm: 800
+    fluorescent_concentration_nm: 1000
+    well_diameter_mm: 10
+    source: https://shop.quelimaging.com/product/icg-equivalent-depth-sensitivity-target/
+
+  Q800:
+    display_name: Q800-01 depth sensitivity target (Lung)
+    old_sku: RDS-80Q-LU05-QUEL01
+    current_sku: S_RDS_STD_Q800-01_DPTH-02_rA
+    serial_template: RDS-S-Q81-D2-A-xxx
+    legacy_serial_template: V1-80Q-LU05-RDSxxx
+    fluorophore_code: 80Q
+    fluorophore_label: Q800-01
+    size: standard
+    form_code: LU05
+    notes: >
+      Current Q800-01 lung depth target. Older OTL38 depth units are a separate
+      superseded preset (1000 nM inclusions vs 600 nM). Design change notice:
+      https://shop.quelimaging.com/resources/
+    status: current
+    channel_nm: 800
+    fluorescent_concentration_nm: 600
+    well_diameter_mm: 10
+    source: https://shop.quelimaging.com/product/q800-01-depth-sensitivity-target-lung/
+
+  Q700:
+    display_name: Q700-01 depth sensitivity target
+    old_sku: RDS-70Q-ST03-QUEL01
+    current_sku: S_RDS_STD_Q700-01_DPTH-01_rA
+    serial_template: RDS-S-Q71-D1-A-xxx
+    legacy_serial_template: V1-70Q-ST03-RDSxxx
+    fluorophore_code: 70Q
+    fluorophore_label: Q700-01
+    size: standard
+    form_code: ST03
+    status: current
+    channel_nm: 700
+    fluorescent_concentration_nm: 1000
+    well_diameter_mm: 10
+    source: https://shop.quelimaging.com/product/q700-depth-sensitivity-target/
+
+  ICG_mini:
+    display_name: Mini ICG-equivalent depth sensitivity target
+    old_sku: RDS-ICG-SM03-QUEL01
+    current_sku: S_RDS_MIN_ICG-01_DPTH-01_rA
+    serial_template: RDS-M-IC1-D1-A-xxx
+    legacy_serial_template: V3-ICG-SM02-RDSxxx
+    legacy_serial_templates:
+      - V3-ICG-SM01-RDSxxx
+    fluorophore_code: ICG
+    fluorophore_label: ICG-eq
+    size: mini
+    form_code: SM03
+    sku_status: published_sku_field
+    conflicting_page_reference: RDS-ICG-SM03-QUEL03
+    status: current
+    channel_nm: 800
+    fluorescent_concentration_nm: 1000
+    well_diameter_mm: 5
+    source: https://shop.quelimaging.com/product/mini-icg-equivalent-depth-sensitivity-target/
+
+  Q800_mini:
+    display_name: Mini Q800-01 depth sensitivity target (Lung)
+    old_sku: RDS-80Q-LM05-QUEL01
+    current_sku: S_RDS_MIN_Q800-01_DPTH-02_rA
+    serial_template: RDS-M-Q81-D2-A-xxx
+    legacy_serial_template: V1-80Q-LM04-RDSxxx
+    fluorophore_code: 80Q
+    fluorophore_label: Q800-01
+    size: mini
+    form_code: LM05
+    notes: >
+      Current mini Q800-01 lung depth target. Mini OTL38 units are the superseded
+      o38_mini preset.
+    status: current
+    channel_nm: 800
+    fluorescent_concentration_nm: 600
+    well_diameter_mm: 5
+    source: https://shop.quelimaging.com/product/mini-q800-01-depth-sensitivity-target-lung/
+
+  Q700_mini:
+    display_name: Mini Q700-01 depth sensitivity target
+    old_sku: RDS-70Q-SM03-QUEL01
+    current_sku: S_RDS_MIN_Q700-01_DPTH-01_rA
+    serial_template: RDS-M-Q71-D1-A-xxx
+    legacy_serial_template: V1-70Q-SM03-RDSxxx
+    fluorophore_code: 70Q
+    fluorophore_label: Q700-01
+    size: miniform
+    form_code: SM03
+    status: current
+    channel_nm: 700
+    fluorescent_concentration_nm: 1000
+    well_diameter_mm: 5
+    source: https://shop.quelimaging.com/product/q700-depth-sensitivity-target/
+
+  O38:
+    display_name: OTL38-equivalent depth sensitivity target (Lung)
+    old_sku: RDS-O38-LU03-QUEL01
+    status: superseded
+    replaced_by: q800
+    backwards_compatible: true
+    fluorophore_code: O38
+    fluorophore_label: OTL38
+    size: standard
+    form_code: LU03
+    channel_nm: 800
+    fluorescent_concentration_nm: 1000
+    well_diameter_mm: 10
+    notes: >
+      Phased-out OTL38 lung depth target. Catalog successor is
+      RDS-80Q-LU05-QUEL01 (Q800-01, 600 nM inclusions). O38 depth used 1000 nM
+      inclusions and the same 0.5–6 mm well IDs.
+    legacy_serial_templates:
+      - V1-O38-LU03-RDSxxx
+      - V2-O38-LU03-RDSxxx
+      - V1-O38-LU02-RDSxxx
+
+  O38_mini:
+    display_name: Mini OTL38-equivalent depth sensitivity target (Lung)
+    old_sku: null
+    sku_status: not_in_catalog
+    status: superseded
+    replaced_by: q800_mini
+    backwards_compatible: true
+    fluorophore_code: O38
+    fluorophore_label: OTL38
+    size: mini
+    form_code: LM03
+    channel_nm: 800
+    fluorescent_concentration_nm: 1000
+    well_diameter_mm: 5
+    notes: >
+      Inventory-only mini OTL38 depth units (LM03 serials), including
+      V2-O38-LM03-RDS006. Current catalog successor is RDS-80Q-LM05-QUEL01.
+    legacy_serial_templates:
+      - V1-O38-LM03-RDSxxx
+      - V2-O38-LM03-RDSxxx
+
+  MBL:
+    display_name: Methylene blue depth sensitivity target
+    old_sku: null
+    sku_status: not_in_catalog
+    status: legacy_inventory
+    fluorophore_code: MBL
+    fluorophore_label: MBL
+    size: standard
+    form_code: R01
+    channel_nm: 700
+    fluorescent_concentration_nm: 1000
+    well_diameter_mm: 10
+    notes: >
+      Inventory methylene blue RDS units (V3-MBL-R01 and v3_Q1_D##). Same
+      0.5–6 mm well IDs as other depth targets.
+    legacy_serial_templates:
+      - V3-MBL-R01-RDSxxx

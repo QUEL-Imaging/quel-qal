@@ -31,6 +31,7 @@ def main():
     cn_df = analyzer.get_stats(region_of_well_to_analyze=0.5)
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):
         print(cn_df)
+        cn_df.to_csv("output_file.csv", index=False)
 
     # Step 3: Plot the detected wells and well intensity graphs
     print("\nVisualizing Concentration Target ROI...")
@@ -83,7 +84,7 @@ def main():
         col_to_plot='mean intensity normalized',
         plot_error_bars=False,
         trendline_lib='scipy',
-        save_plot=None
+        save_plot="depth_target_results.png"
     )
 
 if __name__ == "__main__":
