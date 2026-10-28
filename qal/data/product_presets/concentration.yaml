@@ -1,0 +1,259 @@
+schema_version: 1
+family: concentration_sensitivity
+product_code: RCS
+qal_workflow: WellDetector -> WellAnalyzer -> WellPlotter
+qal_graph_type: concentration
+
+presets:
+  ICG:
+    display_name: ICG-equivalent concentration sensitivity target
+    old_sku: RCS-ICG-ST01-QUEL03
+    current_sku: S_RCS_STD_ICG-01_STND-01_rA
+    serial_template: RCS-S-IC1-S1-A-xxx
+    legacy_serial_template: V3-ICG-ST01_RCSxxx
+    legacy_serial_templates:
+      - V3-ST01-RCSxxx
+    identifiers:
+      - V3-ST01-RCS004
+    fluorophore_code: ICG
+    fluorophore_label: ICG-eq
+    size: standard
+    form_code: ST01
+    status: current
+    channel_nm: 800
+    well_diameter_mm: 10
+    source: https://shop.quelimaging.com/product/icg-equivalent-concentration-sensitivity-target/
+    well_ids:
+      - 1000 nM
+      - 300 nM
+      - 100 nM
+      - 60 nM
+      - 30 nM
+      - 10 nM
+      - 3 nM
+      - 1 nM
+      - Control
+
+  Q800:
+    display_name: Q800-01 concentration sensitivity target (Lung)
+    old_sku: RCS-80Q-LU04-QUEL01
+    current_sku: S_RCS_STD_Q800-01_LUNG-04_rA
+    serial_template: RCS-S-Q81-L4-A-xxx
+    legacy_serial_template: V1-80Q-LU04-RCSxxx
+    fluorophore_code: 80Q
+    fluorophore_label: Q800-01
+    size: standard
+    form_code: LU04
+    notes: >
+      Current Q800-01 lung concentration target. Older OTL38 (O38) units are
+      kept as a separate superseded preset because they used a 1–1000 nM well
+      series instead of 1–600 nM. Design change notice:
+      https://shop.quelimaging.com/resources/
+    status: current
+    channel_nm: 800
+    well_diameter_mm: 10
+    source: https://shop.quelimaging.com/product/q800-01-concentration-sensitivity-target-lung/
+    well_ids:
+      - 600 nM
+      - 300 nM
+      - 100 nM
+      - 60 nM
+      - 30 nM
+      - 10 nM
+      - 3 nM
+      - 1 nM
+      - Control
+
+  Q700:
+    display_name: Q700-01 concentration sensitivity target
+    old_sku: RCS-70Q-ST01-QUEL01
+    current_sku: S_RCS_STD_Q700-01_STND-01_rA
+    serial_template: RCS-S-Q71-S1-A-xxx
+    legacy_serial_template: V1-70Q-ST01-RCSxxx
+    fluorophore_code: 70Q
+    fluorophore_label: Q700-01
+    size: standard
+    form_code: ST01
+    status: current
+    channel_nm: 700
+    well_diameter_mm: 10
+    source: https://shop.quelimaging.com/product/q700-concentration-sensitivity-target/
+    well_ids:
+      - 1000 nM
+      - 300 nM
+      - 100 nM
+      - 60 nM
+      - 30 nM
+      - 10 nM
+      - 3 nM
+      - 1 nM
+      - Control
+
+  ICG_mini:
+    display_name: Mini ICG-equivalent concentration sensitivity target
+    old_sku: RCS-ICG-SM01-QUEL01
+    current_sku: S_RCS_MIN_ICG-01_STND-01_rA
+    serial_template: RCS-M-IC1-S1-A-xxx
+    legacy_serial_template: V3-ICG-SM01_RCSxxx
+    fluorophore_code: ICG
+    fluorophore_label: ICG-eq
+    size: mini
+    form_code: SM01
+    status: current
+    channel_nm: 800
+    well_diameter_mm: 5
+    source: https://shop.quelimaging.com/product/mini-icg-equivalent-concentration-sensitivity-target/
+    well_ids:
+      - 1000 nM
+      - 300 nM
+      - 100 nM
+      - 60 nM
+      - 30 nM
+      - 10 nM
+      - 3 nM
+      - 1 nM
+      - Control
+
+  Q800_mini:
+    display_name: Mini Q800-01 concentration sensitivity target (Lung)
+    old_sku: RCS-80Q-LM04-QUEL01
+    current_sku: S_RCS_MIN_Q800-01_LUNG-04_rA
+    serial_template: RCS-M-Q81-L4-A-xxx
+    legacy_serial_template: V1-80Q-LM04-RCSxxx
+    fluorophore_code: 80Q
+    fluorophore_label: Q800-01
+    size: mini
+    form_code: LM04
+    notes: >
+      Current mini Q800-01 lung concentration target. Mini OTL38 units are the
+      superseded o38_mini preset.
+    status: current
+    channel_nm: 800
+    well_diameter_mm: 5
+    source: https://shop.quelimaging.com/product/mini-q800-01-concentration-sensitivity-target-lung/
+    well_ids:
+      - 600 nM
+      - 300 nM
+      - 100 nM
+      - 60 nM
+      - 30 nM
+      - 10 nM
+      - 3 nM
+      - 1 nM
+      - Control
+
+  Q700_mini:
+    display_name: Mini Q700-01 concentration sensitivity target
+    old_sku: RCS-70Q-SM01-QUEL01
+    current_sku: S_RCS_MIN_Q700-01_STND-01_rA
+    serial_template: RCS-M-Q71-S1-A-xxx
+    legacy_serial_template: V1-70Q-SM01-RCSxxx
+    fluorophore_code: 70Q
+    fluorophore_label: Q700-01
+    size: mini
+    form_code: SM01
+    status: current
+    channel_nm: 700
+    well_diameter_mm: 5
+    source: https://shop.quelimaging.com/product/q700-concentration-sensitivity-target/
+    well_ids:
+      - 1000 nM
+      - 300 nM
+      - 100 nM
+      - 60 nM
+      - 30 nM
+      - 10 nM
+      - 3 nM
+      - 1 nM
+      - Control
+
+  O38:
+    display_name: OTL38-equivalent concentration sensitivity target (Lung)
+    old_sku: RCS-O38-LU02-QUEL01
+    status: superseded
+    replaced_by: q800
+    backwards_compatible: true
+    fluorophore_code: O38
+    fluorophore_label: OTL38
+    size: standard
+    form_code: LU02
+    channel_nm: 800
+    well_diameter_mm: 10
+    notes: >
+      Phased-out OTL38 lung concentration target. Catalog successor is
+      RCS-80Q-LU04-QUEL01 (Q800-01). These units used a 1–1000 nM well series;
+      Q800 uses 1–600 nM.
+      https://shop.quelimaging.com/product/otl38-equivalent-concentration-sensitivity-target-lung/
+    superseded_skus:
+      - RCS-O38-LU02-QUEL02
+    legacy_serial_templates:
+      - V1-O38-LU02-RCSxxx
+      - V2-O38-LU02-RCSxxx
+      - V2-038-LU02-RCSxxx
+    well_ids:
+      - 1000 nM
+      - 300 nM
+      - 100 nM
+      - 60 nM
+      - 30 nM
+      - 10 nM
+      - 3 nM
+      - 1 nM
+      - Control
+
+  O38_mini:
+    display_name: Mini OTL38-equivalent concentration sensitivity target (Lung)
+    old_sku: null
+    sku_status: not_in_catalog
+    status: superseded
+    replaced_by: q800_mini
+    backwards_compatible: true
+    fluorophore_code: O38
+    fluorophore_label: OTL38
+    size: mini
+    form_code: LM02
+    channel_nm: 800
+    well_diameter_mm: 5
+    notes: >
+      Inventory-only mini OTL38 concentration units (LM02/LM03 serials). Current
+      catalog successor is RCS-80Q-LM04-QUEL01.
+    legacy_serial_templates:
+      - V1-O38-LM02-RCSxxx
+      - V2-O38-LM03-RCSxxx
+    well_ids:
+      - 1000 nM
+      - 300 nM
+      - 100 nM
+      - 60 nM
+      - 30 nM
+      - 10 nM
+      - 3 nM
+      - 1 nM
+      - Control
+
+  MBL:
+    display_name: Methylene blue concentration sensitivity target
+    old_sku: null
+    sku_status: not_in_catalog
+    status: legacy_inventory
+    fluorophore_code: MBL
+    fluorophore_label: MBL
+    size: standard
+    form_code: R01
+    channel_nm: 700
+    well_diameter_mm: 10
+    notes: >
+      Inventory methylene blue RCS units (V3-MBL-R01 and v3_Q1_C##). Same 3x3
+      well layout as ICG/Q700; not a current catalog SKU.
+    legacy_serial_templates:
+      - V3-MBL-R01-RCSxxx
+    well_ids:
+      - 1000 nM
+      - 300 nM
+      - 100 nM
+      - 60 nM
+      - 30 nM
+      - 10 nM
+      - 3 nM
+      - 1 nM
+      - Control
