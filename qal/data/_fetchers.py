@@ -3,7 +3,7 @@ import cv2
 import hashlib
 import shutil
 import pooch
-from skimage import io
+from qal.util._image import load_grayscale_image
 
 try:
     from ._registry import registry
@@ -153,7 +153,7 @@ def _load(filename):
         Image read from local cache.
     """
     path = _fetch(filename)
-    return io.imread(path)
+    return load_grayscale_image(path)
 
 
 # --- Concentration samples
@@ -193,6 +193,12 @@ def dr_sample2():
     Return dr_sample2.tiff as an ndarray.
     """
     return _load("depth_resolution_targets/dr_sample2.tiff")
+
+def dr_sample3():
+    """
+    Return dr_sample3.tiff as an ndarray.
+    """
+    return _load("depth_resolution_targets/dr_sample3.tiff")
 
 # --- Depth targets
 def depth_sample_1():

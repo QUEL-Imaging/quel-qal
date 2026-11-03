@@ -11,7 +11,7 @@ The lung phantom is a 3D-printed lung resection, pictured below. It consists of 
 <br/>
 
 # Quick Start
-The following block of code can be used to analyze an image of the lung phantom and calculate metrics about the fluorescent inclusions. In addition to the qal library, it uses the scikit-image library (https://scikit-image.org/) to read in the image. If working in an iPython notebook, see note at the bottom of [Extracting lung phantom metrics](#extracting-lung-phantom-metrics) before running this block of code.
+The following block of code can be used to analyze an image of the lung phantom and calculate metrics about the fluorescent inclusions. In addition to the qal library, it uses the scikit-image library (https://scikit-image.org/) to read in the image. If working in an iPython notebook, see note at the bottom of [Extracting lung phantom metrics](#extracting-lung-phantom-metrics) before running this block of code. This sample code and a reference-mask example can be found in `qal/examples/lung_phantom/`.
 ```python
 from skimage import io
 from qal import LungPhantom
@@ -264,8 +264,13 @@ lung_phantom.create_reference_mask(im_phantom, im_inclusions, inclusion_rad=1, v
 <br/>
 
 # Examples
+Runnable scripts for the lung phantom are in `qal/examples/lung_phantom/`:
+
+- `lung_phantom_example.py`
+- `create_lung_reference.py`
+
 ## Extracting lung phantom metrics
-The image used in this example is downloaded from the repository but can also be located: **qal/data/lung_test_image/lung_test_image.tiff**. First, the necessary imports are made:
+The image used in this example is downloaded from the repository but can also be located: **qal/data/lung_test_image/lung_test_image.tiff**. The matching script is `qal/examples/lung_phantom/lung_phantom_example.py`. First, the necessary imports are made:
 ```python
 from qal.data import lung_test_image
 from qal import LungPhantom
@@ -335,7 +340,7 @@ Process finished with exit code 0
 <br/>
 
 ## Updating reference image
-This example updates the reference image and mask used by the `LungPhantom` class. The images used are the original images that created the reference, and are located in the repository at: **qal/data/lung_reference_source**. Hence, this example can be run without fear of changing the default reference images. First, the necessary imports are made:
+This example updates the reference image and mask used by the `LungPhantom` class. The matching script is `qal/examples/lung_phantom/create_lung_reference.py`. The images used are the original images that created the reference, and are located in the repository at: **qal/data/lung_reference_source**. Hence, this example can be run without fear of changing the default reference images. First, the necessary imports are made:
 ```python
 from qal.data import lung_reference
 from qal import LungPhantom
