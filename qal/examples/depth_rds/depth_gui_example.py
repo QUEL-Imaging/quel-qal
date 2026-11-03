@@ -5,7 +5,7 @@ Edit the knobs below, then run:
     python -m qal.examples.depth_rds.depth_gui_example
 
 For a notebook that processes one local image and can save results
-beside it, open ``qal/examples/jupyter-notebook/depth_gui_example.ipynb``.
+beside it, open ``qal/examples/jupyter-notebook/depth_rds_gui_example.ipynb``.
 Set ``IMAGE_PATH`` there, or leave it as ``None`` for the example image.
 """
 

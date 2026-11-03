@@ -283,15 +283,19 @@ roi_df = select_wells_from_coordinates(
 
 ## Jupyter notebooks
 
-The example notebooks are in `qal/examples/jupyter-notebook/`. Each popup cell calls
-`use_native_window_backend()`. Windows opens a Tk window. macOS opens the
-macOS backend, because a Tk probe fails on Pythons built without Tk and
-IPython then keeps retrying that failed name. Qt is not probed. If another
-GUI toolkit is already running in the kernel, restart the kernel and run the
-notebook from the top.
+The example notebooks are in `qal/examples/jupyter-notebook/`. Importing QAL
+shows ordinary figures in the notebook, so those notebooks do not set a
+Matplotlib backend. The picker then opens a native window and, when it
+closes, puts the following figures back in the notebook.
 
-`select_wells_gui` also detects a Jupyter kernel and chooses an interactive
-backend when the caller has not already selected one.
+Windows tries Tk, then Qt. macOS tries the macOS backend, then Tk, then Qt.
+A failed attempt is forgotten so the next one can load. If none of those
+windows can open, JupyterLab falls back to an `ipympl` canvas. If another
+GUI toolkit is already running, restart the kernel and run the notebook from
+the top.
+
+`select_wells_gui` detects a Jupyter kernel and chooses that window when the
+caller has not already selected one.
 
 - **JupyterLab / classic Notebook:** Matplotlib is switched to `ipympl` when
   needed. The picker is non-blocking and includes **Remove last** and

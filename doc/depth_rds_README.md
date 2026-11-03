@@ -340,7 +340,7 @@ Runnable scripts for the RDS target are in `qal/examples/depth_rds/`:
 - `depth_gui_example.py`
 - `depth_automatic_example.py`
 
-The matching notebook is `qal/examples/jupyter-notebook/depth_gui_example.ipynb`. The well-selection GUI guide is `doc/well_detector_gui_README.md`. The RDS target uses the same well-detection pipeline as RCS.
+The matching notebook is `qal/examples/jupyter-notebook/depth_rds_gui_example.ipynb`. The well-selection GUI guide is `doc/well_detector_gui_README.md`. The RDS target uses the same well-detection pipeline as RCS.
 
 ## Normalized depth sensitivity curve
 This example processes an image of the RDS target to produce a plot of the normalized mean well intensity versus depth. The image used is downloaded from the repository but can also be located at: **qal/data/depth_targets/depth_sample_1.tiff**. First, the necessary modules are imported:

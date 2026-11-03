@@ -823,7 +823,7 @@ Runnable distortion scripts are in `qal/examples/uniformity_distortion_rud/`:
 - `distortion_full_fov_example.py`
 - `distortion_sub_fov_example.py`
 
-The matching notebook is `qal/examples/jupyter-notebook/distortion_gui_example.ipynb`.
+The matching notebook is `qal/examples/jupyter-notebook/uniformity_distortion_rud_gui_example.ipynb`.
 
 ### Assess distortion across the entire field of view
 In this example, distortion is analyzed from a set of images that span the field of view of the imaging system. The matching script is `qal/examples/uniformity_distortion_rud/distortion_full_fov_example.py`. The images used are downloaded from the repository, but can also be found at: **qal/data/rud_targets/example_1**. First, the necessary imports are made:

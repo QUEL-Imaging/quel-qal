@@ -1,3 +1,4 @@
+import sys
 from types import SimpleNamespace
 
 import matplotlib.pyplot as plt
@@ -336,7 +337,27 @@ def test_prepare_gui_backend_switches_notebook_inline(monkeypatch):
 
     monkeypatch.setattr(gui, "_is_notebook_widget_backend", is_widget)
     monkeypatch.setattr(gui, "_run_matplotlib_magic", magic)
+    monkeypatch.setattr(gui, "_activate_desktop_gui_backend", lambda: False)
     assert gui._prepare_gui_backend() is True
+
+
+def test_prepare_gui_backend_prefers_a_native_window(monkeypatch):
+    from qal.rta.roi_extraction import well_detector_gui as gui
+
+    monkeypatch.setattr(gui, "_running_in_notebook", lambda: True)
+    monkeypatch.setattr(gui, "_running_in_vscode_jupyter", lambda: False)
+    monkeypatch.setattr(gui, "_is_notebook_widget_backend", lambda backend=None: False)
+    monkeypatch.setattr(gui, "_is_desktop_gui_backend", lambda backend=None: False)
+    monkeypatch.setattr(gui, "_activate_desktop_gui_backend", lambda: True)
+    called = []
+    monkeypatch.setattr(
+        gui,
+        "_run_matplotlib_magic",
+        lambda name: called.append(name) or False,
+    )
+
+    assert gui._prepare_gui_backend() is False
+    assert called == []
 
 
 def test_prepare_gui_backend_errors_when_notebook_cannot_go_interactive(
@@ -440,6 +461,94 @@ def test_loaded_gui_selection_is_kept(monkeypatch):
     assert shell.pylab_gui_select == "qt"
 
 
+def test_use_inline_plots_leaves_scripts_unchanged(monkeypatch):
+    from qal.rta.roi_extraction import well_detector_gui as gui
+
+    monkeypatch.setattr(gui, "_running_in_notebook", lambda: False)
+    monkeypatch.setattr(gui, "_run_matplotlib_magic", lambda name: True)
+    assert gui.use_inline_plots() is False
+
+
+def test_dismiss_macos_app_does_nothing_before_the_backend_starts(monkeypatch):
+    from qal.rta.roi_extraction import well_detector_gui as gui
+
+    monkeypatch.setattr(gui.sys, "platform", "darwin")
+    monkeypatch.setattr(gui.plt, "get_fignums", lambda: [])
+    monkeypatch.setattr(
+        gui,
+        "_set_macos_activation_policy",
+        lambda policy: (_ for _ in ()).throw(AssertionError(policy)),
+    )
+    monkeypatch.delitem(sys.modules, "matplotlib.backends._macosx", raising=False)
+
+    gui._dismiss_macos_app()
+
+
+def test_dismiss_macos_app_hides_the_icon_without_stopping_the_app(monkeypatch):
+    from qal.rta.roi_extraction import well_detector_gui as gui
+
+    policies = []
+    monkeypatch.setattr(gui.sys, "platform", "darwin")
+    monkeypatch.setattr(gui.plt, "get_fignums", lambda: [])
+    monkeypatch.setattr(gui, "_set_macos_activation_policy", policies.append)
+    monkeypatch.setitem(
+        sys.modules,
+        "matplotlib.backends._macosx",
+        SimpleNamespace(stop=lambda: (_ for _ in ()).throw(AssertionError("stop"))),
+    )
+
+    gui._dismiss_macos_app()
+
+    assert policies == [1]
+
+
+def test_dismiss_macos_app_keeps_an_open_window(monkeypatch):
+    from qal.rta.roi_extraction import well_detector_gui as gui
+
+    monkeypatch.setattr(gui.sys, "platform", "darwin")
+    monkeypatch.setattr(gui.plt, "get_fignums", lambda: [1])
+    monkeypatch.setattr(
+        gui,
+        "_set_macos_activation_policy",
+        lambda policy: (_ for _ in ()).throw(AssertionError(policy)),
+    )
+    monkeypatch.setitem(sys.modules, "matplotlib.backends._macosx", SimpleNamespace())
+
+    gui._dismiss_macos_app()
+
+
+def test_present_macos_app_restores_the_dock_icon(monkeypatch):
+    from qal.rta.roi_extraction import well_detector_gui as gui
+
+    policies = []
+    monkeypatch.setattr(gui.sys, "platform", "darwin")
+    monkeypatch.setattr(gui.plt, "get_backend", lambda: "MacOSX")
+    monkeypatch.setattr(gui, "_set_macos_activation_policy", policies.append)
+
+    gui._present_macos_app()
+
+    assert policies == [0]
+
+
+def test_use_inline_plots_falls_back_to_the_inline_module(monkeypatch):
+    from qal.rta.roi_extraction import well_detector_gui as gui
+
+    backends = {"name": "Agg"}
+    monkeypatch.setattr(gui, "_running_in_notebook", lambda: True)
+    monkeypatch.setattr(gui.plt, "get_backend", lambda: backends["name"])
+    monkeypatch.setattr(gui, "_run_matplotlib_magic", lambda name: False)
+
+    def switch(name):
+        if name == "module://matplotlib_inline.backend_inline":
+            backends["name"] = name
+            return True
+        return False
+
+    monkeypatch.setattr(gui, "_switch_backend", switch)
+    assert gui.use_inline_plots() is True
+    assert "inline" in backends["name"]
+
+
 def test_use_native_window_backend_asks_for_a_restart_when_qt_is_loaded(
     monkeypatch,
 ):
@@ -455,10 +564,70 @@ def test_use_native_window_backend_asks_for_a_restart_when_qt_is_loaded(
         gui.use_native_window_backend()
 
 
+@pytest.mark.parametrize("platform", ["win32", "linux"])
+def test_windows_and_linux_skip_the_macos_dock_app(monkeypatch, platform):
+    from qal.rta.roi_extraction import well_detector_gui as gui
+
+    monkeypatch.setattr(gui.sys, "platform", platform)
+    monkeypatch.setattr(gui.plt, "get_backend", lambda: "MacOSX")
+    monkeypatch.setattr(gui.plt, "get_fignums", lambda: [])
+    monkeypatch.setitem(sys.modules, "matplotlib.backends._macosx", SimpleNamespace())
+    monkeypatch.setattr(
+        gui,
+        "_objc",
+        lambda: (_ for _ in ()).throw(AssertionError("objc")),
+    )
+
+    gui._dismiss_macos_app()
+    gui._present_macos_app()
+    assert gui._ns_application() is None
+    gui._set_macos_activation_policy(1)
+
+    session = WellSelectionSession(
+        np.zeros((40, 40)),
+        expected_count=1,
+        well_ids=["A"],
+        coordinate_mode="manual",
+        manual_roi_diameter=10,
+        resolve_in_background=False,
+        close_on_confirm=True,
+    )
+    session.points.append((5, 5))
+    result = session.confirm()
+
+    assert result is not None
+    assert session.confirmed
+    assert not plt.fignum_exists(session.figure.number)
+
+
+@pytest.mark.parametrize("platform", ["win32", "linux"])
+def test_windows_and_linux_try_tk_before_qt(monkeypatch, platform):
+    from qal.rta.roi_extraction import well_detector_gui as gui
+
+    calls = []
+    monkeypatch.setattr(gui.sys, "platform", platform)
+    monkeypatch.setattr(gui, "_candidate_is_active", lambda magic: False)
+    monkeypatch.setattr(gui, "_is_desktop_gui_backend", lambda backend=None: False)
+
+    def try_magic(magic, backend_name):
+        calls.append((magic, backend_name))
+        return False
+
+    monkeypatch.setattr(gui, "_try_magic_backend", try_magic)
+
+    assert gui._gui_candidates() == [("tk", "TkAgg")]
+    assert gui._activate_desktop_gui_backend() is False
+    assert calls[0] == ("tk", "TkAgg")
+    assert calls[1:] == [("qt", "QtAgg"), ("qt5", "Qt5Agg")]
+
+
 def test_native_candidates_skip_osx_on_windows(monkeypatch):
     from qal.rta.roi_extraction import well_detector_gui as gui
 
     monkeypatch.setattr(gui.sys, "platform", "win32")
+    assert gui._gui_candidates() == [("tk", "TkAgg")]
+
+    monkeypatch.setattr(gui.sys, "platform", "linux")
     assert gui._gui_candidates() == [("tk", "TkAgg")]
 
     monkeypatch.setattr(gui.sys, "platform", "darwin")

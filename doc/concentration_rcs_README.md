@@ -333,7 +333,7 @@ Runnable scripts for the RCS target are in `qal/examples/concentration_rcs/`:
 - `concentration_sku_gui_example.py`
 - `concentration_automatic_example.py`
 
-The matching notebook is `qal/examples/jupyter-notebook/concentration_gui_example.ipynb`. The well-selection GUI guide is `doc/well_detector_gui_README.md`.
+The matching notebook is `qal/examples/jupyter-notebook/concentration_rcs_gui_example.ipynb`. The well-selection GUI guide is `doc/well_detector_gui_README.md`.
 
 ## Normalized concentration sensitivity curve
 This example processes an image of the RCS target to produce a plot of the normalized mean well intensity versus fluorophore concentration. The image used is downloaded from the repository and is located at: **qal/data/concentration_targets/cn_sample_1.tiff**. First, the necessary modules are imported:

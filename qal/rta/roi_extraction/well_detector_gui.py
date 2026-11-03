@@ -307,6 +307,11 @@ def _running_in_notebook() -> bool:
         return False
 
 
+def _is_inline_backend(backend: Optional[str] = None) -> bool:
+    name = (backend or plt.get_backend()).lower()
+    return "inline" in name
+
+
 def _is_notebook_widget_backend(backend: Optional[str] = None) -> bool:
     name = (backend or plt.get_backend()).lower()
     return any(token in name for token in _NOTEBOOK_BACKEND_TOKENS)
@@ -372,10 +377,10 @@ def _switch_backend(name: str) -> bool:
 def _gui_candidates() -> list[tuple[str, str]]:
     """Native window backends for this OS, in the order they should be tried.
 
-    Windows uses Tk, which ships with the standard installer. macOS uses the
-    macOS backend first because many Homebrew and framework Pythons have no
-    Tk. Qt is intentionally absent: trying it after a failure makes IPython
-    reuse that failed name.
+    Windows and Linux use Tk. macOS uses the macOS backend first because many
+    Homebrew and framework Pythons have no Tk. Qt is intentionally absent:
+    trying it after a failure makes IPython reuse that failed name. The
+    desktop activator tries Qt only after these candidates fail.
     """
     if sys.platform == "darwin":
         return [("osx", "MacOSX"), ("tk", "TkAgg")]
@@ -395,18 +400,28 @@ def _candidate_is_active(magic: str) -> bool:
 
 def _try_magic_backend(magic: str, backend_name: str) -> bool:
     """Activate one GUI, and forget the name if it does not load."""
-    if _candidate_is_active(magic):
+
+    def ready() -> bool:
+        if not _candidate_is_active(magic):
+            return False
+        if magic == "osx":
+            # The macOS backend forces a Dock icon. Put it back before the
+            # next window, after an earlier confirmation hid it.
+            _present_macos_app()
+        return True
+
+    if ready():
         return True
     if _is_desktop_gui_backend():
         return False
     _release_unloaded_gui_selection()
     _run_matplotlib_magic(magic)
-    if _candidate_is_active(magic):
+    if ready():
         return True
     _release_unloaded_gui_selection()
     if _is_desktop_gui_backend():
         return False
-    switched = _switch_backend(backend_name) and _candidate_is_active(magic)
+    switched = _switch_backend(backend_name) and ready()
     if not switched:
         _release_unloaded_gui_selection()
     return bool(switched)
@@ -421,12 +436,138 @@ def _try_native_window_backend() -> bool:
     return False
 
 
+def _objc():
+    """Load the system Objective-C runtime used to hide the Dock icon.
+
+    On Apple Silicon, ``objc_msgSend`` has to be looked up by name. Calling
+    the ctypes wrapper object crashes the interpreter. Windows and Linux
+    have no such library; callers must keep this off those platforms.
+    """
+    if sys.platform != "darwin":
+        raise OSError("The macOS Dock helper is only used on macOS.")
+    import ctypes
+
+    lib = ctypes.cdll.LoadLibrary("/usr/lib/libobjc.dylib")
+    lib.objc_getClass.restype = ctypes.c_void_p
+    lib.objc_getClass.argtypes = [ctypes.c_char_p]
+    lib.sel_registerName.restype = ctypes.c_void_p
+    lib.sel_registerName.argtypes = [ctypes.c_char_p]
+    return lib
+
+
+def _objc_msg(lib, restype, *argtypes):
+    import ctypes
+
+    return ctypes.CFUNCTYPE(restype, *argtypes)(("objc_msgSend", lib))
+
+
+def _ns_application():
+    """Return the already-created macOS app, without starting a new one."""
+    if sys.platform != "darwin":
+        return None
+    if "matplotlib.backends._macosx" not in sys.modules:
+        return None
+    try:
+        import ctypes
+
+        lib = _objc()
+        app_class = lib.objc_getClass(b"NSApplication")
+        if not app_class:
+            return None
+        return _objc_msg(lib, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p)(
+            app_class, lib.sel_registerName(b"sharedApplication")
+        )
+    except Exception:
+        return None
+
+
+def _set_macos_activation_policy(policy: int) -> None:
+    """Show or hide the macOS Matplotlib dock icon without quitting Python.
+
+    Quitting that icon sends terminate to the kernel. Policy 0 is a normal
+    app, which is what the click window needs. Policy 1 hides the Dock
+    icon and still allows the next window. Policy 2 removes the icon by
+    prohibiting the app, and macOS then quits the process.
+    """
+    app = _ns_application()
+    if not app:
+        return
+    try:
+        import ctypes
+
+        lib = _objc()
+        _objc_msg(
+            lib,
+            ctypes.c_bool,
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+            ctypes.c_long,
+        )(app, lib.sel_registerName(b"setActivationPolicy:"), policy)
+    except Exception:
+        return
+
+
+def _dismiss_macos_app() -> None:
+    """Hide the macOS plot app after its windows are gone.
+
+    ``plt.close`` removes the window and leaves the Matplotlib dock icon.
+    Closing that icon quits the Jupyter kernel. Hide the icon and do not
+    terminate the process.
+
+    The window close already stops the event loop. ``stop`` is not called
+    here: after the first window it makes the next ``show`` return
+    immediately or quit the interpreter. ``event_loop_is_running`` also
+    stays true for the rest of the process, so it cannot be used as a
+    signal to stop.
+    """
+    if sys.platform != "darwin":
+        return
+    if "matplotlib.backends._macosx" not in sys.modules:
+        return
+    if plt.get_fignums():
+        return
+    # Accessory (1), not Prohibited (2). Prohibited hides the icon and
+    # then macOS quits the interpreter the next time a window closes.
+    _set_macos_activation_policy(1)
+
+
+def _present_macos_app() -> None:
+    """Let the next macOS plot window appear in the Dock."""
+    if sys.platform != "darwin":
+        return
+    if "mac" not in plt.get_backend().lower():
+        return
+    _set_macos_activation_policy(0)
+
+
+def use_inline_plots() -> bool:
+    """Show later figures in the notebook.
+
+    Scripts are left alone. A notebook that is already inline stays inline.
+    Otherwise this asks IPython for the inline backend, then tries Matplotlib's
+    inline backend directly if that request does not stick. On macOS the
+    native plot app is hidden first so switching backends does not leave a
+    Dock icon that can quit the kernel.
+    """
+    if not _running_in_notebook():
+        return False
+    _dismiss_macos_app()
+    if _is_inline_backend():
+        return True
+    if _run_matplotlib_magic("inline") and _is_inline_backend():
+        return True
+    return bool(
+        _switch_backend("module://matplotlib_inline.backend_inline")
+        and _is_inline_backend()
+    )
+
+
 def use_native_window_backend() -> None:
     """Open later figures in a native window.
 
-    Windows requests Tk. macOS requests the macOS backend, then Tk. Neither
-    path tries Qt. If a different GUI toolkit is already running, IPython
-    cannot switch until the kernel is restarted.
+    Windows and Linux request Tk. macOS requests the macOS backend, then Tk.
+    This function does not try Qt. If a different GUI toolkit is already
+    running, IPython cannot switch until the kernel is restarted.
     """
     if _try_native_window_backend():
         return
@@ -438,7 +579,7 @@ def use_native_window_backend() -> None:
             "a native window."
         )
     raise RuntimeError(
-        "Could not open a native window. Windows needs tkinter. "
+        "Could not open a native window. Windows and Linux need tkinter. "
         "Restart the kernel and run this notebook from the top."
     )
 
@@ -482,8 +623,8 @@ def _prepare_gui_backend() -> bool:
             "Interactive well selection needs a native Matplotlib window in "
             "VS Code/Cursor. The notebook widget renderer does not include "
             "jupyter-matplotlib, so ipympl cannot be used. Use Tk on "
-            "Windows or the macOS backend on a Mac, or run the example "
-            "as a script."
+            "Windows or Linux, or the macOS backend on a Mac, or run the "
+            "example as a script."
         )
 
     if _is_notebook_widget_backend():
@@ -491,6 +632,11 @@ def _prepare_gui_backend() -> bool:
     if _is_desktop_gui_backend():
         return False
     if not _running_in_notebook():
+        return False
+
+    # A native window lets the cell wait for clicks. ipympl is the fallback
+    # when this Python cannot open Tk, the macOS backend, or Qt.
+    if _activate_desktop_gui_backend():
         return False
 
     if _ipympl_frontend_available():
@@ -503,13 +649,10 @@ def _prepare_gui_backend() -> bool:
         ):
             return True
 
-    if _activate_desktop_gui_backend():
-        return False
-
     raise RuntimeError(
         "Interactive well selection requires an interactive Matplotlib "
         "backend. In JupyterLab install ipympl, or use Tk on Windows "
-        "or the macOS backend on a Mac."
+        "or Linux, or the macOS backend on a Mac."
     )
 
 
@@ -984,6 +1127,9 @@ class WellSelectionSession:
         self._disconnect()
         if self.close_on_confirm:
             plt.close(self.figure)
+            # Enter has closed the picker. Hide the macOS Dock icon now,
+            # before the caller switches back to inline notebook plots.
+            _dismiss_macos_app()
         else:
             self.image_axis.set_title("Selection confirmed")
             self.figure.canvas.draw_idle()
@@ -1151,6 +1297,7 @@ def select_wells_gui(
     circle.
     """
     notebook = _prepare_gui_backend()
+    _present_macos_app()
     session = WellSelectionSession(
         image=image,
         expected_count=expected_count,
@@ -1168,16 +1315,17 @@ def select_wells_gui(
         resolve_in_background=not notebook,
     )
     if not notebook and _running_in_notebook():
-        print(
-            "Opening a native Matplotlib window. Click the wells, then "
-            "press Enter. VS Code/Cursor cannot load ipympl's "
-            "jupyter-matplotlib widget."
-        )
+        print("Opening a window. Click the wells, then press Enter.")
     try:
         plt.show(block=not notebook)
     except KeyboardInterrupt:
         session._on_close()
         plt.close(session.figure)
+    finally:
+        if not notebook:
+            plt.close(session.figure)
+            _dismiss_macos_app()
+            use_inline_plots()
     if notebook:
         return session
     if session.result is None:

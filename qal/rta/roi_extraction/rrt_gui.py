@@ -37,7 +37,13 @@ from qal.util import load_grayscale_image
 
 from ..image_analyzer.rrt_analyzer import RrtAnalyzer
 from ._selection_io import load_selection, save_selection
-from .well_detector_gui import _prepare_gui_backend, _running_in_notebook
+from .well_detector_gui import (
+    _prepare_gui_backend,
+    _running_in_notebook,
+    _dismiss_macos_app,
+    _present_macos_app,
+    use_inline_plots,
+)
 
 Coordinate = tuple[float, float]
 Line = tuple[Coordinate, Coordinate]
@@ -889,6 +895,7 @@ class RrtSelectionSession:
         self._connections.clear()
         if self.close_on_confirm:
             plt.close(self.figure)
+            _dismiss_macos_app()
         else:
             self.figure.canvas.draw_idle()
         return self.result
@@ -1049,6 +1056,7 @@ def select_rrt_lines(
         )
 
     notebook = _prepare_gui_backend()
+    _present_macos_app()
     session = RrtSelectionSession(
         image=image,
         mode=mode,
@@ -1067,6 +1075,11 @@ def select_rrt_lines(
     except KeyboardInterrupt:
         session._on_close()
         plt.close(session.figure)
+    finally:
+        if not notebook:
+            plt.close(session.figure)
+            _dismiss_macos_app()
+            use_inline_plots()
     if notebook:
         if verbose:
             print(

@@ -89,7 +89,7 @@ def test_concentration_examples_save_nonblank_roi(
             notebook_path = (
                 Path(gui.__file__).resolve().parents[1]
                 / "jupyter-notebook"
-                / "concentration_gui_example.ipynb"
+                / "concentration_rcs_gui_example.ipynb"
             )
             notebook = json.loads(notebook_path.read_text())
             cell = next(cell for cell in notebook["cells"] if any(

@@ -167,6 +167,33 @@ class RrtROI:
         plt.show()
 
     def select_points_standard(self, im):
+        from qal.rta.roi_extraction.well_detector_gui import (
+            _activate_desktop_gui_backend,
+            _dismiss_macos_app,
+            _present_macos_app,
+            _running_in_notebook,
+            use_inline_plots,
+        )
+
+        in_notebook = _running_in_notebook()
+        if in_notebook and not _activate_desktop_gui_backend():
+            raise RuntimeError(
+                "Could not open a window for the corner clicks. "
+                "Windows and Linux try Tk, then Qt. macOS tries the macOS "
+                "backend, then Tk, then Qt. Restart the kernel and run this "
+                "notebook from the top if another GUI toolkit is already "
+                "loaded."
+            )
+        _present_macos_app()
+        try:
+            self._select_points_in_window(im)
+        finally:
+            if in_notebook:
+                plt.close("all")
+                _dismiss_macos_app()
+                use_inline_plots()
+
+    def _select_points_in_window(self, im):
         self.image = im
         self.fig, self.ax = plt.subplots()
         self.fig.canvas.manager.set_window_title('Keypoint Selection')

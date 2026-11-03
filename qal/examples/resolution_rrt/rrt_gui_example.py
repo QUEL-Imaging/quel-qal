@@ -8,7 +8,7 @@ The window prints the coordinates you chose. With SAVE_RESULTS on, it also
 writes plots, a CSV, and selection.yaml next to your image. Paste those
 coordinates into rrt_batch_example to measure more images without the window.
 
-The matching notebook is ``qal/examples/jupyter-notebook/rrt_gui_example.ipynb``.
+The matching notebook is ``qal/examples/jupyter-notebook/resolution_rrt_gui_example.ipynb``.
 """
 
 from pathlib import Path
