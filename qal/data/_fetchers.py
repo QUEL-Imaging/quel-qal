@@ -344,19 +344,19 @@ def lung_test_image():
     """
     Return lung_test_image.tiff as an ndarray.
     """
-    return _load("lung_test_image/lung_test_image.tiff")
+    return _load("lung_phantom/lung_test_image/lung_test_image.tiff")
 
 def lung_reference_inclusions():
     """
     Return Inclusions image.tiff as an ndarray.
     """
-    return _load("lung_reference_source/Inclusions image.tiff")
+    return _load("lung_phantom/lung_reference_source/Inclusions image.tiff")
 
 def lung_reference_body():
     """
     Return Phantom image.tiff as an ndarray.
     """
-    return _load("lung_reference_source/Phantom image.tiff")
+    return _load("lung_phantom/lung_reference_source/Phantom image.tiff")
 
 def lung_reference():
     """
@@ -370,19 +370,19 @@ def lung_reference_image():
     """
     Return Lung_reference_image.tiff as an ndarray.
     """
-    return _load("lung_reference/Lung_reference_image.tiff")
+    return _load("lung_phantom/lung_reference/Lung_reference_image.tiff")
 
 def lung_reference_mask():
     """
     Return Lung_reference_mask.png as an ndarray.
     """
-    return _load("lung_reference/Lung_reference_mask.png")
+    return _load("lung_phantom/lung_reference/Lung_reference_mask.png")
 
 def load_lung_info():
     """
     Download the pickle file containing information on the lung phantom inclusions
     """
-    _fetch("lung_reference/Inclusions_info.pkl")
+    _fetch("lung_phantom/lung_reference/Inclusions_info.pkl")
 
 #
 # End of _fetchers.py
