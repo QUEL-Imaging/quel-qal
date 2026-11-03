@@ -9,7 +9,7 @@ The RDS target consists of nine wells of fluorescent material buried beneath var
 <br/>
 
 # Quick Start
-Below is a block of code that can be used to analyze an image of the RDS target. It assumes the fluorophore in the depth target is "ICG-equivalent" and labels it as such. For a different fluorophore, change `fluorophore_label` in the last line (this only affects labeling on the plot). In addition to using the qal library, the code uses the scikit-image library (https://scikit-image.org/) to read in the image. A runnable script covering both concentration and depth well analysis is `qal/examples/general/well_analyzer_example.py`.
+Below is a block of code that can be used to analyze an image of the RDS target. It assumes the fluorophore in the depth target is "ICG-equivalent" and labels it as such. For a different fluorophore, change `fluorophore_label` in the last line (this only affects labeling on the plot). In addition to using the qal library, the code uses the scikit-image library (https://scikit-image.org/) to read in the image. GUI and automatic well-detection scripts are in `qal/examples/depth_rds/`.
 ```python
 from skimage import io
 from qal.data import depth_sample_1
@@ -335,7 +335,12 @@ A figure like the following will be produced:
 <br/>
 
 # Examples
-The RDS target uses the same well-detection pipeline as RCS. A runnable script that analyzes both concentration and depth targets is `qal/examples/general/well_analyzer_example.py`.
+Runnable scripts for the RDS target are in `qal/examples/depth_rds/`:
+
+- `depth_gui_example.py`
+- `depth_automatic_example.py`
+
+The matching notebook is `qal/examples/jupyter-notebook/depth_gui_example.ipynb`. The well-selection GUI guide is `doc/well_detector_gui_README.md`. The RDS target uses the same well-detection pipeline as RCS.
 
 ## Normalized depth sensitivity curve
 This example processes an image of the RDS target to produce a plot of the normalized mean well intensity versus depth. The image used is downloaded from the repository but can also be located at: **qal/data/depth_targets/depth_sample_1.tiff**. First, the necessary modules are imported:

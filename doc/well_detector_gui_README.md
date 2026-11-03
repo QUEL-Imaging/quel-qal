@@ -32,7 +32,7 @@ The markers use colors from Matplotlib's `plasma` colormap, matching the
 detected-well overlays. A thin black outline keeps each marker visible against
 both bright and dark grayscale regions.
 
-![RET GUI with one selected coordinate](gui_images/ret_gui_selection.png)
+![RET GUI with one selected coordinate](../qal/examples/general/gui_images/ret_gui_selection.png)
 
 ## RET example
 
@@ -74,7 +74,7 @@ After Enter is pressed, the approximate click is matched to a detected well.
 The resulting DataFrame contains the refined `x`, `y`, `ROI Diameter`, and
 `ROI Radius`, making it directly compatible with `RetAnalyzer.analyze`.
 
-![RET centroid and ROI found after confirmation](gui_images/ret_auto_detection.png)
+![RET centroid and ROI found after confirmation](../qal/examples/general/gui_images/ret_auto_detection.png)
 
 ## Concentration-target example
 
@@ -143,9 +143,9 @@ In manual live-preview mode, solid circles represent supplied anchors and
 dashed circles represent inferred wells. Dragging any `+` immediately refits
 the overlay.
 
-![BMP manual coordinates with draggable grid preview](gui_images/bmp_manual_live_preview.png)
+![BMP manual coordinates with draggable grid preview](../qal/examples/general/gui_images/bmp_manual_live_preview.png)
 
-![Completed concentration target grid](gui_images/concentration_grid_completion.png)
+![Completed concentration target grid](../qal/examples/general/gui_images/concentration_grid_completion.png)
 
 The concentration labels are applied in row-major order:
 
@@ -162,6 +162,17 @@ The depth target uses the same geometry with:
 2.0 mm | 3.0 mm | 4.0 mm
 5.0 mm | 6.0 mm | Control
 ```
+
+Run the depth equivalent with:
+
+```bash
+python -m qal.examples.depth_rds.depth_gui_example
+```
+
+By default this loads `qal.data.depth_sample_1()`. Set `IMAGE_PATH` and
+`TARGET_TAG` (`"icg"`, `"q800"`, or `"q700"`) at the top of
+`qal/examples/depth_rds/depth_gui_example.py`. Modes, anchor counts, and live
+preview work the same way as the concentration example.
 
 ## Automatic coordinate refinement
 
@@ -272,8 +283,15 @@ roi_df = select_wells_from_coordinates(
 
 ## Jupyter notebooks
 
-`select_wells_gui` detects a Jupyter kernel and chooses an interactive
-backend automatically.
+The example notebooks are in `qal/examples/jupyter-notebook/`. Each popup cell calls
+`use_native_window_backend()`. Windows opens a Tk window. macOS opens the
+macOS backend, because a Tk probe fails on Pythons built without Tk and
+IPython then keeps retrying that failed name. Qt is not probed. If another
+GUI toolkit is already running in the kernel, restart the kernel and run the
+notebook from the top.
+
+`select_wells_gui` also detects a Jupyter kernel and chooses an interactive
+backend when the caller has not already selected one.
 
 - **JupyterLab / classic Notebook:** Matplotlib is switched to `ipympl` when
   needed. The picker is non-blocking and includes **Remove last** and

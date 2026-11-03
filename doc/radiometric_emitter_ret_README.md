@@ -103,4 +103,4 @@ Runnable scripts are available in `qal/examples/radiometric_emitter_ret/`:
 - `ret_light_frame_automatic_analysis_example.py`
 - `ret_gui_example.py`
 
-The well-selection GUI guide is `qal/examples/general/well_detector_gui_README.md`.
+The well-selection GUI guide is `doc/well_detector_gui_README.md`.

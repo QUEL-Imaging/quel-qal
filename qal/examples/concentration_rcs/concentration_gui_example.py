@@ -5,7 +5,7 @@ Edit the knobs below, then run:
     python -m qal.examples.concentration_rcs.concentration_gui_example
 
 For a notebook that processes one local image and can save results
-beside it, open ``concentration_gui_example.ipynb`` in this folder.
+beside it, open ``qal/examples/jupyter-notebook/concentration_gui_example.ipynb``.
 Set ``IMAGE_PATH`` there, or leave it as ``None`` for the example image.
 
 For SKU or unit-serial lookup, use ``concentration_sku_gui_example``.

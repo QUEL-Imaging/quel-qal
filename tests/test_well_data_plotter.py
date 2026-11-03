@@ -86,7 +86,12 @@ def test_concentration_examples_save_nonblank_roi(
             import json
             from pathlib import Path
 
-            notebook = json.loads(Path(gui.__file__).with_suffix(".ipynb").read_text())
+            notebook_path = (
+                Path(gui.__file__).resolve().parents[1]
+                / "jupyter-notebook"
+                / "concentration_gui_example.ipynb"
+            )
+            notebook = json.loads(notebook_path.read_text())
             cell = next(cell for cell in notebook["cells"] if any(
                 "plotter.visualize_roi(" in line for line in cell.get("source", [])
             ))

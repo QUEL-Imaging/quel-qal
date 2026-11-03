@@ -327,14 +327,37 @@ def _is_desktop_gui_backend(backend: Optional[str] = None) -> bool:
     return any(token in lowered for token in _DESKTOP_BACKEND_TOKENS)
 
 
+def _release_unloaded_gui_selection() -> None:
+    """Forget a GUI name that never became the active Matplotlib backend.
+
+    IPython stores the first requested GUI before that backend loads. A failed
+    macOS or Qt request is then retried by every later ``%matplotlib`` call,
+    including Tk, until the kernel is restarted.
+    """
+    ipython = _get_ipython()
+    if ipython is None:
+        return
+    selected = getattr(ipython, "pylab_gui_select", None)
+    if not selected or selected in {"inline", "agg"}:
+        return
+    if _is_desktop_gui_backend() or _is_notebook_widget_backend():
+        return
+    try:
+        ipython.pylab_gui_select = None
+    except Exception:
+        return
+
+
 def _run_matplotlib_magic(name: str) -> bool:
     ipython = _get_ipython()
     if ipython is None or not hasattr(ipython, "run_line_magic"):
         return False
+    _release_unloaded_gui_selection()
     try:
         ipython.run_line_magic("matplotlib", name)
         return True
     except Exception:
+        _release_unloaded_gui_selection()
         return False
 
 
@@ -346,20 +369,91 @@ def _switch_backend(name: str) -> bool:
         return False
 
 
-def _activate_desktop_gui_backend() -> bool:
-    magics = []
-    backends = []
+def _gui_candidates() -> list[tuple[str, str]]:
+    """Native window backends for this OS, in the order they should be tried.
+
+    Windows uses Tk, which ships with the standard installer. macOS uses the
+    macOS backend first because many Homebrew and framework Pythons have no
+    Tk. Qt is intentionally absent: trying it after a failure makes IPython
+    reuse that failed name.
+    """
     if sys.platform == "darwin":
-        magics.append("osx")
-        backends.append("MacOSX")
-    magics.extend(("qt", "qt5", "tk"))
-    backends.extend(("QtAgg", "Qt5Agg", "TkAgg"))
-    for magic in magics:
-        _run_matplotlib_magic(magic)
-        if _is_desktop_gui_backend():
+        return [("osx", "MacOSX"), ("tk", "TkAgg")]
+    return [("tk", "TkAgg")]
+
+
+def _candidate_is_active(magic: str) -> bool:
+    name = plt.get_backend().lower()
+    if magic == "tk":
+        return "tk" in name
+    if magic == "osx":
+        return "mac" in name
+    if magic.startswith("qt"):
+        return "qt" in name
+    return False
+
+
+def _try_magic_backend(magic: str, backend_name: str) -> bool:
+    """Activate one GUI, and forget the name if it does not load."""
+    if _candidate_is_active(magic):
+        return True
+    if _is_desktop_gui_backend():
+        return False
+    _release_unloaded_gui_selection()
+    _run_matplotlib_magic(magic)
+    if _candidate_is_active(magic):
+        return True
+    _release_unloaded_gui_selection()
+    if _is_desktop_gui_backend():
+        return False
+    switched = _switch_backend(backend_name) and _candidate_is_active(magic)
+    if not switched:
+        _release_unloaded_gui_selection()
+    return bool(switched)
+
+
+def _try_native_window_backend() -> bool:
+    if any(_candidate_is_active(magic) for magic, _name in _gui_candidates()):
+        return True
+    for magic, backend_name in _gui_candidates():
+        if _try_magic_backend(magic, backend_name):
             return True
-    for name in backends:
-        if _switch_backend(name) and _is_desktop_gui_backend():
+    return False
+
+
+def use_native_window_backend() -> None:
+    """Open later figures in a native window.
+
+    Windows requests Tk. macOS requests the macOS backend, then Tk. Neither
+    path tries Qt. If a different GUI toolkit is already running, IPython
+    cannot switch until the kernel is restarted.
+    """
+    if _try_native_window_backend():
+        return
+    backend = plt.get_backend()
+    if _is_desktop_gui_backend(backend):
+        raise RuntimeError(
+            f"Matplotlib is already using {backend}. Restart the kernel, "
+            "then run this notebook from the top so the picker can open "
+            "a native window."
+        )
+    raise RuntimeError(
+        "Could not open a native window. Windows needs tkinter. "
+        "Restart the kernel and run this notebook from the top."
+    )
+
+
+def _activate_desktop_gui_backend() -> bool:
+    """Switch to a native window.
+
+    The OS-native backend is tried before Qt. A failed candidate is forgotten
+    before the next one is tried; otherwise IPython keeps replaying the first
+    name.
+    """
+    if _try_native_window_backend():
+        return True
+    for magic, backend_name in (("qt", "QtAgg"), ("qt5", "Qt5Agg")):
+        if _try_magic_backend(magic, backend_name):
             return True
     return False
 
@@ -387,8 +481,9 @@ def _prepare_gui_backend() -> bool:
         raise RuntimeError(
             "Interactive well selection needs a native Matplotlib window in "
             "VS Code/Cursor. The notebook widget renderer does not include "
-            "jupyter-matplotlib, so ipympl cannot be used. Install a GUI "
-            "backend such as macOS or Tk, or run the example as a script."
+            "jupyter-matplotlib, so ipympl cannot be used. Use Tk on "
+            "Windows or the macOS backend on a Mac, or run the example "
+            "as a script."
         )
 
     if _is_notebook_widget_backend():
@@ -413,8 +508,8 @@ def _prepare_gui_backend() -> bool:
 
     raise RuntimeError(
         "Interactive well selection requires an interactive Matplotlib "
-        "backend. In JupyterLab install ipympl, or use a native GUI "
-        "backend such as Qt, Tk, or macOS."
+        "backend. In JupyterLab install ipympl, or use Tk on Windows "
+        "or the macOS backend on a Mac."
     )
 
 

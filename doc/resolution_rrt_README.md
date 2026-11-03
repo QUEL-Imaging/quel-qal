@@ -274,6 +274,8 @@ Runnable scripts for the RRT target are in `qal/examples/resolution_rrt/`:
 - `rrt_manual_example.py`
 - `rrt_feature_matching_example.py`
 
+The matching notebook is `qal/examples/jupyter-notebook/rrt_gui_example.ipynb`.
+
 ## Semi-automated example
 This example uses the semi-automated process to analyze an image of the RRT target. The matching script is `qal/examples/resolution_rrt/rrt_semi-automatic_example.py`. The image used is downloaded from the repository but can also be found at: **qal/data/resolution_targets/res_sample_1.tiff**. First, the necessary modules are imported:
 ```python

@@ -373,6 +373,114 @@ def test_prepare_gui_backend_skips_ipympl_in_vscode(monkeypatch):
     assert activated
 
 
+def test_failed_matplotlib_magic_forgets_the_requested_gui(monkeypatch):
+    from qal.rta.roi_extraction import well_detector_gui as gui
+
+    class Shell:
+        pylab_gui_select = None
+
+        def run_line_magic(self, magic, name):
+            self.pylab_gui_select = name
+            raise RuntimeError("backend missing")
+
+    shell = Shell()
+    monkeypatch.setattr(gui, "_get_ipython", lambda: shell)
+    monkeypatch.setattr(gui, "_is_desktop_gui_backend", lambda backend=None: False)
+    monkeypatch.setattr(gui, "_is_notebook_widget_backend", lambda backend=None: False)
+
+    assert gui._run_matplotlib_magic("qt") is False
+    assert shell.pylab_gui_select is None
+
+
+def test_try_tk_backend_replaces_a_failed_osx_selection(monkeypatch):
+    from qal.rta.roi_extraction import well_detector_gui as gui
+
+    class Shell:
+        def __init__(self):
+            self.pylab_gui_select = "osx"
+            self.calls = []
+
+        def run_line_magic(self, magic, name):
+            self.calls.append((magic, name))
+            if self.pylab_gui_select not in (None, name):
+                raise RuntimeError(self.pylab_gui_select)
+            self.pylab_gui_select = name
+            backends["name"] = "TkAgg"
+
+    shell = Shell()
+    backends = {"name": "inline"}
+    monkeypatch.setattr(gui, "_get_ipython", lambda: shell)
+    monkeypatch.setattr(gui.plt, "get_backend", lambda: backends["name"])
+    monkeypatch.setattr(
+        gui,
+        "_is_desktop_gui_backend",
+        lambda backend=None: "tk" in (backend or backends["name"]).lower()
+        or "mac" in (backend or backends["name"]).lower(),
+    )
+    monkeypatch.setattr(gui, "_is_notebook_widget_backend", lambda backend=None: False)
+
+    assert gui._try_magic_backend("tk", "TkAgg") is True
+    assert shell.calls == [("matplotlib", "tk")]
+    assert shell.pylab_gui_select == "tk"
+
+
+def test_loaded_gui_selection_is_kept(monkeypatch):
+    from qal.rta.roi_extraction import well_detector_gui as gui
+
+    class Shell:
+        pylab_gui_select = "qt"
+
+    shell = Shell()
+    monkeypatch.setattr(gui, "_get_ipython", lambda: shell)
+    monkeypatch.setattr(gui, "_is_desktop_gui_backend", lambda backend=None: True)
+    monkeypatch.setattr(gui, "_is_notebook_widget_backend", lambda backend=None: False)
+
+    gui._release_unloaded_gui_selection()
+
+    assert shell.pylab_gui_select == "qt"
+
+
+def test_use_native_window_backend_asks_for_a_restart_when_qt_is_loaded(
+    monkeypatch,
+):
+    from qal.rta.roi_extraction import well_detector_gui as gui
+
+    monkeypatch.setattr(gui.plt, "get_backend", lambda: "QtAgg")
+    monkeypatch.setattr(gui, "_is_desktop_gui_backend", lambda backend=None: True)
+    monkeypatch.setattr(gui, "_run_matplotlib_magic", lambda name: True)
+    monkeypatch.setattr(gui, "_switch_backend", lambda name: False)
+    monkeypatch.setattr(gui.sys, "platform", "win32")
+
+    with pytest.raises(RuntimeError, match="Restart the kernel"):
+        gui.use_native_window_backend()
+
+
+def test_native_candidates_skip_osx_on_windows(monkeypatch):
+    from qal.rta.roi_extraction import well_detector_gui as gui
+
+    monkeypatch.setattr(gui.sys, "platform", "win32")
+    assert gui._gui_candidates() == [("tk", "TkAgg")]
+
+    monkeypatch.setattr(gui.sys, "platform", "darwin")
+    assert gui._gui_candidates()[0] == ("osx", "MacOSX")
+    assert "qt" not in {magic for magic, _name in gui._gui_candidates()}
+
+
+def test_activate_desktop_backend_uses_the_native_candidate_first(monkeypatch):
+    from qal.rta.roi_extraction import well_detector_gui as gui
+
+    calls = []
+    monkeypatch.setattr(
+        gui,
+        "_try_native_window_backend",
+        lambda: calls.append("native") or True,
+    )
+    monkeypatch.setattr(gui.sys, "platform", "win32")
+
+    assert gui._activate_desktop_gui_backend() is True
+    assert calls == ["native"]
+
+
 def test_notebook_controls_confirm_resolves_manual_points():
     session = WellSelectionSession(
         np.zeros((40, 40)),
