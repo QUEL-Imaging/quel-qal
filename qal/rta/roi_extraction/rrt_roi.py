@@ -1,31 +1,19 @@
 # rrt_roi.py
 
-import matplotlib.pyplot as plt
-from skimage import io
-from skimage.feature import corner_harris, corner_peaks
-from skimage.draw import circle_perimeter
-import numpy as np
-from skimage import io, img_as_float, img_as_ubyte, transform as sk_transform
-from skimage import io, segmentation
-from qal.data import resolution_template
-from qal.util import load_grayscale_image
-import cv2
 import os
+
+import cv2
+import matplotlib.pyplot as plt
+import numpy as np
+from skimage import io, transform as sk_transform
+
+from qal.data import resolution_template
+
 
 class RrtROI:
     # Trial order for comparing USAF-target feature matchers. BRISK/AKAZE are
     # the closest classical pair, but they are not in opencv-python 5.x.
     FEATURE_DETECTOR_TRIAL_ORDER = ("brisk", "akaze", "orb", "sift", "affine_sift")
-
-    def __init__(self):
-        self.fig = None
-        self.ax = None
-        self.points = []
-        self.image = None
-        self.roi_corners = None
-        self.group_coordinates = None
-
-        self.environment = self.check_environment()
 
     @staticmethod
     def create_feature_detector(name):
@@ -78,237 +66,11 @@ class RrtROI:
                 "opencv-contrib-python as cv2.xfeatures2d."
             ) from exc
 
-    def check_environment(self):
-        try:
-            from IPython import get_ipython
-            get_ipython()
-            if 'IPKernelApp' in get_ipython().config:
-                # print("Running in Jupyter Notebook")
-                get_ipython().magic('matplotlib widget')
-                get_ipython().run_line_magic('matplotlib', 'ipympl')
-                return "Jupyter Notebook"
-            else:
-                # print("Running in JupyterLab")
-                get_ipython().run_line_magic('matplotlib', 'ipympl')
-                return "JupyterLab"
-        except Exception:
-            # print("Running in a standard Python environment")
-            return "Standard Python"
-
-    def on_click(self, event):
-        if len(self.points) < 2:
-            ix, iy = event.xdata, event.ydata
-            print(f'x = {ix}, y = {iy}')
-            self.points.append((ix, iy))
-            self.ax.plot(ix, iy, marker='+', color='r', markersize=10)
-            self.fig.canvas.draw_idle()
-
-        if len(self.points) >= 2:
-            self.fig.canvas.mpl_disconnect(self.cid)
-            self.roi_corners = self.detect_roi_corners(self.points, self.image)
-            self.visualize_corners(self.roi_corners)
-            self.fig.canvas.draw_idle()
-            self.process_resolution_target(self.roi_corners)
-
-    def detect_roi_corners(self, points, image):
-        # Harris expects a scalar 2-D image, including in the legacy picker.
-        image = load_grayscale_image(image)
-        # Extract the coordinates of the selected points
-        x1, y1 = points[0]
-        x2, y2 = points[1]
-
-        # Calculate the width between the selected points
-        width = abs(x2 - x1)
-
-        # Calculate the radius as 10% of the width
-        radius = int(0.1 * width)
-
-        # Perform Harris corner detection
-        harris_response = corner_harris(image, k=0.04)
-        corners = corner_peaks(harris_response, min_distance=1, threshold_rel=0.02)
-
-        # Find the closest corner to each selected point
-        roi_corners = []
-        for selected_point in [(x1, y1), (x2, y2)]:
-            min_distance = float('inf')
-            closest_corner = None
-            for corner in corners:
-                distance = np.sqrt((corner[0] - selected_point[1])**2 + (corner[1] - selected_point[0])**2)
-                if distance <= radius and distance < min_distance:
-                    min_distance = distance
-                    closest_corner = corner
-            if closest_corner is not None:
-                roi_corners.append(closest_corner)
-
-        return roi_corners
-
-    def visualize_corners(self, corners):
-        # Draw circles around the closest corners
-        for corner in corners:
-            rr, cc = circle_perimeter(corner[0], corner[1], radius=5)
-            self.ax.plot(cc, rr, 'bo', markersize=0.5)
-
-    def select_points(self, im):
-        if "Jupyter" in self.environment:
-            self.select_points_jupyter(im)
-        else:
-            self.select_points_standard(im)
-
-    def select_points_jupyter(self, im):
-        self.image = im
-        self.fig, self.ax = plt.subplots()
-        self.fig.suptitle("Keypoint Selection", fontsize=16)
-        self.fig.text(0.5, 0.91, "(Select points)", ha='center', fontsize=10, color='gray')
-        self.fig.subplots_adjust(top=0.85)  # Add padding between title/message and plot
-        self.ax.imshow(self.image)
-        self.points = []
-        self.roi_corners = None
-        self.cid = self.fig.canvas.mpl_connect('button_press_event', self.on_click)
-        plt.show()
-
-    def select_points_standard(self, im):
-        from qal.rta.roi_extraction.well_detector_gui import (
-            _activate_desktop_gui_backend,
-            _dismiss_macos_app,
-            _present_macos_app,
-            _running_in_notebook,
-            use_inline_plots,
-        )
-
-        in_notebook = _running_in_notebook()
-        if in_notebook and not _activate_desktop_gui_backend():
-            raise RuntimeError(
-                "Could not open a window for the corner clicks. "
-                "Windows and Linux try Tk, then Qt. macOS tries the macOS "
-                "backend, then Tk, then Qt. Restart the kernel and run this "
-                "notebook from the top if another GUI toolkit is already "
-                "loaded."
-            )
-        _present_macos_app()
-        try:
-            self._select_points_in_window(im)
-        finally:
-            if in_notebook:
-                plt.close("all")
-                _dismiss_macos_app()
-                use_inline_plots()
-
-    def _select_points_in_window(self, im):
-        self.image = im
-        self.fig, self.ax = plt.subplots()
-        self.fig.canvas.manager.set_window_title('Keypoint Selection')
-        self.fig.suptitle("Keypoint Selection", fontsize=16, y=0.98)
-        self.fig.text(
-            0.5, 0.93,
-            "Click to place two points, then close the window to continue:\n"
-            "1: top-left of Group 0 Element 2 top bar\n"
-            "2: bottom-right of Group 0 Element 1 bottom bar",
-            ha='center', va='top', fontsize=9, color='gray',
-        )
-        self.fig.subplots_adjust(top=0.78)  # Leave room for title and instructions
-        self.ax.imshow(self.image, cmap='gray')
-        plt.ion()
-        plt.show()
-        print(
-            "Please make the following selections.\n"
-            "1: Top-left corner of the top horizontal bar of Group 0 Element 2\n"
-            "2: Bottom-right corner of the bottom horizontal bar of Group 0 Element 1"
-        )
-        self.points = plt.ginput(2)
-        self.roi_corners = self.detect_roi_corners(self.points, self.image)
-        self.visualize_corners(self.roi_corners)
-        plt.ioff()
-        plt.show()
-        self.process_resolution_target(self.roi_corners)
-
-    def calculate_group_0_line(self, top_left, bottom_right, lp_x_per, lp_y_per):
-        """
-        Calculate the coordinates for the group 0 line.
-        
-        Args:
-            top_left (tuple): (x, y) coordinates of the top-left corner of the ROI.
-            bottom_right (tuple): (x, y) coordinates of the bottom-right corner of the ROI.
-            lp_x_per (float): Percentage of the line's x-coordinate relative to the ROI width.
-            lp_y_per (float): Percentage of the line's y-coordinate relative to the ROI height.
-            
-        Returns:
-            tuple: A tuple containing the (x, y) coordinates of the start and end points of the line.
-        """
-        lp_roi_width, lp_roi_height = bottom_right[0] - top_left[0], bottom_right[1] - top_left[1]
-        x = top_left[0] + (lp_roi_width * lp_x_per)
-        y1 = top_left[1] - (lp_roi_height * lp_y_per)
-        y2 = bottom_right[1] + (lp_roi_height * lp_y_per)
-        return ((x, y1), (x, y2))
-
-    def calculate_group_1_line(self, top_left, bottom_right, lp_x_per, lp_y_per, lp_length_per):
-        """
-        Calculate the coordinates for the group 1 line.
-        
-        Args:
-            top_left (tuple): (x, y) coordinates of the top-left corner of the ROI.
-            bottom_right (tuple): (x, y) coordinates of the bottom-right corner of the ROI.
-            lp_x_per (float): Percentage of the line's x-coordinate relative to the ROI width.
-            lp_y_per (float): Percentage of the line's y-coordinate relative to the ROI height.
-            lp_length_per (float): Percentage of the line's length relative to the ROI height.
-            
-        Returns:
-            tuple: A tuple containing the (x, y) coordinates of the start and end points of the line.
-        """
-        lp_roi_width, lp_roi_height = bottom_right[0] - top_left[0], bottom_right[1] - top_left[1]
-        x = top_left[0] + (lp_roi_width * lp_x_per)
-        y1 = top_left[1] - (lp_roi_height * lp_y_per)
-        y2 = top_left[1] + (lp_roi_height * lp_length_per) + (lp_roi_height * lp_y_per)
-        return ((x, y1), (x, y2))
-
-    def calculate_group_2_line(self, top_left, bottom_right, lp_x_per, lp_y_per, lp_length_per, lp_y_start_offset):
-        """
-        Calculate the coordinates for the group 2 line.
-        
-        Args:
-            top_left (tuple): (x, y) coordinates of the top-left corner of the ROI.
-            bottom_right (tuple): (x, y) coordinates of the bottom-right corner of the ROI.
-            lp_x_per (float): Percentage of the line's x-coordinate relative to the ROI width.
-            lp_y_per (float): Percentage of the line's y-coordinate relative to the ROI height.
-            lp_length_per (float): Percentage of the line's length relative to the ROI height.
-            
-        Returns:
-            tuple: A tuple containing the (x, y) coordinates of the start and end points of the line.
-        """
-        lp_roi_width, lp_roi_height = bottom_right[0] - top_left[0], bottom_right[1] - top_left[1]
-        x = top_left[0] + (lp_roi_width * lp_x_per)
-        y1 = top_left[1] + (lp_roi_height * lp_y_start_offset) - (lp_roi_height * lp_y_per)
-        y2 = top_left[1] + (lp_roi_height * lp_y_start_offset) + (lp_roi_height * lp_length_per) + (lp_roi_height * lp_y_per)
-        return ((x, y1), (x, y2))
-
-    def process_resolution_target(self, roi_corners):
-        from .rrt_gui import group_coordinates_from_lines, lines_from_registration
-
-        if len(roi_corners) != 2:
-            raise ValueError(
-                "Two registration corners are required; Harris detection found "
-                f"{len(roi_corners)}. Use select_rrt_lines(mode="
-                "'manual_live_preview') to place them exactly."
-            )
-        top_left = (roi_corners[0][1], roi_corners[0][0])
-        bottom_right = (roi_corners[1][1], roi_corners[1][0])
-        self.group_coordinates = group_coordinates_from_lines(
-            lines_from_registration(top_left, bottom_right)
-        )
-        return self.group_coordinates
-
     def cvt_to_uint8(self, img):
         image = img.astype(float) - np.nanmin(img)
         image = 255 * (image.astype(float) / np.max(image))
         image = image.astype(np.uint8)
         return image
-
-    def read_raw_tiff(self, img):
-        im_array = io.imread(img)
-        if im_array.dtype == 'float16' or im_array.dtype == 'float32':
-            im_array = (im_array - np.min(im_array)) / (np.max(im_array) - np.min(im_array))*(pow(2,16)-1)
-            im_array = im_array.astype(int)
-            im_array = im_array.astype(np.uint16)
-        return im_array
 
     def get_resolution_target_cropped(
         self,
@@ -564,98 +326,6 @@ class RrtROI:
         min_y = max(center_y - (max_dimension // 2) - padding, 0)
         max_y = min(center_y + (max_dimension // 2) + padding, shape[0])
         return int(min_x), int(max_x), int(min_y), int(max_y)
-
-    def preprocess_roi(self, roi):
-        # Convert the cropped ROI to float32
-        roi_float32 = roi.astype(np.float32)
-
-        # Normalize the cropped ROI to the range [0, 1]
-        roi_normalized = (roi_float32 - np.min(roi_float32)) / (np.max(roi_float32) - np.min(roi_float32))
-
-        # Scale the normalized ROI to the range [0, 255] and convert to uint8
-        roi_uint8 = (roi_normalized * 255).astype(np.uint8)
-
-        # Invert the cropped ROI
-        roi_inverted = cv2.bitwise_not(roi_uint8)
-
-        return roi_inverted
-
-    def preprocess_template(self, template_path):
-        # Read the template image
-        template = io.imread(template_path)
-
-        # Normalize the template to 8-bit range (0-255)
-        template_normalized = img_as_ubyte(img_as_float(template))
-
-        # Invert the template image to handle white features on a black background
-        template_inverted = cv2.bitwise_not(template_normalized)
-
-        return template_inverted
-
-    def perform_template_matching(self, roi_inverted, template_inverted):
-        # Define the scale factors for multi-scale template matching
-        scales = np.linspace(0.1, 1.0, 20)[::-1]
-
-        # Perform multi-scale template matching
-        found = None
-        for scale in scales:
-            new_width = int(roi_inverted.shape[1] * scale)
-            new_height = int(roi_inverted.shape[0] * scale)
-
-            if new_width < template_inverted.shape[1] or new_height < template_inverted.shape[0]:
-                continue
-
-            resized = cv2.resize(roi_inverted, (new_width, new_height))
-            r = roi_inverted.shape[1] / float(resized.shape[1])
-
-            # Convert resized and template_inverted to the same data type (CV_8U)
-            resized = resized.astype(np.uint8)
-            template_inverted = template_inverted.astype(np.uint8)
-
-            result = cv2.matchTemplate(resized, template_inverted, cv2.TM_CCOEFF_NORMED)
-            _, max_val, _, max_loc = cv2.minMaxLoc(result)
-
-            if found is None or max_val > found[0]:
-                found = (max_val, max_loc, r)
-
-        return found
-
-    def extract_matched_region(self, roi_inverted, found, template_inverted):
-        if found is not None:
-            _, max_loc, r = found
-            x, y = max_loc
-            w, h = int(template_inverted.shape[1] * r), int(template_inverted.shape[0] * r)
-
-            x, y = int(x * r), int(y * r)
-
-            # Extract the matched region from the cropped ROI
-            matched_region = roi_inverted[y:y+h, x:x+w]
-
-            return matched_region, x, y
-        else:
-            print("Template not found in the image.")
-            return None, None, None
-
-    def visualize_matched_region(self, roi_inverted, matched_region, x, y, template_inverted):
-        w, h = template_inverted.shape[1], template_inverted.shape[0]
-        # Draw the bounding box on the cropped ROI for visualization
-        visualization = cv2.cvtColor(roi_inverted, cv2.COLOR_GRAY2BGR)
-        cv2.rectangle(visualization, (x, y), (x + w, y + h), (0, 255, 0), 2)
-
-        # Display the cropped ROI with the bounding box using Matplotlib
-        plt.figure(figsize=(8, 6))
-        plt.subplot(1, 2, 1)
-        plt.imshow(cv2.cvtColor(visualization, cv2.COLOR_BGR2RGB), cmap='gray')
-        plt.title('Bounding Box')
-        plt.axis('off')
-
-        plt.subplot(1, 2, 2)
-        plt.imshow(matched_region, cmap='gray')
-        plt.title('Matched Region')
-        plt.axis('off')
-
-        plt.tight_layout()
-        plt.show()
 
     @staticmethod
     def print_smallest_resolved(contrast, threshold):
