@@ -2,11 +2,12 @@
 
 Edit the settings below, then run:
 
-    python -m qal.examples.resolution_rrt.rrt_gui_example
+    python -m qal.examples.resolution_rrt.resolution_gui_example
 
 The window prints the coordinates you chose. With SAVE_RESULTS on, it also
-writes plots, a CSV, and selection.yaml next to your image. Paste those
-coordinates into rrt_batch_example to measure more images without the window.
+writes plots, a CSV, and selection.yaml next to your image, or next to this
+script when using the built-in example. Paste those coordinates into
+rrt_batch_example to measure more images without the window.
 
 The matching notebook is ``qal/examples/jupyter-notebook/resolution_rrt_gui_example.ipynb``.
 """
@@ -26,9 +27,10 @@ from qal.util import load_grayscale_image
 # Or set your own file, for example "path/to/image.tiff".
 IMAGE_PATH = None
 
-# True saves plots, a CSV, and selection.yaml in a folder next to the image.
-# This needs IMAGE_PATH, because the built-in example has no folder of its own.
-SAVE_RESULTS = False
+# True saves plots, a CSV, and selection.yaml.
+# With IMAGE_PATH, files go next to that image in <image_name>_results/.
+# With the built-in example, files go next to this script in res_sample_1_results/.
+SAVE_RESULTS = True
 
 # Pick one mode. Leave the others commented out.
 # MODE = "automatic_refinement"  # click two corners; they snap onto the chart
@@ -61,10 +63,6 @@ RESOLUTION_THRESHOLD = 26
 
 
 def main():
-    # Saving needs a real file path, so the results can sit next to the image.
-    if SAVE_RESULTS and not IMAGE_PATH:
-        raise ValueError("Set IMAGE_PATH before turning SAVE_RESULTS on.")
-
     # 1. Load the image. The built-in example is used when IMAGE_PATH is empty.
     image = res_sample_1()
     image_path = None
@@ -76,7 +74,10 @@ def main():
     results_dir = None
     selection_path = None
     if SAVE_RESULTS:
-        results_dir = image_path.parent / f"{image_path.stem}_results"
+        if image_path is None:
+            results_dir = Path(__file__).resolve().parent / "res_sample_1_results"
+        else:
+            results_dir = image_path.parent / f"{image_path.stem}_results"
         results_dir.mkdir(parents=True, exist_ok=True)
         selection_path = results_dir / "selection.yaml"
         print(f"Results folder: {results_dir}")
