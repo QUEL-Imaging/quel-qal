@@ -65,6 +65,40 @@ def test_line_profile_plot_marks_every_detected_extremum():
     assert marked == sorted([10, 16, 22, 28, 13, 19, 25])
 
 
+def test_saved_plots_contain_the_drawn_figure(tmp_path):
+    import matplotlib.pyplot as plt
+    import pandas as pd
+    from skimage import io
+
+    from qal import RrtDataPlotter
+
+    image = np.zeros((40, 60), dtype=np.float32)
+    image[:, 10:60:6] = 200.0
+    group_coordinates = {0: {"coordinates": ((5, 20), (55, 20)), "elements": [2]}}
+    contrast = pd.DataFrame({
+        "Group": [0, 0],
+        "Element": [5, 6],
+        "Resolution (lp/mm)": [1.59, 1.78],
+        "Percentage Contrast": [40.0, 26.0],
+        "Percentage Contrast Std": [1.0, 2.0],
+        "Peak Indices": [[10, 16, 22], [28]],
+        "Trough Indices": [[13, 19, 25], []],
+    })
+    plotter = RrtDataPlotter()
+    profile_path = tmp_path / "line_profiles.png"
+    contrast_path = tmp_path / "percentage_contrast.png"
+    plotter.plot_line_profiles(
+        image, group_coordinates, contrast, save_path=profile_path
+    )
+    plotter.plot_percentage_contrast(contrast, save_path=contrast_path)
+    plt.close("all")
+
+    for path in (profile_path, contrast_path):
+        saved = io.imread(path)
+        assert saved.size > 0
+        assert float(np.std(saved)) > 0
+
+
 def test_print_smallest_resolved_reports_the_last_bar_above_the_threshold(capsys):
     import pandas as pd
 

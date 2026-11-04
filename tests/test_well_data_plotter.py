@@ -54,8 +54,10 @@ def test_visualize_roi_saves_content_before_show(
         plt.close("all")
 
 
-@pytest.mark.parametrize("example", ["gui", "batch", "notebook"])
-def test_concentration_examples_save_nonblank_roi(
+@pytest.mark.parametrize(
+    "example", ["gui", "batch", "notebook", "depth_notebook"]
+)
+def test_examples_save_nonblank_roi(
     monkeypatch, tmp_path, roi_data, example
 ):
     from qal.examples.concentration_rcs import concentration_gui_example as gui
@@ -86,10 +88,15 @@ def test_concentration_examples_save_nonblank_roi(
             import json
             from pathlib import Path
 
+            notebook_name = (
+                "depth_rds_gui_example.ipynb"
+                if example == "depth_notebook"
+                else "concentration_rcs_gui_example.ipynb"
+            )
             notebook_path = (
                 Path(gui.__file__).resolve().parents[1]
                 / "jupyter-notebook"
-                / "concentration_rcs_gui_example.ipynb"
+                / notebook_name
             )
             notebook = json.loads(notebook_path.read_text())
             cell = next(cell for cell in notebook["cells"] if any(

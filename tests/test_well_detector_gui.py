@@ -8,6 +8,10 @@ import pytest
 from qal import WellDetector
 from qal.rta.roi_extraction.well_detector_gui import (
     WellSelectionSession,
+    arm_confirm_window,
+    close_figure_after_callback,
+    disarm_confirm_window,
+    focus_selection_canvas,
     select_wells_from_coordinates,
 )
 from qal.util import circular_mask
@@ -720,7 +724,13 @@ def test_closing_well_gui_before_confirm_returns_none(monkeypatch, capsys):
     from qal.rta.roi_extraction import well_detector_gui
 
     monkeypatch.setattr(well_detector_gui, "_prepare_gui_backend", lambda: False)
-    monkeypatch.setattr(plt, "show", lambda **kwargs: plt.close("all"))
+
+    def _close_without_confirm(figure, *, block=True):
+        plt.close(figure)
+
+    monkeypatch.setattr(
+        well_detector_gui, "run_selection_window", _close_without_confirm
+    )
 
     result = well_detector_gui.select_wells_gui(
         np.zeros((50, 50)), expected_count=1, coordinate_mode="manual",
@@ -732,9 +742,148 @@ def test_closing_well_gui_before_confirm_returns_none(monkeypatch, capsys):
     assert not plt.get_fignums()
 
 
-def test_closed_well_session_ignores_confirm():
+@pytest.mark.parametrize("key", ["enter", "return", "shift+return"])
+def test_enter_confirms_a_finished_well_selection(key):
     session = WellSelectionSession(
         np.zeros((50, 50)), expected_count=1, coordinate_mode="manual",
+        manual_roi_diameter=5, close_on_confirm=False,
+        resolve_in_background=False,
+    )
+    session.points.append((10.0, 10.0))
+    session._on_key(SimpleNamespace(key=key))
+
+    assert session.confirmed
+    assert session.result is not None
+    plt.close(session.figure)
+
+
+def test_disarm_confirm_window_stops_refocus_timers():
+    session = WellSelectionSession(
+        np.zeros((50, 50)), expected_count=1, coordinate_mode="manual",
+        manual_roi_diameter=5, close_on_confirm=True,
+        resolve_in_background=False,
+    )
+    shown = []
+
+    def _show():
+        shown.append(True)
+
+    session.figure.canvas.manager._show = _show
+    arm_confirm_window(session.figure, session.confirm)
+    assert session.figure._qal_timers
+
+    close_figure_after_callback(session.figure)
+
+    assert session.figure._qal_closed is True
+    assert session.figure._qal_timers == []
+    focus_selection_canvas(session.figure)
+    assert shown == []
+    plt.close(session.figure)
+
+
+def test_enter_stops_the_well_selection_event_loop():
+    """Notebook and script pickers both close by stopping the canvas loop."""
+    session = WellSelectionSession(
+        np.zeros((50, 50)), expected_count=1, coordinate_mode="manual",
+        manual_roi_diameter=5, close_on_confirm=True,
+        resolve_in_background=False,
+    )
+    session.points.append((10.0, 10.0))
+    session.figure.canvas.manager._shown = True
+    session.figure._qal_using_event_loop = True
+    stopped = []
+
+    def _stop():
+        stopped.append(True)
+
+    session.figure.canvas.stop_event_loop = _stop
+    session._on_key(SimpleNamespace(key="enter"))
+
+    assert session.confirmed
+    assert stopped == [True]
+    assert session.figure._qal_close_after_loop is True
+    # Destroy happens after run_selection_window returns, not in the key handler.
+    assert plt.fignum_exists(session.figure.number)
+    plt.close(session.figure)
+
+
+def test_native_notebook_well_gui_resolves_synchronously(monkeypatch):
+    from qal.rta.roi_extraction import well_detector_gui as gui
+
+    monkeypatch.setattr(gui, "_prepare_gui_backend", lambda: False)
+    monkeypatch.setattr(gui, "_running_in_notebook", lambda: True)
+    monkeypatch.setattr(gui, "_present_macos_app", lambda: None)
+    monkeypatch.setattr(gui, "_dismiss_macos_app", lambda: None)
+    monkeypatch.setattr(gui, "use_inline_plots", lambda: False)
+    monkeypatch.setattr(gui, "arm_confirm_window", lambda figure, confirm: None)
+
+    created = {}
+
+    def _capture_session(*args, **kwargs):
+        session = WellSelectionSession(*args, **kwargs)
+        created["session"] = session
+        session.points.append((10.0, 10.0))
+        session.result = session._selection_from_points()
+        session.confirmed = True
+        return session
+
+    monkeypatch.setattr(gui, "WellSelectionSession", _capture_session)
+
+    def _finish(figure, *, block=True):
+        assert block is True
+        figure._qal_close_after_loop = True
+        gui._destroy_figure(figure)
+
+    monkeypatch.setattr(gui, "run_selection_window", _finish)
+
+    result = gui.select_wells_gui(
+        np.zeros((50, 50)),
+        expected_count=1,
+        coordinate_mode="manual",
+        manual_roi_diameter=5,
+    )
+
+    assert created["session"].resolve_in_background is False
+    assert result is created["session"].result
+    assert not plt.get_fignums()
+
+
+def test_close_button_confirms_wells_even_if_the_canvas_cannot_draw():
+    session = WellSelectionSession(
+        np.zeros((50, 50)), expected_count=1, coordinate_mode="manual",
+        manual_roi_diameter=5, close_on_confirm=False,
+    )
+    session.points.append((10.0, 10.0))
+
+    def fail():
+        raise RuntimeError("window is already closing")
+
+    session.figure.canvas.draw_idle = fail
+    session._on_close()
+
+    assert session.confirmed
+    assert session.result is not None
+    assert session.closed
+    plt.close(session.figure)
+
+
+def test_closing_finished_well_selection_confirms():
+    session = WellSelectionSession(
+        np.zeros((50, 50)), expected_count=1, coordinate_mode="manual",
+        manual_roi_diameter=5, close_on_confirm=False,
+    )
+    session.points.append((10.0, 10.0))
+    session._on_close()
+
+    assert session.confirmed
+    assert session.result is not None
+    assert session.confirm() is session.result
+    plt.close(session.figure)
+
+
+def test_closing_unfinished_well_selection_discards_it():
+    session = WellSelectionSession(
+        np.zeros((50, 50)), expected_count=2, coordinate_mode="manual",
         manual_roi_diameter=5, close_on_confirm=False,
     )
     session.points.append((10.0, 10.0))

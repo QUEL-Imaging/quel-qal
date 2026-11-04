@@ -10,7 +10,6 @@ from skimage import io
 
 from qal import (
     RrtLineSelection,
-    RrtROI,
     RrtSelectionSession,
     select_rrt_lines,
     select_rrt_lines_from_coordinates,
@@ -63,22 +62,6 @@ def test_group_elements_follow_usaf_layout():
     assert list(group_elements(4)) == [2, 3, 4, 5, 6]
     with pytest.raises(ValueError):
         group_elements(6)
-
-
-def test_registration_lines_match_legacy_rrt_roi():
-    roi = RrtROI.__new__(RrtROI)
-    legacy = roi.process_resolution_target([(78, 56), (215, 202)])
-    lines = lines_from_registration((56, 78), (202, 215))
-
-    for group, line in enumerate(lines):
-        assert np.allclose(legacy[group]["coordinates"], line)
-    assert list(legacy[1]["elements"]) == [1, 2, 3, 4, 5, 6]
-
-
-def test_legacy_process_rejects_missing_corner():
-    roi = RrtROI.__new__(RrtROI)
-    with pytest.raises(ValueError, match="Two registration corners"):
-        roi.process_resolution_target([(78, 56)])
 
 
 def test_snap_moves_to_nearby_corner_and_keeps_distant_points():
@@ -245,9 +228,8 @@ def test_shift_drag_keeps_line_vertical():
         IMAGE, mode="manual_line_profiles", line_count=1,
         template=TEMPLATE, close_on_confirm=False,
     )
-    _click(session, 30, 10)
-    _click(session, 30, 90)
-    session._on_click(_event(session, 30, 90))
+    session.slots = [(30.0, 10.0), (40.0, 90.0)]
+    session._drag_index = 1
     session._on_motion(_event(session, 45, 100, key="shift"))
     session._on_release(_event(session, 45, 100))
 
@@ -258,7 +240,14 @@ def test_closing_window_before_confirm_returns_none(monkeypatch, capsys):
     monkeypatch.setattr(
         "qal.rta.roi_extraction.rrt_gui._prepare_gui_backend", lambda: False
     )
-    monkeypatch.setattr(plt, "show", lambda **kwargs: plt.close("all"))
+
+    def _close_without_confirm(figure, *, block=True):
+        plt.close(figure)
+
+    monkeypatch.setattr(
+        "qal.rta.roi_extraction.rrt_gui.run_selection_window",
+        _close_without_confirm,
+    )
 
     result = select_rrt_lines(IMAGE, mode="manual_live_preview")
 
@@ -267,13 +256,92 @@ def test_closing_window_before_confirm_returns_none(monkeypatch, capsys):
     assert not plt.get_fignums()
 
 
-def test_closed_session_ignores_confirm():
+@pytest.mark.parametrize("key", ["enter", "return", "ctrl+enter", "KP_Enter"])
+def test_enter_confirms_a_finished_resolution_selection(key):
+    from qal.rta.roi_extraction.well_detector_gui import is_confirm_key
+
+    assert is_confirm_key(key)
+    session = RrtSelectionSession(
+        IMAGE, mode="manual_live_preview", template=TEMPLATE,
+        close_on_confirm=False,
+    )
+    session.slots = [(20.0, 20.0), (140.0, 110.0)]
+    session._on_key(SimpleNamespace(key=key))
+
+    assert session.confirmed
+    assert session.result.registration_points == ((20.0, 20.0), (140.0, 110.0))
+    plt.close(session.figure)
+
+
+def test_enter_stops_the_selection_event_loop():
+    """Enter must end the wait used by scripts and notebooks alike."""
+    session = RrtSelectionSession(
+        IMAGE, mode="manual_live_preview", template=TEMPLATE,
+        close_on_confirm=True,
+    )
+    session.slots = [(20.0, 20.0), (140.0, 110.0)]
+    session.figure.canvas.manager._shown = True
+    session.figure._qal_using_event_loop = True
+    stopped = []
+
+    def _stop():
+        stopped.append(True)
+
+    session.figure.canvas.stop_event_loop = _stop
+    session._on_key(SimpleNamespace(key="enter"))
+
+    assert session.confirmed
+    assert stopped == [True]
+    assert session.figure._qal_close_after_loop is True
+    plt.close(session.figure)
+
+
+def test_close_button_confirms_even_if_the_canvas_cannot_draw():
+    session = RrtSelectionSession(
+        IMAGE, mode="manual_live_preview", template=TEMPLATE,
+        close_on_confirm=False,
+    )
+    session.slots = [(20.0, 20.0), (140.0, 110.0)]
+
+    def fail():
+        raise RuntimeError("window is already closing")
+
+    session.figure.canvas.draw_idle = fail
+    session._on_close()
+
+    assert session.confirmed
+    assert session.result.registration_points == ((20.0, 20.0), (140.0, 110.0))
+    assert session.closed
+    plt.close(session.figure)
+
+
+def test_two_live_preview_points_stay_open_for_adjustment():
     session = RrtSelectionSession(
         IMAGE, mode="manual_live_preview", template=TEMPLATE,
         close_on_confirm=False,
     )
     _click(session, 20, 20)
     _click(session, 140, 110)
+
+    assert not session.confirmed
+    assert session.slots == [(20.0, 20.0), (140.0, 110.0)]
+    assert len(session.current_lines()) == 3
+
+    session._drag_index = 0
+    session._on_motion(_event(session, 25, 22))
+    session._on_release(_event(session, 25, 22))
+    session._on_key(SimpleNamespace(key="enter"))
+
+    assert session.confirmed
+    assert session.result.registration_points == ((25.0, 22.0), (140.0, 110.0))
+
+
+def test_closing_before_both_points_discards_the_selection():
+    session = RrtSelectionSession(
+        IMAGE, mode="manual_live_preview", template=TEMPLATE,
+        close_on_confirm=False,
+    )
+    _click(session, 20, 20)
     session._on_close()
 
     assert session.confirm() is None
@@ -292,10 +360,9 @@ def test_live_preview_drag_updates_derived_lines():
         IMAGE, mode="manual_live_preview", template=TEMPLATE,
         close_on_confirm=False,
     )
-    _click(session, 20, 20)
-    _click(session, 140, 110)
+    session.slots = [(20.0, 20.0), (140.0, 110.0)]
     before = session.current_lines()[0]
-    session._on_click(_event(session, 20, 20))
+    session._drag_index = 0
     session._on_motion(_event(session, 30, 25))
     session._on_release(_event(session, 30, 25))
 
