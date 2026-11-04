@@ -94,13 +94,10 @@ def main() -> None:
         save_plot=plot_path,
     )
     if results_dir is not None:
-        wells_path = results_dir / "wells.csv"
         stats_path = results_dir / "stats.csv"
-        wells.to_csv(wells_path, index=False)
         stats.to_csv(stats_path, index=False)
         print(f"Saved {roi_path}")
         print(f"Saved {plot_path}")
-        print(f"Saved {wells_path}")
         print(f"Saved {stats_path}")
 
 
