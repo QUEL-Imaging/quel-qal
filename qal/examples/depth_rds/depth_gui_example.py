@@ -95,11 +95,21 @@ def main() -> None:
     analyzer.print_stats(mode=MODE)
     plotter = WellPlotter(stats, image=image)
     roi_path = results_dir / "roi.png" if results_dir is not None else None
+    plot_path = results_dir / "depth.png" if results_dir is not None else None
     plotter.visualize_roi(save_plot=roi_path)
+    plotter.plot(
+        graph_type="depth",
+        col_to_plot="mean intensity normalized",
+        fluorophore_label=target.get("fluorophore_label", "ICG-eq"),
+        plot_error_bars=False,
+        trendline_lib="scipy",
+        save_plot=plot_path,
+    )
     if results_dir is not None:
         stats_path = results_dir / "stats.csv"
         stats.to_csv(stats_path, index=False)
         print(f"Saved {roi_path}")
+        print(f"Saved {plot_path}")
         print(f"Saved {stats_path}")
 
 

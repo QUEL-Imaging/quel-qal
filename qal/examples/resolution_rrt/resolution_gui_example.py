@@ -128,14 +128,22 @@ def main():
     # ion() keeps each plot open, so it can be saved and stays visible at the end.
     plt.ion()
     plotter = RrtDataPlotter()
+    line_profile_path = (
+        None if results_dir is None else results_dir / "line_profiles.png"
+    )
+    contrast_plot_path = (
+        None if results_dir is None else results_dir / "percentage_contrast.png"
+    )
 
-    plotter.plot_line_profiles(image, group_coordinates, contrast)
+    plotter.plot_line_profiles(
+        image, group_coordinates, contrast, save_path=line_profile_path
+    )
+    plotter.plot_percentage_contrast(
+        contrast,
+        resolution_threshold=RESOLUTION_THRESHOLD,
+        save_path=contrast_plot_path,
+    )
     if results_dir:
-        plt.savefig(results_dir / "line_profiles.png", bbox_inches="tight")
-
-    plotter.plot_percentage_contrast(contrast, resolution_threshold=RESOLUTION_THRESHOLD)
-    if results_dir:
-        plt.savefig(results_dir / "percentage_contrast.png", bbox_inches="tight")
         contrast.to_csv(results_dir / "percentage_contrast.csv", index=False)
         print(f"Saved results to {results_dir}")
 
