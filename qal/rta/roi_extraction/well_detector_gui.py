@@ -18,6 +18,7 @@ import sys
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib._pylab_helpers import Gcf
 from matplotlib.widgets import Button
 
 from qal.util import load_grayscale_image
@@ -34,6 +35,414 @@ CANONICAL_GRID = np.asarray(
     ],
     dtype=float,
 )
+
+
+def is_confirm_key(key) -> bool:
+    """True for Enter or Return, including the keypad, on every backend.
+
+    Matplotlib reports ``enter`` on some builds and ``return`` on others.
+    A modifier prefix such as ``ctrl+enter`` still counts.
+    """
+    token = str(key or "").lower().replace(" ", "")
+    token = token.split("+")[-1]
+    return token in {"enter", "return", "kp_enter", "\r", "\n"}
+
+
+def _window_is_shown(figure) -> bool:
+    """True when a native window is on screen on macOS, Windows, or Linux."""
+    canvas = getattr(figure, "canvas", None)
+    manager = getattr(canvas, "manager", None)
+    if manager is None:
+        return False
+    if getattr(manager, "_shown", False):
+        return True
+    window = getattr(manager, "window", None)
+    if window is None:
+        return False
+    for name in ("isVisible", "winfo_viewable", "winfo_ismapped"):
+        method = getattr(window, name, None)
+        if not callable(method):
+            continue
+        try:
+            if bool(method()):
+                return True
+        except Exception:
+            continue
+    return False
+
+
+def _stop_figure_timers(figure) -> None:
+    """Cancel Matplotlib and QAL timers that can resurrect a closed window."""
+    canvas = getattr(figure, "canvas", None)
+    for timer in list(getattr(figure, "_qal_timers", []) or []):
+        stop = getattr(timer, "stop", None)
+        if callable(stop):
+            try:
+                stop()
+            except Exception:
+                pass
+    try:
+        figure._qal_timers = []
+    except Exception:
+        pass
+    close_timer = getattr(figure, "_qal_close_timer", None)
+    if close_timer is not None:
+        try:
+            close_timer.stop()
+        except Exception:
+            pass
+        try:
+            del figure._qal_close_timer
+        except Exception:
+            pass
+    timers = getattr(canvas, "_timers", None)
+    if timers:
+        while timers:
+            timer = timers.pop()
+            stop = getattr(timer, "stop", None)
+            if callable(stop):
+                try:
+                    stop()
+                except Exception:
+                    pass
+
+
+def _destroy_figure(figure) -> None:
+    """Close ``figure`` the same way the window's close button does."""
+    figure._qal_closed = True
+    _stop_figure_timers(figure)
+    canvas = getattr(figure, "canvas", None)
+    manager = getattr(canvas, "manager", None)
+    number = getattr(figure, "number", None)
+    try:
+        if number is not None and plt.fignum_exists(number):
+            if manager is not None:
+                Gcf.destroy(manager)
+            else:
+                plt.close(figure)
+        else:
+            destroy = getattr(manager, "destroy", None)
+            if callable(destroy):
+                destroy()
+    except Exception:
+        try:
+            if number is not None and plt.fignum_exists(number):
+                plt.close(figure)
+        except Exception:
+            pass
+    flush = getattr(canvas, "flush_events", None)
+    if callable(flush):
+        try:
+            flush()
+        except Exception:
+            pass
+
+
+def _is_interactive_gui_canvas(canvas) -> bool:
+    module = getattr(type(canvas), "__module__", "")
+    return any(
+        token in module
+        for token in (
+            "backend_macosx",
+            "backend_tk",
+            "backend_qt",
+            "backend_wx",
+            "backend_gtk",
+        )
+    )
+
+
+def _stop_shown_macos_loop(figure) -> bool:
+    """Return from ``plt.show`` on the macOS backend.
+
+    Destroying a macOS figure inside a key, click, or timer callback makes
+    the process exit instead of returning from ``plt.show``. ``_macosx.stop``
+    ends the event loop and leaves the figure open so the caller can close
+    it after ``show`` returns. Prefer :func:`run_selection_window` so
+    notebooks do not need this path.
+    """
+    canvas = getattr(figure, "canvas", None)
+    module = getattr(type(canvas), "__module__", "")
+    if "backend_macosx" not in module:
+        return False
+    macosx = sys.modules.get("matplotlib.backends._macosx")
+    stop = getattr(macosx, "stop", None)
+    if not callable(stop):
+        return False
+    try:
+        stop(None)
+    except TypeError:
+        try:
+            stop()
+        except Exception:
+            return False
+    except Exception:
+        return False
+    return True
+
+
+def run_selection_window(figure, *, block: bool = True) -> None:
+    """Show the selection figure and wait until Enter or the close button.
+
+    Scripts and notebooks use the same wait: map the window, then run the
+    canvas event loop. Enter calls :meth:`~.FigureCanvasBase.stop_event_loop`
+    through :func:`close_figure_after_callback`. That avoids ``plt.show``'s
+    macOS ``NSApp`` loop, which conflicts with Jupyter's input hook.
+
+    Destroying the native window happens here after the loop returns, not
+    inside the Enter key callback. That keeps Jupyter notebooks and desktop
+    scripts on the same close path without aborting the macOS backend.
+    """
+    if not block:
+        plt.show(block=False)
+        return
+
+    canvas = getattr(figure, "canvas", None)
+    if canvas is not None and _is_interactive_gui_canvas(canvas):
+        manager = getattr(canvas, "manager", None)
+        if manager is not None:
+            try:
+                manager.show()
+            except Exception:
+                pass
+        focus_selection_canvas(figure)
+        start = getattr(canvas, "start_event_loop", None)
+        if callable(start):
+            figure._qal_using_event_loop = True
+            figure._qal_close_after_loop = False
+            loop_started = False
+            try:
+                try:
+                    start(0)
+                    loop_started = True
+                except TypeError:
+                    start(timeout=0)
+                    loop_started = True
+            except Exception:
+                loop_started = False
+            finally:
+                figure._qal_using_event_loop = False
+                if loop_started and getattr(figure, "_qal_close_after_loop", False):
+                    _destroy_figure(figure)
+            if loop_started:
+                return
+
+    figure._qal_close_after_loop = False
+    plt.show(block=True)
+    if getattr(figure, "_qal_close_after_loop", False):
+        _destroy_figure(figure)
+
+
+def close_figure_after_callback(figure) -> None:
+    """Close ``figure`` without destroying it inside a mouse or key callback.
+
+    When the picker is waiting in :func:`run_selection_window`, stop that
+    canvas event loop and mark the figure so the window is destroyed after
+    the loop returns. Otherwise a visible non-macOS window is closed on the
+    next timer turn, and a shown macOS ``plt.show`` loop is stopped without
+    destroying the window from inside the key callback.
+
+    The timer has to stay referenced. Matplotlib cancels a timer when its
+    Python object is collected, so a timer that exists only as a local
+    variable never fires and the selection window stays open after Enter.
+    """
+    disarm_confirm_window(figure)
+    canvas = getattr(figure, "canvas", None)
+
+    def _close() -> None:
+        _destroy_figure(figure)
+
+    if canvas is None or not _window_is_shown(figure):
+        _close()
+        return
+
+    if getattr(figure, "_qal_using_event_loop", False):
+        figure._qal_close_after_loop = True
+        stop_loop = getattr(canvas, "stop_event_loop", None)
+        if callable(stop_loop):
+            try:
+                stop_loop()
+                return
+            except Exception:
+                pass
+
+    if _stop_shown_macos_loop(figure):
+        figure._qal_close_after_loop = True
+        return
+    if getattr(figure, "_qal_close_timer", None) is not None:
+        return
+    try:
+        timer = canvas.new_timer(interval=0)
+        timer.single_shot = True
+
+        def _fire() -> None:
+            if getattr(figure, "_qal_close_timer", None) is timer:
+                try:
+                    del figure._qal_close_timer
+                except Exception:
+                    pass
+            _close()
+            timer.callbacks.clear()
+
+        timer.add_callback(_fire)
+        # Keep the timer alive after this function returns.
+        figure._qal_close_timer = timer
+        timer.start()
+    except Exception:
+        _close()
+
+
+def focus_selection_canvas(figure) -> None:
+    """Give the image window keyboard focus so Enter reaches the picker.
+
+    Notebook hosts (Cursor, VS Code, JupyterLab) often steal keyboard focus
+    back after a mouse click. Call this again after clicks so Enter still
+    confirms there the same way it does in a plain script.
+    """
+    if getattr(figure, "_qal_closed", False):
+        return
+    canvas = getattr(figure, "canvas", None)
+    if canvas is None:
+        return
+    manager = getattr(canvas, "manager", None)
+    module = getattr(type(canvas), "__module__", "")
+    if "backend_macosx" in module:
+        # orderFront alone leaves another app key, so Return never reaches
+        # the figure. makeKeyAndOrderFront is FigureManager._show.
+        show = getattr(manager, "_show", None)
+        if callable(show):
+            try:
+                show()
+            except Exception:
+                pass
+        raise_window = getattr(manager, "_raise", None)
+        if callable(raise_window):
+            try:
+                raise_window()
+            except Exception:
+                pass
+        return
+    window = getattr(manager, "window", None)
+    getter = getattr(canvas, "get_tk_widget", None)
+    if callable(getter):
+        try:
+            widget = getter()
+            widget.focus_force()
+            top = widget.winfo_toplevel()
+            top.lift()
+            top.focus_force()
+        except Exception:
+            pass
+    for owner in (canvas, window):
+        if owner is None:
+            continue
+        for name in ("setFocus", "activateWindow", "raise_", "requestActivate"):
+            method = getattr(owner, name, None)
+            if not callable(method):
+                continue
+            try:
+                method()
+            except Exception:
+                pass
+
+
+def install_confirm_shortcuts(figure, confirm) -> None:
+    """Bind Enter on the native window, not only on the Matplotlib canvas.
+
+    Tk on Windows and Linux delivers Return to the toplevel even when the
+    canvas does not have focus. Qt and macOS use the canvas key event once
+    :func:`focus_selection_canvas` has run.
+    """
+    canvas = getattr(figure, "canvas", None)
+    getter = getattr(canvas, "get_tk_widget", None)
+    if not callable(getter):
+        return
+    try:
+        top = getter().winfo_toplevel()
+    except Exception:
+        return
+
+    def _on_return(_event=None):
+        confirm()
+        return "break"
+
+    for sequence in ("<Return>", "<KP_Enter>"):
+        try:
+            top.bind(sequence, _on_return)
+        except Exception:
+            pass
+
+
+def arm_confirm_window(figure, confirm) -> None:
+    """Focus the picker and bind Enter before ``plt.show`` blocks.
+
+    Re-focus after the window maps and after every click or mouse enter so
+    notebooks and scripts share the same Enter / close-window behavior.
+    """
+    install_confirm_shortcuts(figure, confirm)
+    focus_selection_canvas(figure)
+    canvas = getattr(figure, "canvas", None)
+    if canvas is None:
+        return
+
+    held = getattr(figure, "_qal_timers", None)
+    if not isinstance(held, list):
+        held = []
+        figure._qal_timers = held
+
+    def _refocus(_event=None) -> None:
+        if getattr(figure, "_qal_closed", False):
+            return
+        focus_selection_canvas(figure)
+
+    if not getattr(figure, "_qal_focus_hooks", False):
+        cids = list(getattr(figure, "_qal_focus_cids", []) or [])
+        for name in (
+            "button_press_event",
+            "button_release_event",
+            "figure_enter_event",
+        ):
+            try:
+                cids.append(canvas.mpl_connect(name, _refocus))
+            except Exception:
+                pass
+        figure._qal_focus_cids = cids
+        figure._qal_focus_hooks = True
+
+    new_timer = getattr(canvas, "new_timer", None)
+    if not callable(new_timer):
+        return
+    try:
+        for delay in (50, 200, 500):
+            timer = new_timer(interval=delay)
+            timer.single_shot = True
+            timer.add_callback(_refocus)
+            # A local timer is cancelled as soon as this function returns.
+            held.append(timer)
+            timer.start()
+    except Exception:
+        return
+
+
+def disarm_confirm_window(figure) -> None:
+    """Stop refocus timers and hooks so they cannot reopen a closed window.
+
+    ``arm_confirm_window`` schedules ``makeKeyAndOrderFront`` on macOS. If
+    those timers fire after Enter, Jupyter's macOS input hook keeps a
+    Matplotlib window alive even after the notebook cell has finished.
+    """
+    figure._qal_closed = True
+    _stop_figure_timers(figure)
+    canvas = getattr(figure, "canvas", None)
+    if canvas is None:
+        return
+    for connection in list(getattr(figure, "_qal_focus_cids", []) or []):
+        try:
+            canvas.mpl_disconnect(connection)
+        except Exception:
+            pass
+    figure._qal_focus_cids = []
+    figure._qal_focus_hooks = False
 
 
 def _estimate_roi_diameter(coordinates: Sequence[Coordinate]) -> float:
@@ -353,6 +762,25 @@ def _release_unloaded_gui_selection() -> None:
         return
 
 
+def _disable_ipython_gui() -> None:
+    """Drop IPython's macOS/Qt input hook after the picker window closes.
+
+    ``%matplotlib osx`` leaves ``enable_gui('osx')`` active. If a native
+    window is still mapped, that hook keeps ``NSApp`` running in the
+    background after the notebook cell has already finished.
+    """
+    ipython = _get_ipython()
+    if ipython is None:
+        return
+    enable_gui = getattr(ipython, "enable_gui", None)
+    if not callable(enable_gui):
+        return
+    try:
+        enable_gui(None)
+    except Exception:
+        pass
+
+
 def _run_matplotlib_magic(name: str) -> bool:
     ipython = _get_ipython()
     if ipython is None or not hasattr(ipython, "run_line_magic"):
@@ -552,14 +980,18 @@ def use_inline_plots() -> bool:
     if not _running_in_notebook():
         return False
     _dismiss_macos_app()
+    switched = False
     if _is_inline_backend():
-        return True
-    if _run_matplotlib_magic("inline") and _is_inline_backend():
-        return True
-    return bool(
-        _switch_backend("module://matplotlib_inline.backend_inline")
-        and _is_inline_backend()
-    )
+        switched = True
+    elif _run_matplotlib_magic("inline") and _is_inline_backend():
+        switched = True
+    elif _switch_backend("module://matplotlib_inline.backend_inline") and (
+        _is_inline_backend()
+    ):
+        switched = True
+    _disable_ipython_gui()
+    _dismiss_macos_app()
+    return switched
 
 
 def use_native_window_backend() -> None:
@@ -786,9 +1218,12 @@ class WellSelectionSession:
             self.figure.canvas.mpl_connect(
                 "button_release_event", self._on_release
             ),
-            self.figure.canvas.mpl_connect("key_press_event", self._on_key),
             self.figure.canvas.mpl_connect("close_event", self._on_close),
         ]
+        self._key_cid = self.figure.canvas.mpl_connect(
+            "key_press_event", self._on_key
+        )
+        self._connections.append(self._key_cid)
         self._redraw()
 
     def _instructions(self) -> str:
@@ -814,7 +1249,10 @@ class WellSelectionSession:
             lines.append("Remove last / Confirm: use the buttons")
             lines.append("Delete also removes last if the figure has focus")
         else:
-            lines.append("Delete: remove last marker |  Enter: confirm")
+            lines.append(
+                "Delete: remove last marker |  Enter: confirm |  "
+                "Close the window: confirm"
+            )
         return "\n".join(lines)
 
     def _signal_indices(self) -> list[int]:
@@ -999,14 +1437,20 @@ class WellSelectionSession:
         self._redraw()
 
     def _on_key(self, event) -> None:
+        if is_confirm_key(getattr(event, "key", None)):
+            if self.confirmed:
+                if self.close_on_confirm and not self.closed:
+                    close_figure_after_callback(self.figure)
+                return
+            if not self._processing:
+                self.confirm()
+            return
         if self.confirmed or self._processing:
             return
         key = str(event.key or "").lower()
         if key in {"delete", "backspace"}:
             self._remove_last_point()
             return
-        if key in {"enter", "return"}:
-            self.confirm()
 
     def _remove_last_point(self) -> None:
         if self.confirmed or self._processing or not self.points:
@@ -1048,14 +1492,24 @@ class WellSelectionSession:
             if self.coordinate_mode == "manual"
             else "Refining clicked wells…"
         )
-        if not self.resolve_in_background:
-            self._set_status(status)
-            self.figure.canvas.draw_idle()
+        if not self.resolve_in_background or getattr(self, "_handling_close", False):
+            # The close button is already destroying the window. Record the
+            # points and do not draw on a canvas that is going away.
+            if not getattr(self, "_handling_close", False):
+                self._set_status(status)
+                try:
+                    self.figure.canvas.draw_idle()
+                except Exception:
+                    pass
             try:
                 result = self._selection_from_points()
             except Exception as exc:
-                self._set_status(str(exc))
-                self.figure.canvas.draw_idle()
+                if not getattr(self, "_handling_close", False):
+                    self._set_status(str(exc))
+                    try:
+                        self.figure.canvas.draw_idle()
+                    except Exception:
+                        pass
                 return None
             self._apply_result(result)
             return self.result
@@ -1123,32 +1577,69 @@ class WellSelectionSession:
         self.result = result
         self.confirmed = True
         self._processing = False
-        self._set_status("Selection confirmed")
-        self._disconnect()
+        try:
+            self._set_status("Selection confirmed")
+        except Exception:
+            pass
+        if getattr(self, "_handling_close", False):
+            self._disconnect()
+            return
+        # Leave the Enter handler connected so a second press can close the
+        # window if the deferred close has not run yet.
+        self._disconnect(keep_confirm_key=True)
         if self.close_on_confirm:
-            plt.close(self.figure)
-            # Enter has closed the picker. Hide the macOS Dock icon now,
-            # before the caller switches back to inline notebook plots.
-            _dismiss_macos_app()
+            close_figure_after_callback(self.figure)
         else:
-            self.image_axis.set_title("Selection confirmed")
-            self.figure.canvas.draw_idle()
+            try:
+                self.image_axis.set_title("Selection confirmed")
+                self.figure.canvas.draw_idle()
+            except Exception:
+                pass
 
     def _set_status(self, message: str) -> None:
         self._status.set_text(message)
 
-    def _on_close(self, _event=None) -> None:
-        self.closed = True
-        self._drag_index = None
-        if self._processing_timer is not None:
-            self._processing_timer.stop()
-        self._processing = False
-        self._disconnect()
+    def _selection_ready(self) -> bool:
+        """True when Enter would accept the points currently placed."""
+        signal_count = len(self._signal_indices())
+        if self.expected_count is not None:
+            return signal_count == self.expected_count
+        return signal_count > 0
 
-    def _disconnect(self) -> None:
+    def _on_close(self, _event=None) -> None:
+        if getattr(self, "_handling_close", False):
+            return
+        self._handling_close = True
+        try:
+            # The window is already going away. A finished selection confirms
+            # the same way Enter does; an unfinished one is discarded.
+            if (
+                not self.confirmed
+                and not self._processing
+                and self._selection_ready()
+            ):
+                self.close_on_confirm = False
+                self.resolve_in_background = False
+                self.confirm()
+        finally:
+            self.closed = True
+            self._drag_index = None
+            if self._processing_timer is not None:
+                self._processing_timer.stop()
+            self._processing = False
+            self._disconnect()
+
+    def _disconnect(self, *, keep_confirm_key: bool = False) -> None:
+        kept = []
         for connection in self._connections:
-            self.figure.canvas.mpl_disconnect(connection)
-        self._connections.clear()
+            if keep_confirm_key and connection == getattr(self, "_key_cid", None):
+                kept.append(connection)
+                continue
+            try:
+                self.figure.canvas.mpl_disconnect(connection)
+            except Exception:
+                pass
+        self._connections = kept
 
     def _redraw(self) -> None:
         for artist in self._artists:
@@ -1288,7 +1779,9 @@ def select_wells_gui(
     """Open the interactive picker and collect or refine well centroids.
 
     Desktop Matplotlib backends block until the window closes and return a
-    DataFrame, or ``None`` if it is closed before confirmation. JupyterLab can use ``ipympl`` with Confirm/Remove buttons and
+    DataFrame, or ``None`` if it is closed before the required points are
+    placed. Closing a finished selection confirms it, the same as Enter.
+    JupyterLab can use ``ipympl`` with Confirm/Remove buttons and
     returns a session immediately. VS Code and Cursor do not register
     ``jupyter-matplotlib``, so those kernels open a native window instead.
     Set ``enable_live_grid_preview=True`` to drag placed ``+`` markers.
@@ -1297,6 +1790,11 @@ def select_wells_gui(
     circle.
     """
     notebook = _prepare_gui_backend()
+    # Cursor/VS Code notebooks open a native window (notebook=False). Resolve
+    # synchronously there so Enter can stop the event loop immediately; a
+    # background timer often never fires under Jupyter's input hook, which
+    # leaves the concentration/depth picker open after confirmation.
+    native_notebook = (not notebook) and _running_in_notebook()
     _present_macos_app()
     session = WellSelectionSession(
         image=image,
@@ -1312,24 +1810,27 @@ def select_wells_gui(
         assume_last_control=assume_last_control,
         close_on_confirm=not notebook,
         notebook_controls=notebook,
-        resolve_in_background=not notebook,
+        resolve_in_background=not notebook and not native_notebook,
     )
-    if not notebook and _running_in_notebook():
-        print("Opening a window. Click the wells, then press Enter.")
+    if native_notebook:
+        print("Opening a window. Click the wells, then press Enter or close the window.")
+    arm_confirm_window(session.figure, session.confirm)
     try:
-        plt.show(block=not notebook)
+        run_selection_window(session.figure, block=not notebook)
     except KeyboardInterrupt:
         session._on_close()
-        plt.close(session.figure)
+        disarm_confirm_window(session.figure)
+        _destroy_figure(session.figure)
     finally:
         if not notebook:
-            plt.close(session.figure)
+            disarm_confirm_window(session.figure)
+            _destroy_figure(session.figure)
             _dismiss_macos_app()
             use_inline_plots()
     if notebook:
         return session
     if session.result is None:
-        plt.close(session.figure)
+        _destroy_figure(session.figure)
         print(
             "Well selection was closed before confirmation; nothing was "
             "selected."
