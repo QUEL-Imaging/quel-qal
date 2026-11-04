@@ -12,6 +12,7 @@ omitted.
 
 from __future__ import annotations
 
+import hashlib
 import importlib
 import json
 import shutil
@@ -149,13 +150,36 @@ def _run_checked(module, results_dir: Path, expected: list[str]) -> None:
 
 
 @pytest.fixture
+def checkout_sample_data(monkeypatch):
+    """Use verified Git LFS files from this checkout without HTTP downloads."""
+    from qal.data import _fetchers
+
+    data_dir = Path(_fetchers.__file__).resolve().parent
+
+    def local_fetch(filename):
+        path = data_dir / filename
+        assert path.is_file(), f"Missing sample data: {path}; run git lfs pull"
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        assert digest == _fetchers.registry[filename], (
+            f"Sample data hash mismatch: {path}; run git lfs pull"
+        )
+        return str(path)
+
+    monkeypatch.setattr(_fetchers, "_fetch", local_fetch)
+    # RUD helpers return directories relative to the fetcher's cache path.
+    monkeypatch.setattr(_fetchers._image_fetcher, "path", data_dir)
+
+
+@pytest.fixture
 def no_gui(monkeypatch):
     monkeypatch.setattr(plt, "show", lambda *args, **kwargs: plt.close("all"))
     yield
     plt.close("all")
 
 
-def test_all_saveable_examples_write_nonblank_files(tmp_path, monkeypatch, no_gui):
+def test_all_saveable_examples_write_nonblank_files(
+    tmp_path, monkeypatch, no_gui, checkout_sample_data
+):
     """One pass through every example that can save without a mouse click."""
     failures = []
 

@@ -9,10 +9,11 @@ from qal import WellPlotter
 
 @pytest.fixture
 def roi_data():
-    image = np.arange(64 * 64).reshape(64, 64).astype(np.uint16)
+    # Signal is brighter than Control, as in a concentration target.
+    image = (4095 - np.arange(64 * 64)).reshape(64, 64).astype(np.uint16)
     wells = pd.DataFrame([
-        {"well": "1000 nM", "x": 20., "y": 20., "ROI Diameter": 16.},
-        {"well": "Control", "x": 44., "y": 44., "ROI Diameter": 16.},
+        {"well": "1000 nM", "value": 1000., "x": 20., "y": 20., "ROI Diameter": 16.},
+        {"well": "Control", "value": 0., "x": 44., "y": 44., "ROI Diameter": 16.},
     ])
     return image, wells
 
