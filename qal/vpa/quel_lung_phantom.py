@@ -61,7 +61,7 @@ class LungPhantom:
             self.im_reference = None
             self.mask_reference = None
             if not os.path.exists(self.ref_dir):
-                self.ref_dir = os.path.join(get_cache_dir(), "lung_reference")
+                self.ref_dir = os.path.join(get_cache_dir(), "lung_phantom", "lung_reference")
                 os.makedirs(self.ref_dir, exist_ok=True)
 
         # Remaining needed attribute initializations
