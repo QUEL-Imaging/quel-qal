@@ -158,7 +158,7 @@ def main():
             "example.analyze_selection(session.image, "
             "load_grayscale_image(Path(example.DARK_FRAME_PATH).expanduser()), "
             "session.result)\n"
-            "See the RET section of well_detector_gui_README.md for the imports."
+            "See the RET section of doc/well_detector_gui_README.md for the imports."
         )
         return wells
 

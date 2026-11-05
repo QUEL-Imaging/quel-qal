@@ -9,10 +9,11 @@ from qal import WellPlotter
 
 @pytest.fixture
 def roi_data():
-    image = np.arange(64 * 64).reshape(64, 64).astype(np.uint16)
+    # Signal is brighter than Control, as in a concentration target.
+    image = (4095 - np.arange(64 * 64)).reshape(64, 64).astype(np.uint16)
     wells = pd.DataFrame([
-        {"well": "1000 nM", "x": 20., "y": 20., "ROI Diameter": 16.},
-        {"well": "Control", "x": 44., "y": 44., "ROI Diameter": 16.},
+        {"well": "1000 nM", "value": 1000., "x": 20., "y": 20., "ROI Diameter": 16.},
+        {"well": "Control", "value": 0., "x": 44., "y": 44., "ROI Diameter": 16.},
     ])
     return image, wells
 
@@ -54,8 +55,10 @@ def test_visualize_roi_saves_content_before_show(
         plt.close("all")
 
 
-@pytest.mark.parametrize("example", ["gui", "batch", "notebook"])
-def test_concentration_examples_save_nonblank_roi(
+@pytest.mark.parametrize(
+    "example", ["gui", "batch", "notebook", "depth_notebook"]
+)
+def test_examples_save_nonblank_roi(
     monkeypatch, tmp_path, roi_data, example
 ):
     from qal.examples.concentration_rcs import concentration_gui_example as gui
@@ -86,7 +89,17 @@ def test_concentration_examples_save_nonblank_roi(
             import json
             from pathlib import Path
 
-            notebook = json.loads(Path(gui.__file__).with_suffix(".ipynb").read_text())
+            notebook_name = (
+                "depth_rds_gui_example.ipynb"
+                if example == "depth_notebook"
+                else "concentration_rcs_gui_example.ipynb"
+            )
+            notebook_path = (
+                Path(gui.__file__).resolve().parents[1]
+                / "jupyter-notebook"
+                / notebook_name
+            )
+            notebook = json.loads(notebook_path.read_text())
             cell = next(cell for cell in notebook["cells"] if any(
                 "plotter.visualize_roi(" in line for line in cell.get("source", [])
             ))

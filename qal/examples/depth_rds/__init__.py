@@ -1,1 +1,1 @@
-# Depth-sensitivity (RDS) GUI notebook example.
+# Depth-sensitivity (RDS) examples.

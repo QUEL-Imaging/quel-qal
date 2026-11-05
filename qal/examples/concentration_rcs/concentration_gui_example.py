@@ -5,7 +5,7 @@ Edit the knobs below, then run:
     python -m qal.examples.concentration_rcs.concentration_gui_example
 
 For a notebook that processes one local image and can save results
-beside it, open ``concentration_gui_example.ipynb`` in this folder.
+beside it, open ``qal/examples/jupyter-notebook/concentration_rcs_gui_example.ipynb``.
 Set ``IMAGE_PATH`` there, or leave it as ``None`` for the example image.
 
 For SKU or unit-serial lookup, use ``concentration_sku_gui_example``.
@@ -114,14 +114,22 @@ def main() -> None:
     analyzer.print_stats(mode=MODE)
     plotter = WellPlotter(stats, image=image)
     roi_path = results_dir / "roi.png" if results_dir is not None else None
+    plot_path = (
+        results_dir / "concentration.png" if results_dir is not None else None
+    )
     plotter.visualize_roi(save_plot=roi_path)
+    plotter.plot(
+        graph_type="concentration",
+        col_to_plot="mean intensity normalized",
+        fluorophore_label=target.get("fluorophore_label", "ICG-eq"),
+        trendline_lib="statsmodels",
+        save_plot=plot_path,
+    )
     if results_dir is not None:
-        wells_path = results_dir / "wells.csv"
         stats_path = results_dir / "stats.csv"
-        wells.to_csv(wells_path, index=False)
         stats.to_csv(stats_path, index=False)
         print(f"Saved {roi_path}")
-        print(f"Saved {wells_path}")
+        print(f"Saved {plot_path}")
         print(f"Saved {stats_path}")
 
 

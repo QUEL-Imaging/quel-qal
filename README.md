@@ -63,6 +63,11 @@ Alternatively, you can install the repository from GitHub by following these ste
     pip install -c requirements-constraints.txt -e .
     ```
 
+## Testing
+
+See [the testing guide](doc/testing.md) for local commands, Git LFS sample data,
+and the `dev`-only GitHub Actions policy.
+
 ## License
 
 ### Source Code
