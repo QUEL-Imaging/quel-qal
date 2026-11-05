@@ -43,3 +43,12 @@ def test_transitive_constraints_match_runtime_and_test_pins():
 def test_requirements_apply_the_shared_constraints():
     assert "-c requirements-constraints.txt" in (ROOT / "requirements.txt").read_text().splitlines()
     assert "-r requirements.txt" in (ROOT / "requirements-test.txt").read_text().splitlines()
+
+
+def test_packaging_tests_install_frontend_and_backend_explicitly():
+    # pip's isolated package build does not leave these tools installed in the
+    # interpreter used by pytest. Missing tools previously failed every CI job.
+    metadata = tomllib.loads((ROOT / "pyproject.toml").read_text())
+    backend = {canonicalize_name(Requirement(value).name)
+               for value in metadata["build-system"]["requires"]}
+    assert backend | {"build", "pyproject-hooks"} <= requirements("requirements-test.txt").keys()

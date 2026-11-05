@@ -101,3 +101,12 @@ This work is partially funded by the NIH and ARPA-H:
 - **NIBIB** Grants R43/44 EB029804
 - **NCI** Contract 75N91021C00035
 - **NCI/ARPA-H** Contract 75N91023C00052
+
+### Data development across branches
+
+Data fetching automatically follows the package checkout or the installed wheel’s
+build reference. See [the data development guide](docs/data-development.md) for
+Git LFS hydration, feature → dev → main testing, overrides, and package builds.
+
+See [CI testing policy](doc/ci-testing.md) for branch triggers, the validation job,
+manual full-matrix runs, and the required packaging-test tools.

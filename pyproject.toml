@@ -69,7 +69,7 @@ where = ["."]
 include = ["qal*"]
 
 [tool.setuptools.package-data]
-"qal.data" = ["product_presets/*.yaml", "product_presets/*.md"]
+"qal.data" = ["product_presets/*.yaml", "product_presets/*.md", "_data_source.json"]
 
 [project.urls]
 homepage = "https://github.com/QUEL-Imaging/quel-qal/wiki"
