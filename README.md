@@ -107,3 +107,6 @@ This work is partially funded by the NIH and ARPA-H:
 Data fetching automatically follows the package checkout or the installed wheel’s
 build reference. See [the data development guide](docs/data-development.md) for
 Git LFS hydration, feature → dev → main testing, overrides, and package builds.
+
+See [CI testing policy](doc/ci-testing.md) for branch triggers, the validation job,
+manual full-matrix runs, and the required packaging-test tools.

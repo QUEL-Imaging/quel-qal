@@ -1,4 +1,8 @@
-"""Build real wheels and sdists, then resolve their provenance without Git."""
+"""Build real wheels/sdists; install requirements-test.txt before running.
+
+The build frontend and backend must be installed in the test interpreter. Pip
+installing the project builds in isolation and does not install these test tools.
+"""
 import json
 import os
 from pathlib import Path
@@ -16,7 +20,6 @@ ROOT = Path(__file__).resolve().parents[1]
 @pytest.mark.parametrize("ref, override", [("dev", None), ("main", None),
                                            ("feature/test-data", None), ("dev", "v1.2")])
 def test_wheel_and_sdist_keep_source_ref(tmp_path, ref, override):
-    pytest.importorskip("build")
     from build import ProjectBuilder
     project = tmp_path / "project"
     project.mkdir()
@@ -41,7 +44,10 @@ def test_wheel_and_sdist_keep_source_ref(tmp_path, ref, override):
         env["QAL_DATA_REF"] = override
     env["QAL_REQUIRE_DATA_PROVENANCE"] = "1"
     def runner(cmd, cwd, extra_environ):
-        subprocess.run(cmd, cwd=cwd, env=env | extra_environ, check=True, capture_output=True)
+        result = subprocess.run(cmd, cwd=cwd, env=env | extra_environ,
+                                capture_output=True, text=True)
+        if result.returncode:
+            pytest.fail(f"Build backend failed:\n{result.stdout}\n{result.stderr}")
     builder = ProjectBuilder(str(project), runner=runner)
     direct = builder.build("wheel", str(tmp_path / "direct"))
     sdist = builder.build("sdist", str(tmp_path / "sdist"))
