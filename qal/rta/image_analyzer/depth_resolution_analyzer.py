@@ -1,3 +1,5 @@
+from numbers import Real
+
 import numpy as np
 from scipy.signal import find_peaks, peak_widths, savgol_filter
 
@@ -22,7 +24,9 @@ class DepthAnalyzer:
             "Polynomial order": 3
         }
 
-    def get_profiles(self, rotate_image_90 = False, channel_distance_from_top = 0.5, depths=None):
+    def get_profiles(
+        self, *, depths=None, rotate_image_90=False, channel_distance_from_top=0.5
+    ):
         """
         Analyze the image from CROPPER to produce an intensity profile and spread profile.
         :param rotate_image_90                 True or False, if the image needs to be rotated so that channels are horizontal
@@ -30,6 +34,10 @@ class DepthAnalyzer:
         :param depths:                         Depths for which to evaluate intensity spread
         :return:
         """
+
+        if (not isinstance(channel_distance_from_top, Real)
+                or not 0 <= channel_distance_from_top <= 1):
+            raise ValueError("channel_distance_from_top must be a finite fraction in [0, 1]")
 
         if depths is None:
             depths = np.arange(self.depth_start_end[0], self.depth_start_end[1] + 1)    # Default depths
@@ -65,8 +73,9 @@ class DepthAnalyzer:
                     int(0.9 * cropped.shape[1]):int(0.95 * cropped.shape[1])]
         )
 
-        # Get the intensity profile and peak intensity along the channel (The intensity profile is the row at the center of the image)
-        channel_row_index = round(cropped.shape[0]*channel_distance_from_top)
+        # Preserve existing row selection, including fractions that round to the bottom edge.
+        height = cropped.shape[0]
+        channel_row_index = min(round(height * channel_distance_from_top), height - 1)
         intensity_profile = cropped[channel_row_index, :]
         peak_max = np.max(intensity_profile)
 

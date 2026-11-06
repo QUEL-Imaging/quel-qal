@@ -100,7 +100,11 @@ def main():
     analyzer.depth_start_end = [1.3, 7.3] # z-depths (mm)
     analyzer.descent_start_end = [6, 44] # x-positions (mm)
     analyzer.phantom_dimensions = [35, 50] # y, x dimensions
-    analyzer.get_profiles(rotate_image_90, channel_distance_from_top = 0.5, depths=np.linspace(1.3, 7.3, 10)) # channel_distance_from_top = percent (as fraction) from the top where the channel is (0.5 for 50%), depths = same as depth_start_end, 10 points in between
+    analyzer.get_profiles(
+        depths=np.linspace(1.3, 7.3, 10),
+        rotate_image_90=rotate_image_90,
+        channel_distance_from_top=0.5,
+    )
 
     # Plot data in ANALYZER
     depth_data_plotter = DepthDataPlotter(analyzer.outputs)
