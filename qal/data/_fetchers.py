@@ -411,9 +411,9 @@ def lung_reference_mask():
 
 def load_lung_info():
     """
-    Download the pickle file containing information on the lung phantom inclusions
+    Return the resolved path to the lung phantom inclusions pickle file
     """
-    _fetch("lung_phantom/lung_reference/Inclusions_info.pkl")
+    return _fetch("lung_phantom/lung_reference/Inclusions_info.pkl")
 
 #
 # End of _fetchers.py
