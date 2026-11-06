@@ -466,7 +466,10 @@ class LungPhantom:
         """
 
         # Get reference mask inclusion properties
-        with open(os.path.join(self.ref_dir, "Inclusions_info.pkl"), 'rb') as f:
+        inclusions_path = os.path.join(self.ref_dir, "Inclusions_info.pkl")
+        if not os.path.isfile(inclusions_path):
+            inclusions_path = load_lung_info()
+        with open(inclusions_path, 'rb') as f:
             inclusions_df = pickle.load(f)
 
         # Get the center locations of the registered inclusions

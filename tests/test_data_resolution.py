@@ -239,11 +239,11 @@ def test_partial_download_never_becomes_cache_entry(checkout, dataset, monkeypat
     assert not (Path(fetch.get_cache_dir()) / name).exists()
 
 
-def test_mixed_directory_sources_and_legacy_lung_cache(checkout, dataset, monkeypatch):
+def test_mixed_directory_sources_and_local_lung_reference(checkout, dataset, monkeypatch):
     data, _ = checkout
     name, content = dataset
     other = "test/second.tiff"
-    lung = "lung_reference/Inclusions_info.pkl"
+    lung = "lung_phantom/lung_reference/Inclusions_info.pkl"
     monkeypatch.setattr(fetch, "registry", dict.fromkeys([name, other, lung], hashlib.sha256(content).hexdigest()))
     write_data(data, name, content)
     write_data(data, lung, content)
@@ -255,5 +255,6 @@ def test_mixed_directory_sources_and_legacy_lung_cache(checkout, dataset, monkey
     result = Path(fetch._fetch_directory("test"))
     assert (result / Path(name).name).read_bytes() == content
     assert (result / Path(other).name).read_bytes() == content
-    fetch.load_lung_info()
-    assert (Path(fetch.get_cache_dir()) / lung).read_bytes() == content
+    resolved = Path(fetch.load_lung_info())
+    assert resolved == data / lung
+    assert resolved.read_bytes() == content
