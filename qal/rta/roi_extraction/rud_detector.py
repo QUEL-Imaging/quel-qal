@@ -487,7 +487,7 @@ class RudDetector:
             else:
                 get_ipython().run_line_magic('matplotlib', 'ipympl')
                 return "JupyterLab"
-        except AttributeError:
+        except Exception:
             return "Standard Python"
 
     @staticmethod

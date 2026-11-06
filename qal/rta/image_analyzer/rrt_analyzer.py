@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from scipy.signal import savgol_filter
+from scipy.signal import find_peaks, savgol_filter
 from skimage.measure import profile_line
 
 
@@ -44,16 +44,36 @@ class RrtAnalyzer:
         else:
             raise ValueError("Invalid group number or element number.")
 
-    def detect_peaks_and_troughs(self, data):
-        gradient = np.diff(data)
-        peaks = []
-        troughs = []
-        for i in range(1, len(gradient)):
-            if gradient[i] < 0 and gradient[i-1] > 0:
-                peaks.append(i)
-            elif gradient[i] > 0 and gradient[i-1] < 0:
-                troughs.append(i)
+    def detect_peaks_and_troughs(self, data, min_swing=0.05):
+        """Return indices of local maxima and minima of a line profile.
+
+        Flat-topped extrema (runs of equal samples, common in quantized
+        8-bit or RGB565 images) count once, at the run's centre. Adjacent
+        extrema separated by a dip smaller than ``min_swing`` times the
+        profile's range are merged, so quantization wiggles on a bar are not
+        counted as extra bars.
+        """
+        data = np.asarray(data, dtype=float)
+        if data.size < 3:
+            return [], []
+        swing = min_swing * (np.nanmax(data) - np.nanmin(data))
+        peaks = self._merge_shallow_extrema(find_peaks(data)[0], data, swing)
+        troughs = self._merge_shallow_extrema(find_peaks(-data)[0], -data, swing)
         return peaks, troughs
+
+    @staticmethod
+    def _merge_shallow_extrema(indices, data, swing):
+        merged = []
+        for index in map(int, indices):
+            if merged:
+                previous = merged[-1]
+                dip = min(data[previous], data[index]) - data[previous:index + 1].min()
+                if dip < swing:
+                    if data[index] > data[previous]:
+                        merged[-1] = index
+                    continue
+            merged.append(index)
+        return merged
 
     def filter_peaks_and_troughs(self, peaks, troughs, profile):
         """Filter peaks and troughs based on their heights."""

@@ -1,0 +1,12 @@
+schema_version: 1
+family: depth_resolution
+qal_workflow: PhantomCropper -> DepthAnalyzer -> DepthDataPlotter
+
+presets:
+  icg_v_wedge:
+    display_name: ICG-equivalent depth resolution target (V-wedge)
+    old_sku: null
+    sku_status: not_assigned
+    status: design_evaluation_out_of_stock
+    inclusion_geometry: v_wedge
+    source: https://shop.quelimaging.com/product/icg-equivalent-depth-resolution-v-wedge/
