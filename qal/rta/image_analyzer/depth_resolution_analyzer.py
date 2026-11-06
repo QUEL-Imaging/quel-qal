@@ -90,7 +90,7 @@ class DepthAnalyzer:
         descent_depth = np.linspace(self.depth_start_end[0], self.depth_start_end[1], len(descent_distance))
         descent_intensities = intensity_profile[mask].astype(np.float64)
         descent_intensities_smoothed = intensity_profile_smoothed[mask]
-        vert_distance = ((np.arange(cropped.shape[0]) - channel_row_index) / cropped.shape[0]) * self.phantom_dimensions[0] 
+        vert_distance = ((np.arange(cropped.shape[0]) - channel_row_index) / cropped.shape[0]) * self.phantom_dimensions[0]
 
         # Store some outputs
         self.outputs["Depths"] = depths
