@@ -884,6 +884,30 @@ def test_macos_selection_waits_for_the_figure_to_close(monkeypatch, finish):
     assert not figure._qal_using_event_loop
 
 
+@pytest.mark.parametrize("closed_by_backend", [False, True])
+def test_picker_cleanup_does_not_touch_a_closed_window(monkeypatch, closed_by_backend):
+    from qal.rta.roi_extraction import well_detector_gui as gui
+
+    figure = plt.figure()
+    calls = []
+    monkeypatch.setattr(figure.canvas.manager, "destroy", lambda: calls.append("destroy"))
+    monkeypatch.setattr(figure.canvas, "flush_events", lambda: calls.append("flush"))
+    if closed_by_backend:
+        plt.close(figure)
+    gui._destroy_figure(figure)
+
+    replacement = plt.figure(figure.number)
+    active = plt.figure()
+    try:
+        gui._destroy_figure(figure)
+        assert calls == (["destroy"] if closed_by_backend else ["destroy", "flush"])
+        assert gui.Gcf.get_active() is active.canvas.manager
+        assert gui.Gcf.figs[replacement.number] is replacement.canvas.manager
+    finally:
+        plt.close(active)
+        plt.close(replacement)
+
+
 def test_native_notebook_well_gui_resolves_synchronously(monkeypatch):
     from qal.rta.roi_extraction import well_detector_gui as gui
 

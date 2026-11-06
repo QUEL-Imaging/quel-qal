@@ -108,28 +108,20 @@ def _stop_figure_timers(figure) -> None:
 
 
 def _destroy_figure(figure) -> None:
-    """Close ``figure`` the same way the window's close button does."""
+    """Stop picker timers and close the figure if it is still registered."""
     figure._qal_closed = True
     _stop_figure_timers(figure)
     canvas = getattr(figure, "canvas", None)
     manager = getattr(canvas, "manager", None)
     number = getattr(figure, "number", None)
+    # The backend's close handler or the window runner may already have
+    # destroyed this manager. A new figure can also reuse the same number.
+    if manager is None or Gcf.figs.get(number) is not manager:
+        return
     try:
-        if number is not None and plt.fignum_exists(number):
-            if manager is not None:
-                Gcf.destroy(manager)
-            else:
-                plt.close(figure)
-        else:
-            destroy = getattr(manager, "destroy", None)
-            if callable(destroy):
-                destroy()
+        Gcf.destroy(manager)
     except Exception:
-        try:
-            if number is not None and plt.fignum_exists(number):
-                plt.close(figure)
-        except Exception:
-            pass
+        pass
     flush = getattr(canvas, "flush_events", None)
     if callable(flush):
         try:
