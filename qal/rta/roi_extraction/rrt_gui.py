@@ -1152,7 +1152,7 @@ def select_rrt_lines(
         if not notebook:
             disarm_confirm_window(session.figure)
             _destroy_figure(session.figure)
-            _dismiss_macos_app()
+            _dismiss_macos_app(session.figure.canvas)
             use_inline_plots()
     if notebook:
         if verbose:

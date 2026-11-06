@@ -297,6 +297,61 @@ the top.
 `select_wells_gui` detects a Jupyter kernel and chooses that window when the
 caller has not already selected one.
 
+If the red macOS close button removes the picker but the notebook cell stays
+busy, the native event loop may still be waiting. In Matplotlib 3.10.8, the
+close handler flushes pending events, which can consume the event intended
+to wake the waiting loop. There is no Python exception in this case. QAL
+uses bounded waits and checks whether the figure is still registered so
+closing the window ends selection. Restart the notebook kernel after
+updating QAL to load the changed GUI code.
+
+When testing a source checkout, make sure the notebook imports that checkout
+rather than an older copy in the virtual environment. Run this in the
+notebook to see the actual GUI module being used:
+
+```python
+from qal.rta.roi_extraction import well_detector_gui
+print(well_detector_gui.__file__)
+```
+
+If it points into `site-packages/qal/`, install the checkout in editable mode
+with that environment's Python (`python -m pip install --no-deps -e .` from
+the repository root), then restart the kernel. A kernel restart alone does
+not update an installed copy.
+
+If the spinning cursor persists after selection but clicking another panel
+lets you continue, the macOS plot application may still own focus after
+its last window closes. Removing its Dock icon alone does not release
+focus. QAL remembers the previously active application and requests its
+activation after closing the last plot window. It skips this handoff if
+you have already switched to a different application during selection.
+In this case, stack samples can show the kernel idle in the Jupyter
+event loop rather than executing selection code.
+
+To capture a Python stack if a cell hangs again, run this before opening the
+picker (the log is written in the notebook's working directory):
+
+```python
+import faulthandler
+from pathlib import Path
+
+gui_log_path = Path("qal-gui-hang.log").resolve()
+gui_log = gui_log_path.open("a", buffering=1)
+faulthandler.dump_traceback_later(30, repeat=True, file=gui_log)
+print(f"Stack traces will be written to {gui_log_path}")
+```
+
+After the picker returns, stop the stack dumps and close the log:
+
+```python
+faulthandler.cancel_dump_traceback_later()
+gui_log.close()
+```
+
+The timed dump also runs during an ordinary selection that takes longer
+than 30 seconds; a stack in `start_event_loop` while the window is still
+open is expected. The same window runner is used by the resolution picker.
+
 - **JupyterLab / classic Notebook:** Matplotlib is switched to `ipympl` when
   needed. The picker is non-blocking and includes **Remove last** and
   **Confirm** buttons. After clicking Confirm, retrieve the DataFrame from

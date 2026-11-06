@@ -495,6 +495,7 @@ def test_dismiss_macos_app_hides_the_icon_without_stopping_the_app(monkeypatch):
     monkeypatch.setattr(gui.sys, "platform", "darwin")
     monkeypatch.setattr(gui.plt, "get_fignums", lambda: [])
     monkeypatch.setattr(gui, "_set_macos_activation_policy", policies.append)
+    monkeypatch.setattr(gui, "_restore_macos_host_focus", lambda canvas: None)
     monkeypatch.setitem(
         sys.modules,
         "matplotlib.backends._macosx",
@@ -528,10 +529,48 @@ def test_present_macos_app_restores_the_dock_icon(monkeypatch):
     monkeypatch.setattr(gui.sys, "platform", "darwin")
     monkeypatch.setattr(gui.plt, "get_backend", lambda: "MacOSX")
     monkeypatch.setattr(gui, "_set_macos_activation_policy", policies.append)
+    monkeypatch.setattr(gui, "_macos_frontmost_pid", lambda: None)
 
     gui._present_macos_app()
 
     assert policies == [0]
+
+
+@pytest.mark.parametrize("switched_away", [False, True])
+def test_macos_picker_returns_focus_unless_user_switched_apps(monkeypatch, switched_away):
+    from qal.rta.roi_extraction import well_detector_gui as gui
+
+    host_pid = 123
+    frontmost = {"pid": host_pid}
+    activated = []
+    waits = []
+    monkeypatch.setattr(gui.sys, "platform", "darwin")
+    monkeypatch.setattr(gui, "_MACOS_HOST_PID", None)
+    monkeypatch.setattr(gui.plt, "get_backend", lambda: "MacOSX")
+    monkeypatch.setattr(gui.plt, "get_fignums", lambda: [])
+    monkeypatch.setitem(sys.modules, "matplotlib.backends._macosx", SimpleNamespace())
+    monkeypatch.setattr(gui, "_macos_frontmost_pid", lambda: frontmost["pid"])
+    monkeypatch.setattr(gui, "_set_macos_activation_policy", lambda policy: None)
+    monkeypatch.setattr(gui, "_activate_macos_app", activated.append)
+
+    gui._present_macos_app()
+    frontmost["pid"] = gui.os.getpid()
+    # Repeated presentation while Python is active must keep the host PID.
+    gui._present_macos_app()
+    if switched_away:
+        frontmost["pid"] = 456
+
+    def deliver_activation(timeout):
+        waits.append(timeout)
+        frontmost["pid"] = host_pid
+
+    gui._dismiss_macos_app(SimpleNamespace(start_event_loop=deliver_activation))
+    # Inline switching also dismisses; restore focus only once.
+    gui._dismiss_macos_app()
+
+    assert activated == ([] if switched_away else [host_pid])
+    assert waits == ([] if switched_away else [0.01])
+    assert gui._MACOS_HOST_PID is None
 
 
 def test_use_inline_plots_falls_back_to_the_inline_module(monkeypatch):
@@ -807,13 +846,51 @@ def test_enter_stops_the_well_selection_event_loop():
     plt.close(session.figure)
 
 
+@pytest.mark.parametrize("finish", ["enter", "close_button"])
+def test_macos_selection_waits_for_the_figure_to_close(monkeypatch, finish):
+    from qal.rta.roi_extraction import well_detector_gui as gui
+
+    manager = SimpleNamespace(show=lambda: None)
+    figure = SimpleNamespace(number=1)
+    registered = {1: manager}
+    waits = []
+
+    class Canvas:
+        __module__ = "matplotlib.backends.backend_macosx"
+
+        def start_event_loop(self, timeout):
+            waits.append(timeout)
+            # The first call returns because of a startup event. The second
+            # simulates a close whose wake-up event was consumed by flush_events.
+            if len(waits) == 2:
+                if finish == "enter":
+                    figure._qal_close_after_loop = True
+                else:
+                    registered.clear()
+            if len(waits) > 2:
+                pytest.fail("Waiting again after the figure closed")
+
+    figure.canvas = Canvas()
+    figure.canvas.manager = manager
+    monkeypatch.setattr(gui.Gcf, "get_fig_manager", registered.get)
+    monkeypatch.setattr(gui, "focus_selection_canvas", lambda figure: None)
+    destroyed = []
+    monkeypatch.setattr(gui, "_destroy_figure", destroyed.append)
+
+    gui.run_selection_window(figure)
+
+    assert waits == [0.1, 0.1]
+    assert destroyed == ([figure] if finish == "enter" else [])
+    assert not figure._qal_using_event_loop
+
+
 def test_native_notebook_well_gui_resolves_synchronously(monkeypatch):
     from qal.rta.roi_extraction import well_detector_gui as gui
 
     monkeypatch.setattr(gui, "_prepare_gui_backend", lambda: False)
     monkeypatch.setattr(gui, "_running_in_notebook", lambda: True)
     monkeypatch.setattr(gui, "_present_macos_app", lambda: None)
-    monkeypatch.setattr(gui, "_dismiss_macos_app", lambda: None)
+    monkeypatch.setattr(gui, "_dismiss_macos_app", lambda canvas=None: None)
     monkeypatch.setattr(gui, "use_inline_plots", lambda: False)
     monkeypatch.setattr(gui, "arm_confirm_window", lambda figure, confirm: None)
 

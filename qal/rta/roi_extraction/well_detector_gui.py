@@ -192,6 +192,8 @@ def run_selection_window(figure, *, block: bool = True) -> None:
     Destroying the native window happens here after the loop returns, not
     inside the Enter key callback. That keeps Jupyter notebooks and desktop
     scripts on the same close path without aborting the macOS backend.
+    On macOS, bounded waits also handle close events consumed by Cocoa's
+    event flushing and unrelated events that return from the loop early.
     """
     if not block:
         plt.show(block=False)
@@ -213,7 +215,19 @@ def run_selection_window(figure, *, block: bool = True) -> None:
             loop_started = False
             try:
                 try:
-                    start(0)
+                    if "backend_macosx" in type(canvas).__module__:
+                        # Cocoa returns on *any* application-defined event,
+                        # including startup events. Conversely, the close
+                        # button's flush_events() can consume the event that
+                        # would wake this loop. Use bounded waits and check
+                        # the figure itself instead of trusting either event.
+                        while (
+                            Gcf.get_fig_manager(figure.number) is manager
+                            and not getattr(figure, "_qal_close_after_loop", False)
+                        ):
+                            start(0.1)
+                    else:
+                        start(0)
                     loop_started = True
                 except TypeError:
                     start(timeout=0)
@@ -935,8 +949,74 @@ def _set_macos_activation_policy(policy: int) -> None:
         return
 
 
-def _dismiss_macos_app() -> None:
-    """Hide the macOS plot app after its windows are gone.
+_MACOS_HOST_PID: Optional[int] = None
+
+
+def _macos_frontmost_pid() -> Optional[int]:
+    """Read the active app without starting a Cocoa application."""
+    if sys.platform != "darwin" or "matplotlib.backends._macosx" not in sys.modules:
+        return None
+    try:
+        import ctypes
+
+        lib = _objc()
+        workspace_class = lib.objc_getClass(b"NSWorkspace")
+        if not workspace_class:
+            return None
+        send = _objc_msg(lib, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p)
+        workspace = send(workspace_class, lib.sel_registerName(b"sharedWorkspace"))
+        frontmost = send(workspace, lib.sel_registerName(b"frontmostApplication"))
+        if not frontmost:
+            return None
+        return _objc_msg(lib, ctypes.c_int, ctypes.c_void_p, ctypes.c_void_p)(
+            frontmost, lib.sel_registerName(b"processIdentifier")
+        )
+    except Exception:
+        return None
+
+
+def _activate_macos_app(pid: int) -> None:
+    """Request activation of the app that owned focus before the picker."""
+    if sys.platform != "darwin":
+        return
+    try:
+        import ctypes
+
+        lib = _objc()
+        app_class = lib.objc_getClass(b"NSRunningApplication")
+        if not app_class:
+            return
+        app = _objc_msg(
+            lib, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int
+        )(app_class, lib.sel_registerName(b"runningApplicationWithProcessIdentifier:"), pid)
+        if app:
+            _objc_msg(
+                lib, ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_ulong
+            )(app, lib.sel_registerName(b"activateWithOptions:"), 0)
+    except Exception:
+        return
+
+
+def _restore_macos_host_focus(canvas=None) -> None:
+    global _MACOS_HOST_PID
+    pid, _MACOS_HOST_PID = _MACOS_HOST_PID, None
+    # Never interrupt someone who switched to another app during selection.
+    if pid is not None and _macos_frontmost_pid() == os.getpid():
+        _activate_macos_app(pid)
+        # Activation is asynchronous. Deliver the Cocoa handoff before
+        # Jupyter disables its GUI input hook and stops servicing NSApp.
+        if canvas is not None:
+            try:
+                for _ in range(20):
+                    if _macos_frontmost_pid() != os.getpid():
+                        break
+                    canvas.start_event_loop(0.01)
+            except Exception:
+                pass
+
+
+def _dismiss_macos_app(canvas=None) -> None:
+    """Hide the macOS plot app and release focus after its windows are gone.
 
     ``plt.close`` removes the window and leaves the Matplotlib dock icon.
     Closing that icon quits the Jupyter kernel. Hide the icon and do not
@@ -957,14 +1037,22 @@ def _dismiss_macos_app() -> None:
     # Accessory (1), not Prohibited (2). Prohibited hides the icon and
     # then macOS quits the interpreter the next time a window closes.
     _set_macos_activation_policy(1)
+    # Accessory policy removes the Dock icon but can leave this windowless
+    # process frontmost. Its stopped Cocoa loop then shows a spinning cursor
+    # until another app gains focus, even though the kernel is already idle.
+    _restore_macos_host_focus(canvas)
 
 
 def _present_macos_app() -> None:
-    """Let the next macOS plot window appear in the Dock."""
+    """Remember the host app and let the next plot window appear in the Dock."""
+    global _MACOS_HOST_PID
     if sys.platform != "darwin":
         return
     if "mac" not in plt.get_backend().lower():
         return
+    pid = _macos_frontmost_pid()
+    if pid is not None and pid != os.getpid():
+        _MACOS_HOST_PID = pid
     _set_macos_activation_policy(0)
 
 
@@ -1825,7 +1913,7 @@ def select_wells_gui(
         if not notebook:
             disarm_confirm_window(session.figure)
             _destroy_figure(session.figure)
-            _dismiss_macos_app()
+            _dismiss_macos_app(session.figure.canvas)
             use_inline_plots()
     if notebook:
         return session
