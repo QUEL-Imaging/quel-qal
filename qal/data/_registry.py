@@ -26,16 +26,16 @@ registry = {
     "depth_resolution_targets/dr_sample3.tiff": "5b3b720f97a8419b3931da8010719307ebe94d13de39f81113bbe63637854cc2",
 
     # Lung Test Image
-    "lung_test_image/lung_test_image.tiff": "fb8bc5a98428cf0acb19693b241805f07c4cd888186820f60fb485d686b3a0fe",
+    "lung_phantom/lung_test_image/lung_test_image.tiff": "fb8bc5a98428cf0acb19693b241805f07c4cd888186820f60fb485d686b3a0fe",
 
     # Lung Reference Source
-    "lung_reference_source/Phantom image.tiff": "26ec41433735675274476a065792c99abdd34ddb58c6968a08077575b7fee5b0",
-    "lung_reference_source/Inclusions image.tiff": "23c2fee447d5cde3ea965b324fd9afb6be4b68c138fba1af4afb65402f84a458",
+    "lung_phantom/lung_reference_source/Phantom image.tiff": "26ec41433735675274476a065792c99abdd34ddb58c6968a08077575b7fee5b0",
+    "lung_phantom/lung_reference_source/Inclusions image.tiff": "23c2fee447d5cde3ea965b324fd9afb6be4b68c138fba1af4afb65402f84a458",
 
     # Lung Reference
-    "lung_reference/Lung_reference_image.tiff": "bd810b9052c260e34e7b689ea76fa31fb1e0425cb750a17536eb47b75579b380",
-    "lung_reference/Lung_reference_mask.png": "104a550ee3287137fa32a518e9b67d80c3b949dcd7b1328bcf36c7d039c36e06",
-    "lung_reference/Inclusions_info.pkl": "dd809eb0bd92578cd071a809903aa70be7ac239af10f3a32d7f12604f4156820",
+    "lung_phantom/lung_reference/Lung_reference_image.tiff": "bd810b9052c260e34e7b689ea76fa31fb1e0425cb750a17536eb47b75579b380",
+    "lung_phantom/lung_reference/Lung_reference_mask.png": "104a550ee3287137fa32a518e9b67d80c3b949dcd7b1328bcf36c7d039c36e06",
+    "lung_phantom/lung_reference/Inclusions_info.pkl": "dd809eb0bd92578cd071a809903aa70be7ac239af10f3a32d7f12604f4156820",
 
     # RUD Targets - Example 1
     "rud_targets/example_1/rud_image1.tiff": "4cde7ef6639898685133378a87b4171e5ead1d006519df2279507cbacce1bbdb",

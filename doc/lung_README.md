@@ -270,7 +270,7 @@ Runnable scripts for the lung phantom are in `qal/examples/lung_phantom/`:
 - `create_lung_reference.py`
 
 ## Extracting lung phantom metrics
-The image used in this example is downloaded from the repository but can also be located: **qal/data/lung_test_image/lung_test_image.tiff**. The matching script is `qal/examples/lung_phantom/lung_phantom_example.py`. First, the necessary imports are made:
+The image used in this example is downloaded from the repository but can also be located: **qal/data/lung_phantom/lung_test_image/lung_test_image.tiff**. The matching script is `qal/examples/lung_phantom/lung_phantom_example.py`. First, the necessary imports are made:
 ```python
 from qal.data import lung_test_image
 from qal import LungPhantom
@@ -340,7 +340,7 @@ Process finished with exit code 0
 <br/>
 
 ## Updating reference image
-This example updates the reference image and mask used by the `LungPhantom` class. The matching script is `qal/examples/lung_phantom/create_lung_reference.py`. The images used are the original images that created the reference, and are located in the repository at: **qal/data/lung_reference_source**. Hence, this example can be run without fear of changing the default reference images. First, the necessary imports are made:
+This example updates the reference image and mask used by the `LungPhantom` class. The matching script is `qal/examples/lung_phantom/create_lung_reference.py`. The images used are the original images that created the reference, and are located in the repository at: **qal/data/lung_phantom/lung_reference_source**. Hence, this example can be run without fear of changing the default reference images. First, the necessary imports are made:
 ```python
 from qal.data import lung_reference
 from qal import LungPhantom
