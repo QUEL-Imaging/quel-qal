@@ -3,7 +3,12 @@ import cv2
 import hashlib
 import shutil
 import pooch
-from skimage import io
+import tempfile
+from contextlib import nullcontext
+from pathlib import Path, PurePosixPath
+from ._source import Source, resolve_source
+from requests import HTTPError
+from qal.util._image import load_grayscale_image
 
 try:
     from ._registry import registry
@@ -39,103 +44,148 @@ except ModuleNotFoundError:
                 hasher.update(chunk)
         return hasher.hexdigest()
 
-def _create_image_fetcher(branch="main"):
-    """
-    Create a pooch fetcher object that handles downloading/caching data files.
-
-    Parameters
-    ----------
-    branch : str
-        The branch to fetch files from.
-
-    Returns
-    -------
-    pooch.Pooch
-        Configured pooch fetcher.
-    """
-    base_url = f"https://github.com/QUEL-Imaging/quel-qal/raw/{branch}/qal/data/"
-    cache_dir = pooch.os_cache("quel-qal-data")
-
-    # Create the Pooch fetcher
+def _create_image_fetcher(branch=None, *, source=None):
+    """Create a reference- and repository-isolated Pooch cache."""
+    source = source or resolve_source()
+    if branch is not None:
+        source = Source(branch, source.repository)
+    identity = hashlib.sha256(
+        f"{source.repository}\0{source.ref}".encode()
+    ).hexdigest()
     return pooch.create(
-        path=cache_dir,
-        base_url=base_url,
-        registry=registry,
+        path=Path(pooch.os_cache("quel-qal-data")) / identity,
+        base_url=source.url(""), registry=registry,
+        urls={name: source.url(name) for name in registry},
     )
 
-# Initialize the fetcher
-_image_fetcher = _create_image_fetcher(branch='main')
+
+def _is_pointer(path):
+    with open(path, "rb") as stream:
+        return stream.read(1024).startswith(b"version https://git-lfs.github.com/spec/v1")
+
+
+def _valid_file(path, filename):
+    try:
+        return (path.is_file() and not _is_pointer(path)
+                and file_hash(path) == registry[filename])
+    except OSError:
+        return False
+
+
+def _downloader(source, filename):
+    def download(url, output_file, pooch_object):
+        http = pooch.HTTPDownloader(progressbar=True)
+        try:
+            http(url, output_file, pooch_object)
+        except HTTPError as exc:
+            if exc.response is None or exc.response.status_code != 404:
+                raise
+            # Non-LFS blobs are served by raw instead of media. This is the
+            # same repository/ref/path, never a fallback to another branch.
+            http(source.raw_url(filename), output_file, pooch_object)
+        if _is_pointer(output_file):
+            raise ValueError("The server returned an unresolved Git LFS pointer")
+    return download
+
 
 def _fetch(filename):
-    """
-    Fetch a file by name from the registry, downloading if necessary.
-
-    Parameters
-    ----------
-    filename : str
-        The name of the file to fetch.
-
-    Returns
-    -------
-    str
-        The local, absolute path to the file.
-
-    Raises
-    ------
-    ValueError:
-        If the filename is not in the registry.
-    """
+    """Resolve a registered dataset locally, then from its selected remote ref."""
     if filename not in registry:
         raise ValueError(f"'{filename}' is not in the registry.")
+    mode = os.environ.get("QAL_DATA_SOURCE", "auto")
+    if mode not in ("auto", "remote"):
+        raise ValueError("QAL_DATA_SOURCE must be 'auto' or 'remote'.")
+    source = resolve_source()
+    if mode != "remote":
+        roots = []
+        if os.environ.get("QAL_DATA_ROOT"):
+            roots.append(Path(os.environ["QAL_DATA_ROOT"]).expanduser().resolve())
+        if source.checkout:
+            roots.append(source.checkout)
+        for root in roots:
+            path = root / filename
+            if _valid_file(path, filename):
+                return str(path)
 
-    # Use pooch.retrieve to download the file and verify the hash
-    return pooch.retrieve(
-        url=_image_fetcher.get_url(filename),
-        known_hash=f"sha256:{registry[filename]}",
-        path=_image_fetcher.path,
-        fname=filename,
-        progressbar=True,  # Show a progress bar during download
-    )
+    fetcher = _create_image_fetcher(source=source)
+    try:
+        # A fresh temporary cache forces an HTTP request even when a normal cache
+        # entry exists. Pooch validates hashes before atomically moving files.
+        with tempfile.TemporaryDirectory(prefix="qal-remote-") if mode == "remote" else nullcontext(None) as scratch:
+            path = pooch.retrieve(
+                url=source.url(filename), known_hash=f"sha256:{registry[filename]}",
+                path=scratch or fetcher.path, fname=filename,
+                downloader=_downloader(source, filename),
+            )
+            if _is_pointer(path):
+                raise ValueError("The server returned an unresolved Git LFS pointer")
+            if scratch:
+                destination = fetcher.path / filename
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                # Publish only the validated result; replace atomically even if
+                # the temporary directory is on a different filesystem.
+                with tempfile.NamedTemporaryFile(dir=destination.parent, delete=False) as temp:
+                    staging = Path(temp.name)
+                try:
+                    shutil.copyfile(path, staging)
+                    os.replace(staging, destination)
+                finally:
+                    staging.unlink(missing_ok=True)
+                path = str(destination)
+            return path
+    except Exception as exc:
+        raise RuntimeError(
+            f"Cannot fetch '{filename}' from {source.repository} at ref '{source.ref}' "
+            f"({source.url(filename)}). Check that the data is pushed and Git LFS "
+            f"objects are uploaded. {exc}"
+        ) from exc
+
 
 def get_cache_dir():
-    """
-    Get the cache directory used by pooch.
-
-    Returns
-    -------
-    str
-        Path to the cache directory.
-    """
-    return str(_image_fetcher.path)
+    """Return the cache directory for the currently selected repository and ref."""
+    return str(_create_image_fetcher().path)
 
 
 def download_all():
-    """
-    Download all data files for offline use.
-
-    Raises
-    ------
-    ModuleNotFoundError:
-        If `_image_fetcher` is not initialized.
-    """
-    if _image_fetcher is None:
-        raise ModuleNotFoundError("Pooch fetcher is not initialized.")
-
+    """Resolve all registered datasets for offline use."""
     for filename in registry:
         print(f"Fetching: {filename}")
         _fetch(filename)
 
+
 def clear_cache():
-    """
-    Remove all cached data from the pooch cache directory.
-    """
-    cache_dir = _image_fetcher.path
+    """Remove cached data for the currently selected repository and ref."""
+    cache_dir = get_cache_dir()
     if os.path.exists(cache_dir):
-        print(f"Deleting cache at {cache_dir}...")
         shutil.rmtree(cache_dir)
-        print("Cache cleared.")
-    else:
-        print("No cache directory found to delete.")
+
+
+def _cache_local(path, filename):
+    """Keep legacy directory consumers working when resolution returns local data."""
+    destination = Path(get_cache_dir()) / filename
+    if Path(path) != destination:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        # Copy only for consumers that specifically require a cache directory.
+        # Do not hardlink: consumers can modify files in the writable cache.
+        with tempfile.NamedTemporaryFile(dir=destination.parent, delete=False) as temp:
+            staging = Path(temp.name)
+        try:
+            shutil.copyfile(path, staging)
+            os.replace(staging, destination)
+        finally:
+            staging.unlink(missing_ok=True)
+    return str(destination)
+
+
+def _fetch_directory(directory):
+    names = [name for name in registry if str(PurePosixPath(name).parent) == directory]
+    paths = [_fetch(name) for name in names]
+    parents = {str(Path(path).parent) for path in paths}
+    if len(parents) == 1:
+        return parents.pop()
+    for name, path in zip(names, paths):
+        _cache_local(path, name)
+    return str(Path(get_cache_dir()) / directory)
 
 
 def _load(filename):
@@ -153,7 +203,7 @@ def _load(filename):
         Image read from local cache.
     """
     path = _fetch(filename)
-    return io.imread(path)
+    return load_grayscale_image(path)
 
 
 # --- Concentration samples
@@ -180,6 +230,27 @@ def cn_sample_4():
     Return the cn_sample_4.tiff path as an ndarray.
     """
     return _load("concentration_targets/cn_sample_4.tiff")
+
+# --- Radiometric emitter targets
+def ret_sample_1_lf():
+    """Return sample 1's light frame as a grayscale ndarray."""
+    return _load("RET_images/ret_sample_1_lf.tiff")
+
+
+def ret_sample_1_df():
+    """Return the matching dark frame for sample 1 as a grayscale ndarray."""
+    return _load("RET_images/ret_sample_1_df.tiff")
+
+
+def ret_sample_2_lf():
+    """Return sample 2's light frame as a grayscale ndarray."""
+    return _load("RET_images/ret_sample_2_lf.tiff")
+
+
+def ret_sample_2_df():
+    """Return the matching dark frame for sample 2 as a grayscale ndarray."""
+    return _load("RET_images/ret_sample_2_df.tiff")
+
 
 # --- Depth resolution targets
 def dr_sample1():
@@ -235,39 +306,20 @@ def resolution_template():
 
 # --- RUD targets
 def rud_example_1():
-    """
-    Load example 1 RUD images and return the local path to the image directory.
-    """
-    rud_image1_example_1()
-    rud_image2_example_1()
-    rud_image3_example_1()
-    rud_image4_example_1()
-    return os.path.join(get_cache_dir(), "rud_targets", "example_1")
+    """Return the resolved directory of RUD example 1."""
+    return _fetch_directory("rud_targets/example_1")
 
 def rud_example_2():
-    """
-    Load example 2 RUD images and return the local path to the image directory.
-    """
-    rud_image1_example_2()
-    rud_image2_example_2()
-    rud_image3_example_2()
-    rud_image4_example_2()
-    rud_image5_example_2()
-    return os.path.join(get_cache_dir(), "rud_targets", "example_2")
+    """Return the resolved directory of RUD example 2."""
+    return _fetch_directory("rud_targets/example_2")
 
 def rud_example_3():
-    """
-    Load example 3 RUD image and return the local path to the image directory.
-    """
-    rud_center_fov_example_3()
-    return os.path.join(get_cache_dir(), "rud_targets", "example_3")
+    """Return the resolved directory of RUD example 3."""
+    return _fetch_directory("rud_targets/example_3")
 
 def rud_example_4():
-    """
-    Load example 4 RUD image and return the local path to the image directory.
-    """
-    rud_image_example_4()
-    return os.path.join(get_cache_dir(), "rud_targets", "example_4")
+    """Return the resolved directory of RUD example 4."""
+    return _fetch_directory("rud_targets/example_4")
 
 # --- RUD targets, example_1
 def rud_image1_example_1():
@@ -344,19 +396,19 @@ def lung_test_image():
     """
     Return lung_test_image.tiff as an ndarray.
     """
-    return _load("lung_test_image/lung_test_image.tiff")
+    return _load("lung_phantom/lung_test_image/lung_test_image.tiff")
 
 def lung_reference_inclusions():
     """
     Return Inclusions image.tiff as an ndarray.
     """
-    return _load("lung_reference_source/Inclusions image.tiff")
+    return _load("lung_phantom/lung_reference_source/Inclusions image.tiff")
 
 def lung_reference_body():
     """
     Return Phantom image.tiff as an ndarray.
     """
-    return _load("lung_reference_source/Phantom image.tiff")
+    return _load("lung_phantom/lung_reference_source/Phantom image.tiff")
 
 def lung_reference():
     """
@@ -370,19 +422,19 @@ def lung_reference_image():
     """
     Return Lung_reference_image.tiff as an ndarray.
     """
-    return _load("lung_reference/Lung_reference_image.tiff")
+    return _load("lung_phantom/lung_reference/Lung_reference_image.tiff")
 
 def lung_reference_mask():
     """
     Return Lung_reference_mask.png as an ndarray.
     """
-    return _load("lung_reference/Lung_reference_mask.png")
+    return _load("lung_phantom/lung_reference/Lung_reference_mask.png")
 
 def load_lung_info():
     """
-    Download the pickle file containing information on the lung phantom inclusions
+    Return the resolved path to the lung phantom inclusions pickle file
     """
-    _fetch("lung_reference/Inclusions_info.pkl")
+    return _fetch("lung_phantom/lung_reference/Inclusions_info.pkl")
 
 #
 # End of _fetchers.py

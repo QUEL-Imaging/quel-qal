@@ -20,11 +20,22 @@ class RrtDataPlotter:
                 # print("Running in JupyterLab")
                 self.line_profile_fig_size = (10, 5)
                 return "JupyterLab"
-        except AttributeError:
+        except Exception:
             # print("Running in a standard Python environment")
             return "Standard Python"
 
-    def plot_percentage_contrast(self, df, resolution_threshold=26):
+    def _save_figure(self, fig, save_path):
+        """Write ``fig`` before ``plt.show()`` replaces the current figure.
+
+        In a notebook, ``plt.show()`` displays this figure and then
+        ``plt.savefig()`` targets a new blank one.
+        """
+        if save_path is None:
+            return
+        fig.canvas.draw()
+        fig.savefig(save_path, bbox_inches="tight")
+
+    def plot_percentage_contrast(self, df, resolution_threshold=26, save_path=None):
         """
         Plot the percentage contrast values for each element.
         
@@ -61,6 +72,7 @@ class RrtDataPlotter:
         ax.legend()
         
         plt.tight_layout()
+        self._save_figure(fig, save_path)
         plt.show()
     
     def extract_line_profiles(self, im, x1, y1, x2, y2, offset, linewidth=4, order=0, mode="constant"):
@@ -80,7 +92,7 @@ class RrtDataPlotter:
         
         return profiles
 
-    def plot_line_profiles(self, im, group_coordinates, percentage_contrast_df):
+    def plot_line_profiles(self, im, group_coordinates, percentage_contrast_df, save_path=None):
         num_groups = len(group_coordinates)
         fig, axs = plt.subplots(1, num_groups + 1, figsize=self.line_profile_fig_size)
         fig.canvas.manager.set_window_title('Line Profile Plots')
@@ -110,8 +122,9 @@ class RrtDataPlotter:
                 peak_indices = row['Peak Indices']
                 trough_indices = row['Trough Indices']
 
-                if len(peak_indices) > 0 and len(trough_indices) > 0:
+                if len(peak_indices) > 0:
                     axs[i + 1].scatter(peak_indices, [profiles['center'][index] for index in peak_indices], color='red', label=f'Element {element_number} Peaks', marker='x')
+                if len(trough_indices) > 0:
                     axs[i + 1].scatter(trough_indices, [profiles['center'][index] for index in trough_indices], color='green', label=f'Element {element_number} Troughs', marker='o')
 
             axs[i + 1].set_title(f'Group {group_number}')
@@ -121,5 +134,6 @@ class RrtDataPlotter:
 
         axs[0].legend()
         plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+        self._save_figure(fig, save_path)
         plt.show()
 

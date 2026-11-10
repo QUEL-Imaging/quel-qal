@@ -9,6 +9,12 @@ registry = {
     "concentration_targets/cn_sample_1.tiff": "8dae075be3cb52d849b1b4aaf801036ccc9103ee9ccba9c11aeb055cb2fcdab7",
     "concentration_targets/cn_sample_4.tiff": "784e376feafa0f5c8624fd437bb70d416170e605b00213d849975073a405d057",
 
+    # Radiometric Emitter Targets
+    "RET_images/ret_sample_1_lf.tiff": "91ee962389041783b8d39792bf471639919e864422fa1ac22fe64022d2959871",
+    "RET_images/ret_sample_1_df.tiff": "d02c53e84afa62a8ec2c68acbc5e619445ff2bee8ee0dc3b9bae8d24606c8fc4",
+    "RET_images/ret_sample_2_lf.tiff": "6e8cc334e09feb7e595aa7446ac4b20fa71e072152cdf932e70f66187b05f83f",
+    "RET_images/ret_sample_2_df.tiff": "eb3806026d848d4f170f051fe2e3a277a38d70a05543ba813bb018f5d9ddb16e",
+
     # Depth Targets
     "depth_targets/depth_sample_1.tiff": "da8a4e6d9f4d7e13048462b06a2efb0f5da10ea4d4d36be2ee07cd3b73c8dbd1",
     "depth_targets/depth_sample_2.tiff": "3d5fefd4d4335fd682d253bd8a33fc2cbe9dfd09660051e068bc217816ba5c3d",
@@ -26,16 +32,16 @@ registry = {
     "depth_resolution_targets/dr_sample3.tiff": "5b3b720f97a8419b3931da8010719307ebe94d13de39f81113bbe63637854cc2",
 
     # Lung Test Image
-    "lung_test_image/lung_test_image.tiff": "fb8bc5a98428cf0acb19693b241805f07c4cd888186820f60fb485d686b3a0fe",
+    "lung_phantom/lung_test_image/lung_test_image.tiff": "fb8bc5a98428cf0acb19693b241805f07c4cd888186820f60fb485d686b3a0fe",
 
     # Lung Reference Source
-    "lung_reference_source/Phantom image.tiff": "26ec41433735675274476a065792c99abdd34ddb58c6968a08077575b7fee5b0",
-    "lung_reference_source/Inclusions image.tiff": "23c2fee447d5cde3ea965b324fd9afb6be4b68c138fba1af4afb65402f84a458",
+    "lung_phantom/lung_reference_source/Phantom image.tiff": "26ec41433735675274476a065792c99abdd34ddb58c6968a08077575b7fee5b0",
+    "lung_phantom/lung_reference_source/Inclusions image.tiff": "23c2fee447d5cde3ea965b324fd9afb6be4b68c138fba1af4afb65402f84a458",
 
     # Lung Reference
-    "lung_reference/Lung_reference_image.tiff": "bd810b9052c260e34e7b689ea76fa31fb1e0425cb750a17536eb47b75579b380",
-    "lung_reference/Lung_reference_mask.png": "104a550ee3287137fa32a518e9b67d80c3b949dcd7b1328bcf36c7d039c36e06",
-    "lung_reference/Inclusions_info.pkl": "dd809eb0bd92578cd071a809903aa70be7ac239af10f3a32d7f12604f4156820",
+    "lung_phantom/lung_reference/Lung_reference_image.tiff": "bd810b9052c260e34e7b689ea76fa31fb1e0425cb750a17536eb47b75579b380",
+    "lung_phantom/lung_reference/Lung_reference_mask.png": "104a550ee3287137fa32a518e9b67d80c3b949dcd7b1328bcf36c7d039c36e06",
+    "lung_phantom/lung_reference/Inclusions_info.pkl": "dd809eb0bd92578cd071a809903aa70be7ac239af10f3a32d7f12604f4156820",
 
     # RUD Targets - Example 1
     "rud_targets/example_1/rud_image1.tiff": "4cde7ef6639898685133378a87b4171e5ead1d006519df2279507cbacce1bbdb",
