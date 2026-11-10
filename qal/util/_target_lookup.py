@@ -522,7 +522,10 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     args = parser.parse_args(argv)
 
     if args.all:
-        matches = find_target_presets(args.query, family=args.family)
+        try:
+            matches = find_target_presets(args.query, family=args.family)
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from None
         if not matches:
             raise SystemExit(f"No product preset matches {args.query!r}")
         for preset in matches:
@@ -530,7 +533,11 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
             print()
         return
 
-    print_preset(lookup_target_preset(args.query, family=args.family))
+    try:
+        preset = lookup_target_preset(args.query, family=args.family)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from None
+    print_preset(preset)
 
 
 if __name__ == "__main__":

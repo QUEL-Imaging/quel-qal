@@ -166,8 +166,6 @@ def checkout_sample_data(monkeypatch):
         return str(path)
 
     monkeypatch.setattr(_fetchers, "_fetch", local_fetch)
-    # RUD helpers return directories relative to the fetcher's cache path.
-    monkeypatch.setattr(_fetchers._image_fetcher, "path", data_dir)
 
 
 @pytest.fixture
@@ -298,6 +296,8 @@ def test_all_saveable_examples_write_nonblank_files(
         check(module_name, copied / subdir, expected)
 
     def enable_uniformity(module):
+        # Exercise GIF export without rendering an entire 120-frame rotation.
+        monkeypatch.setattr(module.UniformityVisualizer, "ANI_FRAMES", 3)
         original = module.UniformityAnalyzer.update_params
 
         def update(self, params):

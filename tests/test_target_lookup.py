@@ -1,3 +1,7 @@
+import subprocess
+import sys
+from pathlib import Path
+
 import pytest
 
 from qal.data import get_target_preset
@@ -77,6 +81,54 @@ def test_lookup_can_be_limited_to_one_family():
 def test_unknown_serial_raises():
     with pytest.raises(ValueError, match="No product preset matches"):
         lookup_target_preset("XYZ-NOPE-0001")
+
+
+@pytest.mark.parametrize(
+    "module",
+    ["qal.util", "qal.examples.general.target_preset_lookup_example"],
+)
+@pytest.mark.parametrize(
+    ("args", "message"),
+    [
+        (["XYZ-NOPE-0001"], "No product preset matches 'XYZ-NOPE-0001'"),
+        (["XYZ-NOPE-0001", "--all"], "No product preset matches 'XYZ-NOPE-0001'"),
+        (["RCS-ICG"], "Ambiguous target query 'RCS-ICG'"),
+        ([""], "query must be a non-empty serial number or SKU fragment"),
+        (["", "--all"], "query must be a non-empty serial number or SKU fragment"),
+    ],
+)
+def test_lookup_commands_exit_gracefully_on_lookup_error(module, args, message):
+    result = subprocess.run(
+        [sys.executable, "-m", module, *args],
+        cwd=Path(__file__).resolve().parents[1],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 1
+    assert result.stdout == ""
+    assert result.stderr.startswith(message)
+    assert "Traceback" not in result.stderr
+
+
+@pytest.mark.parametrize(
+    "module",
+    ["qal.util", "qal.examples.general.target_preset_lookup_example"],
+)
+@pytest.mark.parametrize("options", [[], ["--all"]])
+def test_lookup_commands_print_matching_preset(module, options):
+    result = subprocess.run(
+        [sys.executable, "-m", module, "RCS-ICG-ST01-QUEL03", *options],
+        cwd=Path(__file__).resolve().parents[1],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0
+    assert "RCS-ICG-ST01-QUEL03" in result.stdout
+    assert result.stderr == ""
 
 
 def test_legacy_o38_keeps_1000_nm_well_series():

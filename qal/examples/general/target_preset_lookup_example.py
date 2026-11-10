@@ -37,7 +37,10 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.all:
-        matches = find_target_presets(args.query)
+        try:
+            matches = find_target_presets(args.query)
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from None
         if not matches:
             raise SystemExit(f"No product preset matches {args.query!r}")
         for preset in matches:
@@ -45,7 +48,11 @@ def main() -> None:
             print()
         return
 
-    print_preset(lookup_target_preset(args.query))
+    try:
+        preset = lookup_target_preset(args.query)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from None
+    print_preset(preset)
 
 
 if __name__ == "__main__":
