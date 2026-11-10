@@ -8,6 +8,7 @@ from PIL import Image
 from skimage import io
 
 from qal.examples.radiometric_emitter_ret import ret_dark_frame_example as example
+from qal.examples.radiometric_emitter_ret import ret_gui_example as gui_example
 from qal.rta.roi_extraction.well_detector_gui import WellSelectionSession
 from qal.util import circular_mask
 
@@ -68,6 +69,43 @@ def test_fixed_automatic_refinement_recenters_the_click(frames, monkeypatch):
     np.testing.assert_allclose(result.roi_df[["x", "y"]], [[30, 28]], atol=.5)
     assert result.stats_df.loc[0, "mean intensity"] == 110
     assert not frames[2].exists()
+
+
+def test_array_sample_saves_in_working_directory(frames, monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(example, "IMAGE_PATH", frames[0])
+    monkeypatch.setattr(example, "DARK_FRAME_PATH", frames[1])
+    monkeypatch.setattr(example, "SAVE_RESULTS", True)
+    result = example.main()
+    assert result.is_baselined
+    assert (tmp_path / "ret_sample_1_lf_results/stats.csv").is_file()
+    assert (tmp_path / "ret_sample_1_lf_results/roi.png").is_file()
+
+
+@pytest.mark.parametrize("with_dark", [True, False])
+def test_gui_example_analyzes_matching_pair_or_raw_signal(frames, monkeypatch, with_dark):
+    image, dark, _ = frames
+    monkeypatch.setattr(gui_example, "IMAGE_PATH", image)
+    monkeypatch.setattr(gui_example, "DARK_FRAME_PATH", dark if with_dark else None)
+    monkeypatch.setattr(gui_example, "MODE", "manual_coordinates")
+    monkeypatch.setattr(gui_example, "COORDINATES", [(30, 28)])
+    monkeypatch.setattr(gui_example, "MANUAL_ROI_DIAMETER", 20)
+    plotted = []
+    monkeypatch.setattr(gui_example.WellPlotter, "visualize_roi", lambda self: plotted.append(self.df))
+    gui_example.main()
+    stats = plotted[0]
+    assert stats.loc[0, "mean intensity"] == 110
+    assert ("CNR" in stats) == with_dark
+    if with_dark:
+        values = dark[circular_mask(dark.shape, (30, 28), 5)].astype(float)
+        assert stats.loc[0, "CNR"] == pytest.approx((110 - values.mean()) / values.std())
+
+
+def test_gui_example_rejects_mismatched_dark_frame_before_picker(frames, monkeypatch):
+    monkeypatch.setattr(gui_example, "IMAGE_PATH", frames[0])
+    monkeypatch.setattr(gui_example, "DARK_FRAME_PATH", np.zeros((10, 10), dtype=np.uint16))
+    with pytest.raises(ValueError, match="same dimensions"):
+        gui_example.main()
 
 
 @pytest.mark.parametrize("mode", ["automatic_refinement", "manual_coordinates"])
