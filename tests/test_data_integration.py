@@ -81,7 +81,14 @@ from qal.data import _fetchers as fetch
 from qal.data import _source as source
 
 
-def test_detected_branch_and_applied_url():
+@pytest.mark.parametrize("filename", [
+    "concentration_targets/cn_sample_1.tiff",
+    "RET_images/ret_sample_1_lf.tiff",
+    "RET_images/ret_sample_1_df.tiff",
+    "RET_images/ret_sample_2_lf.tiff",
+    "RET_images/ret_sample_2_df.tiff",
+])
+def test_detected_branch_and_applied_url(filename):
     """Compare automatic detection with Git and inspect the fetcher's real URL."""
     checkout = source.checkout_source()
     selected = source.resolve_source()
@@ -100,7 +107,6 @@ def test_detected_branch_and_applied_url():
     else:
         print("\nNo package Git checkout detected; using build metadata or production fallback.")
 
-    filename = "concentration_targets/cn_sample_1.tiff"
     url = fetch._create_image_fetcher(source=selected).get_url(filename)
     parts = urlsplit(url)
     segments = parts.path.split("/")
@@ -131,7 +137,14 @@ def test_all_registered_checkout_data_without_network(monkeypatch):
 
 
 @pytest.mark.skipif(os.environ.get("QAL_TEST_REMOTE") != "1", reason="requires real GitHub network access")
-@pytest.mark.parametrize("filename", ["concentration_targets/cn_sample_1.tiff", "USAF1951_template/res_source.png"])
+@pytest.mark.parametrize("filename", [
+    "concentration_targets/cn_sample_1.tiff",
+    "RET_images/ret_sample_1_lf.tiff",
+    "RET_images/ret_sample_1_df.tiff",
+    "RET_images/ret_sample_2_lf.tiff",
+    "RET_images/ret_sample_2_df.tiff",
+    "USAF1951_template/res_source.png",
+])
 def test_remote_selected_reference(monkeypatch, tmp_path, filename):
     monkeypatch.setattr(fetch.pooch, "os_cache", lambda _: tmp_path / "cache")
     monkeypatch.setenv("QAL_DATA_SOURCE", "remote")

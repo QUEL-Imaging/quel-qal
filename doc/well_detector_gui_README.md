@@ -32,7 +32,7 @@ The markers use colors from Matplotlib's `plasma` colormap, matching the
 detected-well overlays. A thin black outline keeps each marker visible against
 both bright and dark grayscale regions.
 
-![RET GUI with one selected coordinate](gui_images/ret_gui_selection.png)
+![RET GUI with one selected coordinate](../qal/examples/general/gui_images/ret_gui_selection.png)
 
 ## RET example
 
@@ -74,7 +74,7 @@ After Enter is pressed, the approximate click is matched to a detected well.
 The resulting DataFrame contains the refined `x`, `y`, `ROI Diameter`, and
 `ROI Radius`, making it directly compatible with `RetAnalyzer.analyze`.
 
-![RET centroid and ROI found after confirmation](gui_images/ret_auto_detection.png)
+![RET centroid and ROI found after confirmation](../qal/examples/general/gui_images/ret_auto_detection.png)
 
 ## Concentration-target example
 
@@ -143,9 +143,9 @@ In manual live-preview mode, solid circles represent supplied anchors and
 dashed circles represent inferred wells. Dragging any `+` immediately refits
 the overlay.
 
-![BMP manual coordinates with draggable grid preview](gui_images/bmp_manual_live_preview.png)
+![BMP manual coordinates with draggable grid preview](../qal/examples/general/gui_images/bmp_manual_live_preview.png)
 
-![Completed concentration target grid](gui_images/concentration_grid_completion.png)
+![Completed concentration target grid](../qal/examples/general/gui_images/concentration_grid_completion.png)
 
 The concentration labels are applied in row-major order:
 
@@ -162,6 +162,17 @@ The depth target uses the same geometry with:
 2.0 mm | 3.0 mm | 4.0 mm
 5.0 mm | 6.0 mm | Control
 ```
+
+Run the depth equivalent with:
+
+```bash
+python -m qal.examples.depth_rds.depth_gui_example
+```
+
+By default this loads `qal.data.depth_sample_1()`. Set `IMAGE_PATH` and
+`TARGET_TAG` (`"icg"`, `"q800"`, or `"q700"`) at the top of
+`qal/examples/depth_rds/depth_gui_example.py`. Modes, anchor counts, and live
+preview work the same way as the concentration example.
 
 ## Automatic coordinate refinement
 
@@ -272,8 +283,74 @@ roi_df = select_wells_from_coordinates(
 
 ## Jupyter notebooks
 
-`select_wells_gui` detects a Jupyter kernel and chooses an interactive
-backend automatically.
+The example notebooks are in `qal/examples/jupyter-notebook/`. Importing QAL
+shows ordinary figures in the notebook, so those notebooks do not set a
+Matplotlib backend. The picker then opens a native window and, when it
+closes, puts the following figures back in the notebook.
+
+Windows tries Tk, then Qt. macOS tries the macOS backend, then Tk, then Qt.
+A failed attempt is forgotten so the next one can load. If none of those
+windows can open, JupyterLab falls back to an `ipympl` canvas. If another
+GUI toolkit is already running, restart the kernel and run the notebook from
+the top.
+
+`select_wells_gui` detects a Jupyter kernel and chooses that window when the
+caller has not already selected one.
+
+If the red macOS close button removes the picker but the notebook cell stays
+busy, the native event loop may still be waiting. In Matplotlib 3.10.8, the
+close handler flushes pending events, which can consume the event intended
+to wake the waiting loop. There is no Python exception in this case. QAL
+uses bounded waits and checks whether the figure is still registered so
+closing the window ends selection. Restart the notebook kernel after
+updating QAL to load the changed GUI code.
+
+When testing a source checkout, make sure the notebook imports that checkout
+rather than an older copy in the virtual environment. Run this in the
+notebook to see the actual GUI module being used:
+
+```python
+from qal.rta.roi_extraction import well_detector_gui
+print(well_detector_gui.__file__)
+```
+
+If it points into `site-packages/qal/`, install the checkout in editable mode
+with that environment's Python (`python -m pip install --no-deps -e .` from
+the repository root), then restart the kernel. A kernel restart alone does
+not update an installed copy.
+
+If the spinning cursor persists after selection but clicking another panel
+lets you continue, the macOS plot application may still own focus after
+its last window closes. Removing its Dock icon alone does not release
+focus. QAL remembers the previously active application and requests its
+activation after closing the last plot window. It skips this handoff if
+you have already switched to a different application during selection.
+In this case, stack samples can show the kernel idle in the Jupyter
+event loop rather than executing selection code.
+
+To capture a Python stack if a cell hangs again, run this before opening the
+picker (the log is written in the notebook's working directory):
+
+```python
+import faulthandler
+from pathlib import Path
+
+gui_log_path = Path("qal-gui-hang.log").resolve()
+gui_log = gui_log_path.open("a", buffering=1)
+faulthandler.dump_traceback_later(30, repeat=True, file=gui_log)
+print(f"Stack traces will be written to {gui_log_path}")
+```
+
+After the picker returns, stop the stack dumps and close the log:
+
+```python
+faulthandler.cancel_dump_traceback_later()
+gui_log.close()
+```
+
+The timed dump also runs during an ordinary selection that takes longer
+than 30 seconds; a stack in `start_event_loop` while the window is still
+open is expected. The same window runner is used by the resolution picker.
 
 - **JupyterLab / classic Notebook:** Matplotlib is switched to `ipympl` when
   needed. The picker is non-blocking and includes **Remove last** and

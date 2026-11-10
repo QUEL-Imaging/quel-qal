@@ -465,7 +465,8 @@ def target_data_labels(preset: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
-def _print_preset(preset: Mapping[str, Any]) -> None:
+def print_preset(preset: Mapping[str, Any]) -> None:
+    """Print common product-preset fields for interactive lookup."""
     labels = target_data_labels(preset)
     print(preset.get("display_name") or preset.get("tag"))
     print(
@@ -521,15 +522,22 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     args = parser.parse_args(argv)
 
     if args.all:
-        matches = find_target_presets(args.query, family=args.family)
+        try:
+            matches = find_target_presets(args.query, family=args.family)
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from None
         if not matches:
             raise SystemExit(f"No product preset matches {args.query!r}")
         for preset in matches:
-            _print_preset(preset)
+            print_preset(preset)
             print()
         return
 
-    _print_preset(lookup_target_preset(args.query, family=args.family))
+    try:
+        preset = lookup_target_preset(args.query, family=args.family)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from None
+    print_preset(preset)
 
 
 if __name__ == "__main__":

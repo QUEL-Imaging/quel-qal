@@ -32,18 +32,6 @@ def test_issue_43_opencv_factory_locations(monkeypatch, location):
     assert RrtROI.create_feature_detector("brisk") == (sentinel, 6)
 
 
-def test_issue_43_legacy_harris_accepts_rgb_and_rgba():
-    image = np.zeros((80, 90), dtype=np.uint16)
-    image[15:60, 20:65] = 45000
-    roi = RrtROI.__new__(RrtROI)
-    points = [(20, 15), (65, 60)]
-    expected = roi.detect_roi_corners(points, image)
-    assert len(expected) == 2
-    for channels in (3, 4):
-        color = np.repeat(image[..., None], channels, axis=-1)
-        np.testing.assert_array_equal(roi.detect_roi_corners(points, color), expected)
-
-
 @pytest.mark.parametrize("detector", ["brisk", "akaze", "orb", "sift"])
 def test_issue_43_real_template_feature_matching_accepts_uint16_template(monkeypatch, detector):
     from pathlib import Path

@@ -37,7 +37,19 @@ from qal.util import load_grayscale_image
 
 from ..image_analyzer.rrt_analyzer import RrtAnalyzer
 from ._selection_io import load_selection, save_selection
-from .well_detector_gui import _prepare_gui_backend, _running_in_notebook
+from .well_detector_gui import (
+    _destroy_figure,
+    _prepare_gui_backend,
+    _running_in_notebook,
+    _dismiss_macos_app,
+    _present_macos_app,
+    arm_confirm_window,
+    close_figure_after_callback,
+    disarm_confirm_window,
+    is_confirm_key,
+    run_selection_window,
+    use_inline_plots,
+)
 
 Coordinate = tuple[float, float]
 Line = tuple[Coordinate, Coordinate]
@@ -546,9 +558,12 @@ class RrtSelectionSession:
             self.figure.canvas.mpl_connect(
                 "button_release_event", self._on_release
             ),
-            self.figure.canvas.mpl_connect("key_press_event", self._on_key),
             self.figure.canvas.mpl_connect("close_event", self._on_close),
         ]
+        self._key_cid = self.figure.canvas.mpl_connect(
+            "key_press_event", self._on_key
+        )
+        self._connections.append(self._key_cid)
         self._set_status(self._next_step_text())
         self._redraw()
 
@@ -590,7 +605,7 @@ class RrtSelectionSession:
         else:
             lines.append(
                 "Right-click a +: clear it  |  Delete: undo last  |  "
-                "Enter: confirm"
+                "Enter: confirm  |  Close the window: confirm"
             )
         return "\n".join(lines)
 
@@ -800,7 +815,13 @@ class RrtSelectionSession:
                 return
             self.slots[index] = self._clip(event.xdata, event.ydata)
             self._history.append(index)
-            self._set_status(self._next_step_text())
+            if self._selection_ready():
+                self._set_status(
+                    "All points placed. Drag a + to adjust, then press Enter "
+                    "or close the window."
+                )
+            else:
+                self._set_status(self._next_step_text())
             self._redraw()
         elif event.button == 3:
             nearest = self._nearest_slot(event)
@@ -840,20 +861,50 @@ class RrtSelectionSession:
         self._redraw()
 
     def _on_key(self, event) -> None:
+        if is_confirm_key(getattr(event, "key", None)):
+            if self.confirmed:
+                if self.close_on_confirm and not self.closed:
+                    close_figure_after_callback(self.figure)
+                return
+            self.confirm()
+            return
         if self.confirmed:
             return
         key = str(event.key or "").lower()
         if key in {"delete", "backspace"}:
             self._remove_last_point()
-        elif key in {"enter", "return"}:
-            self.confirm()
+
+    def _selection_ready(self) -> bool:
+        """True when Enter would accept the points currently placed."""
+        return self._placed_count() == len(self.slots)
 
     def _on_close(self, _event=None) -> None:
-        self.closed = True
-        self._drag_index = None
+        if getattr(self, "_handling_close", False):
+            return
+        self._handling_close = True
+        try:
+            # The close button (red on macOS, X on Windows and Linux) is
+            # already destroying the window. A finished selection confirms
+            # the same way Enter does; an unfinished one is discarded.
+            if not self.confirmed and self._selection_ready():
+                self.close_on_confirm = False
+                self.confirm()
+        finally:
+            self.closed = True
+            self._drag_index = None
+            self._disconnect()
+
+    def _disconnect(self, *, keep_confirm_key: bool = False) -> None:
+        kept = []
         for connection in self._connections:
-            self.figure.canvas.mpl_disconnect(connection)
-        self._connections.clear()
+            if keep_confirm_key and connection == getattr(self, "_key_cid", None):
+                kept.append(connection)
+                continue
+            try:
+                self.figure.canvas.mpl_disconnect(connection)
+            except Exception:
+                pass
+        self._connections = kept
 
     def _remove_last_point(self) -> None:
         if self.confirmed or not self._history:
@@ -865,14 +916,19 @@ class RrtSelectionSession:
 
     def confirm(self) -> Optional[RrtLineSelection]:
         """Confirm the placed points and store an :class:`RrtLineSelection`."""
-        if self.confirmed or self.closed:
+        closing = getattr(self, "_handling_close", False)
+        if self.confirmed or (self.closed and not closing):
             return self.result
         missing = len(self.slots) - self._placed_count()
         if missing:
             self._set_status(
                 f"{missing} point(s) still needed. {self._next_step_text()}"
             )
-            self.figure.canvas.draw_idle()
+            if not closing:
+                try:
+                    self.figure.canvas.draw_idle()
+                except Exception:
+                    pass
             return None
         registration = self.registration_points()
         self.result = RrtLineSelection(
@@ -883,14 +939,25 @@ class RrtSelectionSession:
             ),
         )
         self.confirmed = True
-        self._set_status("Selection confirmed")
-        for connection in self._connections:
-            self.figure.canvas.mpl_disconnect(connection)
-        self._connections.clear()
-        if self.close_on_confirm:
-            plt.close(self.figure)
+        try:
+            self._set_status("Selection confirmed")
+        except Exception:
+            pass
+        if closing:
+            self._disconnect()
         else:
-            self.figure.canvas.draw_idle()
+            # Leave Enter connected so it can close the window if this
+            # attempt's deferred close has not run yet.
+            self._disconnect(keep_confirm_key=True)
+        if closing:
+            return self.result
+        if self.close_on_confirm:
+            close_figure_after_callback(self.figure)
+        else:
+            try:
+                self.figure.canvas.draw_idle()
+            except Exception:
+                pass
         return self.result
 
     def _set_status(self, message: str) -> None:
@@ -972,26 +1039,37 @@ class RrtSelectionSession:
                         self._profile_image, x1, y1, x2, y2, group,
                         group_elements(group), window_length=1, polyorder=0,
                     )
+                positions = np.arange(len(profile))
+                profile_line.set_data(positions, profile)
+                peak_indices, trough_indices, labels = [], [], []
+                if stats is not None:
+                    for _, row in stats.iterrows():
+                        peak_indices.extend(
+                            index for index in row["Peak Indices"]
+                            if 0 <= int(index) < len(profile)
+                        )
+                        trough_indices.extend(
+                            index for index in row["Trough Indices"]
+                            if 0 <= int(index) < len(profile)
+                        )
+                        value = row["Percentage Contrast"]
+                        text = "--" if np.isnan(value) else f"{value:.0f}%"
+                        labels.append(f"E{row['Element']} {text}")
+                peak_indices = [int(index) for index in peak_indices]
+                trough_indices = [int(index) for index in trough_indices]
+                peaks_line.set_data(peak_indices, profile[peak_indices])
+                troughs_line.set_data(trough_indices, profile[trough_indices])
+                contrast.set_text("  ".join(labels))
+                if len(profile):
+                    axis.set_xlim(0, max(len(profile) - 1, 1))
+                    low, high = float(np.min(profile)), float(np.max(profile))
+                    pad = 0.05 * (high - low) or 1.0
+                    axis.set_ylim(low - pad, high + pad)
             except Exception:
-                profile, stats = np.asarray([]), None
-            positions = np.arange(len(profile))
-            profile_line.set_data(positions, profile)
-            peak_indices, trough_indices, labels = [], [], []
-            if stats is not None:
-                for _, row in stats.iterrows():
-                    peak_indices.extend(row["Peak Indices"])
-                    trough_indices.extend(row["Trough Indices"])
-                    value = row["Percentage Contrast"]
-                    text = "--" if np.isnan(value) else f"{value:.0f}%"
-                    labels.append(f"E{row['Element']} {text}")
-            peaks_line.set_data(peak_indices, profile[peak_indices])
-            troughs_line.set_data(trough_indices, profile[trough_indices])
-            contrast.set_text("  ".join(labels))
-            if len(profile):
-                axis.set_xlim(0, max(len(profile) - 1, 1))
-                low, high = float(np.min(profile)), float(np.max(profile))
-                pad = 0.05 * (high - low) or 1.0
-                axis.set_ylim(low - pad, high + pad)
+                for artist in (profile_line, peaks_line, troughs_line):
+                    artist.set_data([], [])
+                waiting.set_visible(True)
+                contrast.set_text("")
 
 
 def select_rrt_lines(
@@ -1020,11 +1098,11 @@ def select_rrt_lines(
     Registration modes always produce the standard three lines.
 
     Desktop backends block until confirmation and return an
-    :class:`RrtLineSelection`, or ``None`` if the window is closed before
-    confirmation. Jupyter widget backends return an
-    :class:`RrtSelectionSession`; after Confirm, use ``session.result``.
-    ``selection_path`` writes the confirmed selection as YAML for reuse
-    (an explicit .json suffix saves JSON).
+    :class:`RrtLineSelection`. Enter or closing the window confirms once
+    every point is placed. Closing before that returns ``None``. Jupyter
+    widget backends return an :class:`RrtSelectionSession`; after Confirm,
+    use ``session.result``. ``selection_path`` writes the confirmed
+    selection as YAML for reuse (an explicit .json suffix saves JSON).
     """
     if mode not in RRT_GUI_MODES:
         raise ValueError(f"Unknown MODE: {mode}")
@@ -1049,6 +1127,7 @@ def select_rrt_lines(
         )
 
     notebook = _prepare_gui_backend()
+    _present_macos_app()
     session = RrtSelectionSession(
         image=image,
         mode=mode,
@@ -1062,11 +1141,19 @@ def select_rrt_lines(
         print(session._instructions())
         if not notebook and _running_in_notebook():
             print("Opening a native Matplotlib window.")
+    arm_confirm_window(session.figure, session.confirm)
     try:
-        plt.show(block=not notebook)
+        run_selection_window(session.figure, block=not notebook)
     except KeyboardInterrupt:
         session._on_close()
-        plt.close(session.figure)
+        disarm_confirm_window(session.figure)
+        _destroy_figure(session.figure)
+    finally:
+        if not notebook:
+            disarm_confirm_window(session.figure)
+            _destroy_figure(session.figure)
+            _dismiss_macos_app(session.figure.canvas)
+            use_inline_plots()
     if notebook:
         if verbose:
             print(
@@ -1075,7 +1162,7 @@ def select_rrt_lines(
             )
         return session
     if session.result is None:
-        plt.close(session.figure)
+        _destroy_figure(session.figure)
         if verbose:
             print(
                 "Resolution target selection was closed before confirmation; "

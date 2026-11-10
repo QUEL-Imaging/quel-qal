@@ -10,7 +10,7 @@ from typing import Literal, Union
 import numpy as np
 from scipy.ndimage import label
 from skimage import io
-from skimage.color import rgb2gray
+from skimage.color import rgb2gray, rgba2rgb
 
 ImageInput = Union[str, Path, np.ndarray]
 GrayscaleMethod = Union[Literal["average", "rgb2gray"], Callable[[np.ndarray], np.ndarray]]
@@ -107,14 +107,21 @@ def load_grayscale_image(image: ImageInput) -> np.ndarray:
     container bit depth. A 16-bit file whose samples only occupy 0–255 is
     returned as ``uint16`` with those values.
 
-    RGB/RGBA images are reduced to their first channel. For multi-page image
+    RGB images use scikit-image's luminance weights and return floating-point
+    values. RGBA images are composited onto white before conversion, matching
+    ``skimage.io.imread(..., as_gray=True)``. For multi-page grayscale image
     stacks, the first page is used.
     """
     im = image if isinstance(image, np.ndarray) else io.imread(str(image))
     im = np.squeeze(np.asarray(im))
 
     if im.ndim == 3:
-        im = im[..., 0] if im.shape[-1] in (3, 4) else im[0]
+        if im.shape[-1] in (3, 4):
+            if im.shape[-1] == 4:
+                im = rgba2rgb(im)
+            im = rgb2gray(im)
+        else:
+            im = im[0]
     if im.ndim != 2:
         raise ValueError(f"Expected a 2-D grayscale image, got shape {im.shape}")
 

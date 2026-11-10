@@ -11,7 +11,7 @@ from __future__ import annotations
 import pandas as pd
 
 from qal import WellAnalyzer, WellPlotter, select_concentration_grid
-from qal.data import cn_sample_3
+from qal.data import cn_sample_1
 from qal.util import (
     describe_stored_values,
     load_grayscale_image,
@@ -23,8 +23,19 @@ from qal.util import (
 # Examples: "RCS-ICG-ST01-QUEL03", "RCS-S-IC1-S1-A-000", "V3-ICG-ST01-RCS000".
 TARGET_SERIAL = "RCS-S-IC1-S1-A-000"
 
-# None uses QAL's cn_sample_3 example image.
-IMAGE_PATH = None  # "path/to/image.tiff"
+# Images are loaded and converted to grayscale with load_grayscale_image.
+# Already-grayscale images remain unchanged: stored values and dtype are preserved.
+# RGB uses scikit-image rgb2gray weights across all channels (floating-point output).
+# Choose one option; leave the others commented out.
+# Uncomment the next line and put the path to your image:
+# IMAGE_PATH = "/path/to/your/image.tiff"
+
+# Example using a file that ships with QAL:
+# Run from this example's directory in a GitHub checkout or download.
+# IMAGE_PATH = "../../data/concentration_targets/cn_sample_1.tiff"
+
+# Selecting the built-in example image:
+IMAGE_PATH = cn_sample_1()
 
 # Choose one variation by uncommenting it and commenting out the active one.
 # MODE = "automatic_refinement"
@@ -39,11 +50,13 @@ REGION_OF_WELL_TO_ANALYZE = 0.5
 
 
 def main() -> None:
-    image = (
-        load_grayscale_image(IMAGE_PATH)
-        if IMAGE_PATH is not None
-        else cn_sample_3()
-    )
+    if IMAGE_PATH is None:
+        raise ValueError(
+            "No image has been supplied. Set IMAGE_PATH to an image file path "
+            "or a built-in example call."
+        )
+
+    image = load_grayscale_image(IMAGE_PATH)
     print(describe_stored_values(image).summary())
     target = lookup_concentration_preset(TARGET_SERIAL)
 

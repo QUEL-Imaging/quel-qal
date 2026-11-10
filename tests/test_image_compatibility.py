@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from skimage import io
-from skimage.color import rgb2gray
+from skimage.color import rgb2gray, rgba2rgb
 
 from qal import RetAnalyzer, WellAnalyzer
 from qal.util import load_grayscale_image, to_grayscale, to_log_scale, describe_stored_values
@@ -33,13 +33,15 @@ def test_lossless_grayscale_files_preserve_samples_through_analysis(tmp_path, ex
 
 
 @pytest.mark.parametrize("extension", ["tiff", "png", "bmp"])
-def test_rgb_file_loading_uses_first_channel_not_luminance(tmp_path, extension):
+def test_rgb_file_loading_matches_scikit_image_grayscale(tmp_path, extension):
     rgb = np.empty((12, 15, 3), dtype=np.uint8)
     rgb[...] = [17, 83, 241]
     path = tmp_path / f"color.{extension}"
     io.imsave(path, rgb, check_contrast=False)
     loaded = load_grayscale_image(path)
-    np.testing.assert_array_equal(loaded, rgb[..., 0])
+    np.testing.assert_allclose(loaded, io.imread(path, as_gray=True))
+    assert np.issubdtype(loaded.dtype, np.floating)
+    assert not np.allclose(loaded, rgb[..., 0] / 255)
 
 
 def test_jpeg_is_accepted_without_claiming_lossless_measurements(tmp_path):
@@ -47,7 +49,35 @@ def test_jpeg_is_accepted_without_claiming_lossless_measurements(tmp_path):
     path = tmp_path / "preview.jpg"
     io.imsave(path, rgb, check_contrast=False)
     decoded = io.imread(path)
-    np.testing.assert_array_equal(load_grayscale_image(path), decoded[..., 0])
+    np.testing.assert_allclose(load_grayscale_image(path), rgb2gray(decoded))
+
+
+@pytest.mark.parametrize("dtype", [np.uint8, np.uint16, np.float32, np.float64])
+@pytest.mark.parametrize("channels", [3, 4])
+def test_color_array_loading_uses_all_channels_without_mutating_input(dtype, channels):
+    maximum = np.iinfo(dtype).max if np.issubdtype(dtype, np.integer) else 1
+    values = [0.1, 0.4, 0.9, 0.5][:channels]
+    image = np.tile(np.array(values) * maximum, (5, 7, 1)).astype(dtype)
+    original = image.copy()
+    expected = rgb2gray(rgba2rgb(image) if channels == 4 else image)
+    np.testing.assert_allclose(load_grayscale_image(image), expected)
+    np.testing.assert_array_equal(image, original)
+
+
+def test_rgba_file_loading_matches_scikit_image_alpha_handling(tmp_path):
+    image = np.tile(np.array([17, 83, 241, 128], dtype=np.uint8), (5, 7, 1))
+    path = tmp_path / "transparent.png"
+    io.imsave(path, image, check_contrast=False)
+    np.testing.assert_allclose(load_grayscale_image(path), io.imread(path, as_gray=True))
+
+
+def test_grayscale_array_loading_is_unchanged():
+    image = np.arange(35, dtype=np.uint16).reshape(5, 7)
+    original = image.copy()
+    loaded = load_grayscale_image(image)
+    assert loaded is image
+    assert loaded.dtype == image.dtype
+    np.testing.assert_array_equal(loaded, original)
 
 
 def test_grayscale_stack_uses_first_page(tmp_path):

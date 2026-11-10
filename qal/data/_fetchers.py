@@ -231,6 +231,27 @@ def cn_sample_4():
     """
     return _load("concentration_targets/cn_sample_4.tiff")
 
+# --- Radiometric emitter targets
+def ret_sample_1_lf():
+    """Return sample 1's light frame as a grayscale ndarray."""
+    return _load("RET_images/ret_sample_1_lf.tiff")
+
+
+def ret_sample_1_df():
+    """Return the matching dark frame for sample 1 as a grayscale ndarray."""
+    return _load("RET_images/ret_sample_1_df.tiff")
+
+
+def ret_sample_2_lf():
+    """Return sample 2's light frame as a grayscale ndarray."""
+    return _load("RET_images/ret_sample_2_lf.tiff")
+
+
+def ret_sample_2_df():
+    """Return the matching dark frame for sample 2 as a grayscale ndarray."""
+    return _load("RET_images/ret_sample_2_df.tiff")
+
+
 # --- Depth resolution targets
 def dr_sample1():
     """

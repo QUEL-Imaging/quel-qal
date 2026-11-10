@@ -9,6 +9,12 @@ registry = {
     "concentration_targets/cn_sample_1.tiff": "8dae075be3cb52d849b1b4aaf801036ccc9103ee9ccba9c11aeb055cb2fcdab7",
     "concentration_targets/cn_sample_4.tiff": "784e376feafa0f5c8624fd437bb70d416170e605b00213d849975073a405d057",
 
+    # Radiometric Emitter Targets
+    "RET_images/ret_sample_1_lf.tiff": "91ee962389041783b8d39792bf471639919e864422fa1ac22fe64022d2959871",
+    "RET_images/ret_sample_1_df.tiff": "d02c53e84afa62a8ec2c68acbc5e619445ff2bee8ee0dc3b9bae8d24606c8fc4",
+    "RET_images/ret_sample_2_lf.tiff": "6e8cc334e09feb7e595aa7446ac4b20fa71e072152cdf932e70f66187b05f83f",
+    "RET_images/ret_sample_2_df.tiff": "eb3806026d848d4f170f051fe2e3a277a38d70a05543ba813bb018f5d9ddb16e",
+
     # Depth Targets
     "depth_targets/depth_sample_1.tiff": "da8a4e6d9f4d7e13048462b06a2efb0f5da10ea4d4d36be2ee07cd3b73c8dbd1",
     "depth_targets/depth_sample_2.tiff": "3d5fefd4d4335fd682d253bd8a33fc2cbe9dfd09660051e068bc217816ba5c3d",

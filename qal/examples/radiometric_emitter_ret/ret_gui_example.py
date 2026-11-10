@@ -1,6 +1,7 @@
 """Select and analyze one RET well with the Matplotlib GUI.
 
-Edit the path below, then run:
+Uses sample 1's light/dark pair by default. To use your own frames, edit the
+inputs below, then run:
 
     python -m qal.examples.radiometric_emitter_ret.ret_gui_example
 """
@@ -12,6 +13,7 @@ from pathlib import Path
 import pandas as pd
 
 from qal import RetAnalyzer, WellDetector, WellPlotter
+from qal.data import ret_sample_1_df, ret_sample_1_lf
 from qal.rta.roi_extraction.well_detector_gui import (
     select_wells_from_coordinates,
     select_wells_gui,
@@ -24,8 +26,16 @@ from qal.util import (
 )
 
 
-# Replace with your light-frame file. Relative paths start where Python is run.
-IMAGE_PATH = Path("path/to/light_frame.tiff").expanduser()
+# Use the built-in pair, or replace both inputs with matching file paths.
+# Relative paths start where Python is run.
+# Images are loaded and converted to grayscale with load_grayscale_image.
+# Already-grayscale images remain unchanged: stored values and dtype are preserved.
+# RGB uses scikit-image rgb2gray weights across all channels (floating-point output).
+IMAGE_PATH = ret_sample_1_lf()
+DARK_FRAME_PATH = ret_sample_1_df()
+# IMAGE_PATH = Path("path/to/light_frame.tiff").expanduser()
+# DARK_FRAME_PATH = Path("path/to/dark_frame.tiff").expanduser()
+# DARK_FRAME_PATH = None  # Raw analysis without a dark-frame baseline or CNR.
 
 # Choose one variation.
 MODE = "automatic_refinement"
@@ -43,6 +53,11 @@ COORDINATES = None  # [(x, y)]
 def main() -> None:
     image = load_grayscale_image(IMAGE_PATH)
     print(describe_stored_values(image).summary())
+    dark_frame = None if DARK_FRAME_PATH is None else load_grayscale_image(DARK_FRAME_PATH)
+    if dark_frame is not None:
+        if dark_frame.shape != image.shape:
+            raise ValueError("The light frame and dark frame must have the same dimensions.")
+        print(f"Dark frame: {describe_stored_values(dark_frame).summary()}")
     detector = WellDetector(parallel_processing=False)
     if MODE not in {"automatic_refinement", "manual_coordinates"}:
         raise ValueError(f"Unknown MODE: {MODE}")
@@ -88,23 +103,23 @@ def main() -> None:
 
     # Desktop backends return a DataFrame. In a Jupyter widget backend the
     # function returns a session immediately; run analysis after Confirm with:
-    # result = RetAnalyzer().analyze(image, session.result)
+    # result = RetAnalyzer().analyze(image, session.result, dark_frame=dark_frame)
     if selections is None:
         return
     if not isinstance(selections, pd.DataFrame):
         print(
             "Jupyter session started. Click Confirm (or press Enter if the "
             "figure has focus), then use "
-            "`RetAnalyzer().analyze(image, selections.result)`."
+            "`RetAnalyzer().analyze(image, selections.result, dark_frame=dark_frame)`."
         )
         return
 
     ret_roi = selections[selections["well"] == "RET"]
-    result = RetAnalyzer().analyze(image, ret_roi)
+    result = RetAnalyzer().analyze(image, ret_roi, dark_frame=dark_frame)
     with pd.option_context("display.max_columns", None):
         print("\nResolved RET ROI:")
         print(ret_roi)
-        print("\nRaw RET statistics:")
+        print("\nRET statistics:")
         print(result.stats_df)
 
     control_rows = selections[selections["well"] == "Control"]

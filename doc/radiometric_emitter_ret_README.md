@@ -103,4 +103,17 @@ Runnable scripts are available in `qal/examples/radiometric_emitter_ret/`:
 - `ret_light_frame_automatic_analysis_example.py`
 - `ret_gui_example.py`
 
-The well-selection GUI guide is `qal/examples/general/well_detector_gui_README.md`.
+All three scripts use `qal.data.ret_sample_1_lf()` as the signal image by default.
+The GUI and dark-frame examples use `qal.data.ret_sample_1_df()` as the matching
+dark frame. The light-frame-only example demonstrates raw analysis without a
+baseline. For pair 2, use `qal.data.ret_sample_2_lf()` and
+`qal.data.ret_sample_2_df()` together. All four loaders return grayscale arrays,
+resolving local checkout data or downloading the registered, SHA-256-validated
+image from the selected repository and branch.
+
+For the popup picker with inline plots and optional CSV/plot saving, open
+`qal/examples/jupyter-notebook/radiometric_emitter_ret_gui_example.ipynb`.
+It defaults to sample 1's matching light/dark pair, including dark-frame baseline
+and CNR statistics. Set `DARK_FRAME_PATH = None` for raw analysis only.
+
+The well-selection GUI guide is `doc/well_detector_gui_README.md`.

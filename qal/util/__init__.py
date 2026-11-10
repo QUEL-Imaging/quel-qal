@@ -26,6 +26,7 @@ from ._target_lookup import (
     find_target_presets,
     lookup_concentration_preset,
     lookup_target_preset,
+    print_preset,
     target_data_labels,
 )
 
@@ -42,6 +43,7 @@ __all__ = [
     "lookup_concentration_preset",
     "lookup_target_preset",
     "mean_in_circular_roi",
+    "print_preset",
     "raw_stats_in_circular_roi",
     "remove_corner_overlays",
     "std_in_circular_roi",
