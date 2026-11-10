@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 from skimage import io
+from skimage.color import rgb2gray
 
 from qal.util import (
     circular_mask,
@@ -28,7 +29,7 @@ def test_mean_in_circular_roi_uses_requested_center():
     assert mean_in_circular_roi(image, (6, 2), 1) == 7
 
 
-def test_load_grayscale_image_reads_first_rgb_channel(tmp_path):
+def test_load_grayscale_image_uses_rgb_luminance(tmp_path):
     rgb = np.zeros((5, 6, 3), dtype=np.uint8)
     rgb[..., 0] = 11
     rgb[..., 1] = 22
@@ -38,7 +39,7 @@ def test_load_grayscale_image_reads_first_rgb_channel(tmp_path):
     loaded = load_grayscale_image(path)
 
     assert loaded.shape == (5, 6)
-    assert np.all(loaded == 11)
+    np.testing.assert_allclose(loaded, rgb2gray(rgb))
 
 
 def test_load_grayscale_image_rejects_non_image_array():
