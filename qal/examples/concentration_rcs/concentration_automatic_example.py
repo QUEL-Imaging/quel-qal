@@ -4,7 +4,7 @@ Edit the knobs below, then run:
 
     python -m qal.examples.concentration_rcs.concentration_automatic_example
 
-Leave ``IMAGE_PATH`` as ``None`` to use QAL's built-in example image.
+The example uses ``IMAGE_PATH = cn_sample_1()`` to load a built-in image.
 To use your own file, set ``IMAGE_PATH`` to a TIFF, BMP, PNG, or JPEG.
 """
 
@@ -12,16 +12,30 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import numpy as np
+
 from qal import WellAnalyzer, WellDetector, WellPlotter
-from qal.data import cn_sample_3, get_concentration_target_preset
+from qal.data import cn_sample_1, get_concentration_target_preset
 from qal.util import describe_stored_values, load_grayscale_image
 
 
 # Select a packaged QUEL product preset: "icg", "q800", or "q700".
 TARGET_TAG = "icg"
 
-# None uses QAL's cn_sample_3 example image.
-IMAGE_PATH = None  # "path/to/image.tiff"
+# Images are loaded and converted to grayscale with load_grayscale_image.
+# Already-grayscale images remain unchanged: stored values and dtype are preserved.
+# RGB uses scikit-image rgb2gray weights across all channels (floating-point output).
+# Choose one option; leave the others commented out.
+# Uncomment the next line and put the path to your image:
+# IMAGE_PATH = "/path/to/your/image.tiff"
+
+# Example using a file that ships with QAL:
+# Run from this example's directory in a GitHub checkout or download.
+# IMAGE_PATH = "../../data/concentration_targets/cn_sample_1.tiff"
+
+# Selecting the built-in example image:
+IMAGE_PATH = cn_sample_1()
+
 # Writes plots and CSVs to <image_stem>_results next to IMAGE_PATH.
 SAVE_RESULTS = False
 
@@ -30,15 +44,19 @@ REGION_OF_WELL_TO_ANALYZE = 0.5
 
 
 def main() -> None:
+    if IMAGE_PATH is None:
+        raise ValueError(
+            "No image has been supplied. Set IMAGE_PATH to an image file path "
+            "or a built-in example call."
+        )
+
     image_path = (
         Path(IMAGE_PATH).expanduser().resolve()
-        if IMAGE_PATH is not None
+        if not isinstance(IMAGE_PATH, np.ndarray)
         else None
     )
-    image = (
-        load_grayscale_image(image_path)
-        if image_path is not None
-        else cn_sample_3()
+    image = load_grayscale_image(
+        image_path if image_path is not None else IMAGE_PATH
     )
     print(describe_stored_values(image).summary())
 
@@ -49,7 +67,7 @@ def main() -> None:
     if SAVE_RESULTS:
         if image_path is None:
             raise ValueError(
-                "SAVE_RESULTS requires IMAGE_PATH so results can be written "
+                "SAVE_RESULTS requires a file path in IMAGE_PATH so results can be written "
                 "next to the image."
             )
         results_dir = image_path.parent / f"{image_path.stem}_results"

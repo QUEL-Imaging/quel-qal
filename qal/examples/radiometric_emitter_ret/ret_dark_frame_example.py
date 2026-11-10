@@ -5,12 +5,14 @@ Edit the settings below, then run from the repository root:
     python -m qal.examples.radiometric_emitter_ret.ret_dark_frame_example
 
 Click the light-frame well, drag the + if needed, and press Enter to confirm.
-SAVE_RESULTS writes wells.csv, stats.csv and roi.png beside the light frame.
-There is no bundled RET image pair; supply your own light and dark frames.
+SAVE_RESULTS writes wells.csv, stats.csv and roi.png beside the light frame,
+or in ret_sample_1_lf_results under the working directory for the built-in sample.
+The default inputs are the matching ret_sample_1_lf and ret_sample_1_df frames.
 """
 
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from qal import (
@@ -21,18 +23,24 @@ from qal import (
     select_wells_from_coordinates,
     select_wells_gui,
 )
+from qal.data import ret_sample_1_df, ret_sample_1_lf
 from qal.util import describe_stored_values, load_grayscale_image
 
 
 # --- Settings ---------------------------------------------------------------
 
-# Replace these placeholders with the paths to YOUR files.
+# Use the built-in pair, or replace both inputs with your own matching file paths.
 # Relative paths start from the folder where you launch Python.
 # Absolute paths work too; on Windows, forward slashes work: C:/path/to/file.tiff.
-IMAGE_PATH = "path/to/light_frame.tiff"
-DARK_FRAME_PATH = "path/to/dark_frame.tiff"
+# Images are loaded and converted to grayscale with load_grayscale_image.
+# Already-grayscale images remain unchanged: stored values and dtype are preserved.
+# RGB uses scikit-image rgb2gray weights across all channels (floating-point output).
+IMAGE_PATH = ret_sample_1_lf()
+DARK_FRAME_PATH = ret_sample_1_df()
+# IMAGE_PATH = "path/to/light_frame.tiff"
+# DARK_FRAME_PATH = "path/to/dark_frame.tiff"
 
-# True saves to <image_stem>_results in the same folder as IMAGE_PATH.
+# True saves beside your input file, or in ./ret_sample_1_lf_results for the sample.
 SAVE_RESULTS = False
 
 # Pick one mode. Leave the others commented out.
@@ -79,8 +87,11 @@ def analyze_selection(image, dark_frame, wells):
     results_dir = None
     roi_path = None
     if SAVE_RESULTS:
-        image_path = Path(IMAGE_PATH).expanduser().resolve()
-        results_dir = image_path.parent / f"{image_path.stem}_results"
+        if isinstance(IMAGE_PATH, np.ndarray):
+            results_dir = Path("ret_sample_1_lf_results").resolve()
+        else:
+            image_path = Path(IMAGE_PATH).expanduser().resolve()
+            results_dir = image_path.parent / f"{image_path.stem}_results"
         results_dir.mkdir(parents=True, exist_ok=True)
         wells.to_csv(results_dir / "wells.csv", index=False)
         result.stats_df.to_csv(results_dir / "stats.csv", index=False)
@@ -102,15 +113,21 @@ def main():
     if MODE == "automatic_detection" and COORDINATES is not None:
         raise ValueError("Set COORDINATES = None when using automatic_detection.")
 
-    image_path = Path(IMAGE_PATH).expanduser().resolve()
-    dark_path = Path(DARK_FRAME_PATH).expanduser().resolve()
+    image_path = (
+        None if isinstance(IMAGE_PATH, np.ndarray)
+        else Path(IMAGE_PATH).expanduser().resolve()
+    )
+    dark_path = (
+        None if isinstance(DARK_FRAME_PATH, np.ndarray)
+        else Path(DARK_FRAME_PATH).expanduser().resolve()
+    )
     for setting, path in (("IMAGE_PATH", image_path), ("DARK_FRAME_PATH", dark_path)):
-        if not path.is_file():
+        if path is not None and not path.is_file():
             raise FileNotFoundError(f"Set {setting} to an existing image file. File not found: {path}")
 
     # 2. Load the frames. Their pixels must describe the same image geometry.
-    image = load_grayscale_image(image_path)
-    dark_frame = load_grayscale_image(dark_path)
+    image = load_grayscale_image(IMAGE_PATH if image_path is None else image_path)
+    dark_frame = load_grayscale_image(DARK_FRAME_PATH if dark_path is None else dark_path)
     if image.shape != dark_frame.shape:
         raise ValueError(
             "The light frame and dark frame must have the same dimensions; "
@@ -156,7 +173,7 @@ def main():
             "JupyterLab session started. Run `session = example.main()` to keep it. "
             "After Confirm, run:\n"
             "example.analyze_selection(session.image, "
-            "load_grayscale_image(Path(example.DARK_FRAME_PATH).expanduser()), "
+            "load_grayscale_image(example.DARK_FRAME_PATH), "
             "session.result)\n"
             "See the RET section of doc/well_detector_gui_README.md for the imports."
         )

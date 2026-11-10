@@ -15,6 +15,7 @@ The matching notebook is ``qal/examples/jupyter-notebook/resolution_rrt_gui_exam
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 from qal import RrtAnalyzer, RrtDataPlotter, RrtLineSelection, RrtROI, select_rrt_lines
 from qal.data import res_sample_1
@@ -23,12 +24,23 @@ from qal.util import load_grayscale_image
 
 # --- Settings ---------------------------------------------------------------
 
-# Leave this as None to use QAL's built-in example image.
-# Or set your own file, for example "path/to/image.tiff".
-IMAGE_PATH = None
+# Images are loaded and converted to grayscale with load_grayscale_image.
+# Already-grayscale images remain unchanged: stored values and dtype are preserved.
+# RGB uses scikit-image rgb2gray weights across all channels (floating-point output).
+# Choose one option; leave the others commented out.
+# Uncomment the next line and put the path to your image:
+# IMAGE_PATH = "/path/to/your/image.tiff"
+
+# Example using a file that ships with QAL:
+# Run from this example's directory in a GitHub checkout or download.
+# IMAGE_PATH = "../../data/resolution_targets/res_sample_1.tiff"
+
+# Selecting the built-in example image:
+IMAGE_PATH = res_sample_1()
+
 
 # True saves plots, a CSV, and selection.yaml.
-# With IMAGE_PATH, files go next to that image in <image_name>_results/.
+# With a file path, files go next to that image in <image_name>_results/.
 # With the built-in example, files go next to this script in res_sample_1_results/.
 SAVE_RESULTS = True
 
@@ -63,12 +75,21 @@ RESOLUTION_THRESHOLD = 26
 
 
 def main():
-    # 1. Load the image. The built-in example is used when IMAGE_PATH is empty.
-    image = res_sample_1()
-    image_path = None
-    if IMAGE_PATH:
-        image_path = Path(IMAGE_PATH).expanduser().resolve()
-        image = load_grayscale_image(image_path)
+    # 1. Load the supplied image.
+    if IMAGE_PATH is None:
+        raise ValueError(
+            "No image has been supplied. Set IMAGE_PATH to an image file path "
+            "or a built-in example call."
+        )
+
+    image_path = (
+        Path(IMAGE_PATH).expanduser().resolve()
+        if not isinstance(IMAGE_PATH, np.ndarray)
+        else None
+    )
+    image = load_grayscale_image(
+        image_path if image_path is not None else IMAGE_PATH
+    )
 
     # 2. Make the results folder.
     results_dir = None

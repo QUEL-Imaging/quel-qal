@@ -1,6 +1,6 @@
 """Run single-well RET analysis without a dark frame.
 
-Edit the path below, then run:
+Uses ret_sample_1_lf by default. To use your own image, edit IMAGE_PATH, then run:
 
     python -m qal.examples.radiometric_emitter_ret.ret_light_frame_automatic_analysis_example
 """
@@ -10,11 +10,17 @@ from pathlib import Path
 import pandas as pd
 
 from qal import RetAnalyzer, WellDetector
+from qal.data import ret_sample_1_lf
 from qal.util import describe_stored_values, load_grayscale_image
 
 
-# Replace with your light-frame file. Relative paths start where Python is run.
-IMAGE_PATH = Path("path/to/light_frame.tiff").expanduser()
+# Use the built-in sample, or replace with your light-frame file path.
+# Relative paths start where Python is run.
+# Images are loaded and converted to grayscale with load_grayscale_image.
+# Already-grayscale images remain unchanged: stored values and dtype are preserved.
+# RGB uses scikit-image rgb2gray weights across all channels (floating-point output).
+IMAGE_PATH = ret_sample_1_lf()
+# IMAGE_PATH = Path("path/to/light_frame.tiff").expanduser()
 
 
 def main() -> None:

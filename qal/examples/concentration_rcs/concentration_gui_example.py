@@ -6,7 +6,7 @@ Edit the knobs below, then run:
 
 For a notebook that processes one local image and can save results
 beside it, open ``qal/examples/jupyter-notebook/concentration_rcs_gui_example.ipynb``.
-Set ``IMAGE_PATH`` there, or leave it as ``None`` for the example image.
+Set ``IMAGE_PATH`` there to your image file or a built-in example call.
 
 For SKU or unit-serial lookup, use ``concentration_sku_gui_example``.
 To process a folder with fixed anchors, use ``concentration_batch_example``.
@@ -16,10 +16,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from qal import WellAnalyzer, WellPlotter, select_concentration_grid
-from qal.data import cn_sample_3, get_concentration_target_preset
+from qal.data import cn_sample_1, get_concentration_target_preset
 from qal.util import describe_stored_values, load_grayscale_image
 
 
@@ -39,8 +40,20 @@ CUSTOM_WELL_IDS = [
     "Control",
 ]
 
-# None uses QAL's cn_sample_3 example image.
-IMAGE_PATH = None  # "path/to/image.tiff"
+# Images are loaded and converted to grayscale with load_grayscale_image.
+# Already-grayscale images remain unchanged: stored values and dtype are preserved.
+# RGB uses scikit-image rgb2gray weights across all channels (floating-point output).
+# Choose one option; leave the others commented out.
+# Uncomment the next line and put the path to your image:
+# IMAGE_PATH = "/path/to/your/image.tiff"
+
+# Example using a file that ships with QAL:
+# Run from this example's directory in a GitHub checkout or download.
+# IMAGE_PATH = "../../data/concentration_targets/cn_sample_1.tiff"
+
+# Selecting the built-in example image:
+IMAGE_PATH = cn_sample_1()
+
 # Writes plots and CSVs to <image_stem>_results next to IMAGE_PATH.
 SAVE_RESULTS = False
 
@@ -62,15 +75,19 @@ REGION_OF_WELL_TO_ANALYZE = 0.5
 
 
 def main() -> None:
+    if IMAGE_PATH is None:
+        raise ValueError(
+            "No image has been supplied. Set IMAGE_PATH to an image file path "
+            "or a built-in example call."
+        )
+
     image_path = (
         Path(IMAGE_PATH).expanduser().resolve()
-        if IMAGE_PATH is not None
+        if not isinstance(IMAGE_PATH, np.ndarray)
         else None
     )
-    image = (
-        load_grayscale_image(image_path)
-        if image_path is not None
-        else cn_sample_3()
+    image = load_grayscale_image(
+        image_path if image_path is not None else IMAGE_PATH
     )
     print(describe_stored_values(image).summary())
     target = get_concentration_target_preset(
@@ -85,7 +102,7 @@ def main() -> None:
     if SAVE_RESULTS:
         if image_path is None:
             raise ValueError(
-                "SAVE_RESULTS requires IMAGE_PATH so results can be written "
+                "SAVE_RESULTS requires a file path in IMAGE_PATH so results can be written "
                 "next to the image."
             )
         results_dir = image_path.parent / f"{image_path.stem}_results"
