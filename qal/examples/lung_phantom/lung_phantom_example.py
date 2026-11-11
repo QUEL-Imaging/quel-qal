@@ -1,18 +1,34 @@
-"""
-This script shows example use of the LungPhantom class.
+"""Register a lung-phantom image and measure its inclusions.
+
+Run ``python -m qal.examples.lung_phantom.lung_phantom_example``.
+Results save beside this script for built-in samples, or beside your image.
 """
 
 from qal.data import lung_test_image
 from qal import LungPhantom
+from qal.examples._output import results_directory, save_sample_sources
+from qal.util import load_grayscale_image
+
+
+IMAGE_PATH = lung_test_image()
+# IMAGE_PATH = "path/to/your/lung_phantom.tiff"
+
+SAVE_RESULTS = True
+# Optional copying of the original built-in sample only.
+SAVE_SOURCE_IMAGES = False
+SHOW_PROGRESS = True
 
 
 def main():
 
-    # The "data" folder contains a sample image of the lung phantom that has been scaled and rotated. This image will
-    # be used in this example. To obtain the Excel files containing the metrics output from the program, change
-    # SAVE_DIR to the location of the directory you want to save to.
-    im = lung_test_image()
+    if IMAGE_PATH is None:
+        raise ValueError("Set IMAGE_PATH to an image file or built-in sample.")
+    im = load_grayscale_image(IMAGE_PATH)
     save_dir = None
+    if SAVE_RESULTS:
+        save_dir = results_directory(IMAGE_PATH, __file__)
+        save_dir.mkdir(parents=True, exist_ok=True)
+        print(f"Results folder: {save_dir}")
 
     # Because the parameter space for finding the right registration parameters is so broad, it is easy for the
     # optimization search to land in local minima. Hence, the initial guesses are very important. Initial parameters
@@ -28,8 +44,13 @@ def main():
     # is reached (4 parameters * 200 = 800 for each limit). The optimizer prints
     # its termination status. Runtime depends on the image, initial guess, and
     # plotting overhead; there is no fixed duration or function-call count.
-    metrics = lung_phantom.get_inclusion_stats(im, save_dir=save_dir)
+    metrics = lung_phantom.get_inclusion_stats(
+        im, show_progress=SHOW_PROGRESS, save_dir=save_dir
+    )
+    if save_dir is not None and SAVE_SOURCE_IMAGES:
+        save_sample_sources(save_dir, IMAGE_PATH)
     print(f"\nSummary metrics:\n{metrics[0]}")
+    return metrics
 
 
 if __name__ == "__main__":

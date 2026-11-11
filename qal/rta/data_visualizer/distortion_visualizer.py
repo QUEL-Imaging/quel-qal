@@ -39,6 +39,7 @@ class DistortionVisualizer:
         :param distortion_analyzer_outputs:     Distortion data
         :param save:                            If True, save figures
         :param lens_maker:                      If True, generate lens manufacturer style distortion plot
+        :return:                               Named curve and map figures, usable after display/close
         """
 
         self.lens_maker = lens_maker
@@ -60,14 +61,15 @@ class DistortionVisualizer:
         distortion_map = distortion_analyzer_outputs["Distortion map"] * np.max(distortion)
 
         # Plot image height against distortion
-        self.plot_distortion(distances, distortion, fov)
+        curve_figure = self.plot_distortion(distances, distortion, fov)
 
         # Display map of distortion across the field of view
-        self.map_distortion(xq, yq, distortion_map, fov)
+        map_figure = self.map_distortion(xq, yq, distortion_map, fov)
 
         # Show images, then return matplotlib parameters to default
         plt.show()
         plt.rcdefaults()
+        return {"curve": curve_figure, "map": map_figure}
 
     def plot_distortion(self, distances, distortion, fov):
         """
@@ -135,6 +137,8 @@ class DistortionVisualizer:
                 fig_name = "Fitted image height vs distortion"
                 plt.savefig(os.path.join(self.save_dir, fig_name))
 
+        return fig1
+
     def map_distortion(self, xq, yq, distortion_map, fov):
         """
         Generate figure mapping distortion across the field of view.
@@ -182,3 +186,4 @@ class DistortionVisualizer:
         if self.save_figures:
             fig_name = "Distortion map"
             plt.savefig(os.path.join(self.save_dir, fig_name))
+        return fig1

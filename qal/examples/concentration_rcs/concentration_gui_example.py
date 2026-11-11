@@ -68,7 +68,7 @@ MODE = "manual_live_preview"
 ANCHOR_COUNT = 3
 # Fixed anchors skip the GUI in any mode (e.g. a jig-mounted target).
 # The GUI prints these after each selection; SAVE_RESULTS also writes them
-# to selection.json for concentration_batch_example.
+# to selection.json so the coordinates can be reused.
 COORDINATES = None  # [(x1, y1), (x2, y2), (x3, y3)]
 CONTROL_INDICES = None  # manual_coordinates only, e.g. [3]
 # None estimates diameter as 60% of grid spacing; set a pixel value to override.

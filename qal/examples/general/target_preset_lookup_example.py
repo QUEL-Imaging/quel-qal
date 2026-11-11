@@ -58,6 +58,7 @@ def main() -> None:
         try:
             matches = find_target_presets(args.query)
         except ValueError as exc:
+            save([])
             raise SystemExit(str(exc)) from None
         diagnostic = describe_target_query(args.query)
         if diagnostic:

@@ -6,8 +6,8 @@ Edit the settings below, then run:
 
 The window prints the coordinates you chose. With SAVE_RESULTS on, it also
 writes plots, a CSV, and selection.yaml next to your image, or next to this
-script when using the built-in example. Paste those coordinates into
-rrt_batch_example to measure more images without the window.
+script when using the built-in example. Reuse those coordinates in the
+settings below to measure more images without the window.
 
 The matching notebook is ``qal/examples/jupyter-notebook/resolution_rrt_gui_example.ipynb``.
 """
