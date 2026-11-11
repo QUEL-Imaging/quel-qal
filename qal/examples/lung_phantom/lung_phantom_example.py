@@ -21,6 +21,13 @@ def main():
     lung_phantom.update_params({
         "Initial registration parameters": [0.75, 0.5, 25, 5],      # Scale, rotation (in radians), x and y translation
     })
+    # Registration minimizes negative mutual information using scipy.optimize.fmin
+    # (Nelder-Mead), rather than stopping at a fixed target cost. It stops when
+    # both the parameter spread is within xtol=0.005 and the cost spread is within
+    # SciPy's default ftol=0.0001, or when the default iteration/evaluation limit
+    # is reached (4 parameters * 200 = 800 for each limit). The optimizer prints
+    # its termination status. Runtime depends on the image, initial guess, and
+    # plotting overhead; there is no fixed duration or function-call count.
     metrics = lung_phantom.get_inclusion_stats(im, save_dir=save_dir)
     print(f"\nSummary metrics:\n{metrics[0]}")
 

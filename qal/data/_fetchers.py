@@ -4,11 +4,26 @@ import hashlib
 import shutil
 import pooch
 import tempfile
+import weakref
 from contextlib import nullcontext
 from pathlib import Path, PurePosixPath
 from ._source import Source, resolve_source
 from requests import HTTPError
 from qal.util._image import load_grayscale_image
+
+# Track only live sample arrays, so exports can copy the original source file
+# without retaining image buffers or guessing a sample from its pixel values.
+_SAMPLE_ARRAYS = {}
+_SAMPLE_DIRECTORIES = {}
+
+
+def _sample_source_paths(value):
+    entry = _SAMPLE_ARRAYS.get(id(value))
+    if entry is not None and entry[0]() is value:
+        return (entry[1],)
+    if isinstance(value, (str, Path)):
+        return _SAMPLE_DIRECTORIES.get(Path(value).expanduser().resolve(), ())
+    return ()
 
 try:
     from ._registry import registry
@@ -182,10 +197,14 @@ def _fetch_directory(directory):
     paths = [_fetch(name) for name in names]
     parents = {str(Path(path).parent) for path in paths}
     if len(parents) == 1:
-        return parents.pop()
+        result = parents.pop()
+        _SAMPLE_DIRECTORIES[Path(result).resolve()] = tuple(Path(p) for p in paths)
+        return result
     for name, path in zip(names, paths):
         _cache_local(path, name)
-    return str(Path(get_cache_dir()) / directory)
+    result = Path(get_cache_dir()) / directory
+    _SAMPLE_DIRECTORIES[result.resolve()] = tuple(result / Path(n).name for n in names)
+    return str(result)
 
 
 def _load(filename):
@@ -203,7 +222,13 @@ def _load(filename):
         Image read from local cache.
     """
     path = _fetch(filename)
-    return load_grayscale_image(path)
+    image = load_grayscale_image(path)
+    key = id(image)
+    _SAMPLE_ARRAYS[key] = (
+        weakref.ref(image, lambda ref: _SAMPLE_ARRAYS.pop(key, None)),
+        Path(path),
+    )
+    return image
 
 
 # --- Concentration samples

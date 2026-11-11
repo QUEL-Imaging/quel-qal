@@ -23,6 +23,7 @@ from ._roi import (
     std_in_circular_roi,
 )
 from ._target_lookup import (
+    describe_target_query,
     find_target_presets,
     lookup_concentration_preset,
     lookup_target_preset,
@@ -38,6 +39,7 @@ __all__ = [
     "StoredValueInfo",
     "circular_mask",
     "describe_stored_values",
+    "describe_target_query",
     "find_target_presets",
     "load_grayscale_image",
     "lookup_concentration_preset",

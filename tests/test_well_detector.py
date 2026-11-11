@@ -9,6 +9,48 @@ from qal import WellDetector
 from qal.util import circular_mask
 
 
+def test_automatic_grid_keeps_nearly_horizontal_rows_and_measured_rois(monkeypatch):
+    from qal import WellAnalyzer, WellPlotter
+    import matplotlib.pyplot as plt
+
+    # The seven detected cn_sample_1 centers: the middle well is 0.24 px
+    # higher than the left well, and the last two wells are not detected.
+    centers = np.array([
+        [1625.677695, 916.037589], [2076.612945, 915.793471],
+        [2527.557746, 917.216315], [1624.572333, 1365.968227],
+        [2075.228227, 1366.325064], [2525.271912, 1368.569072],
+        [1623.750970, 1815.265726],
+    ])
+    # Shrink the fixture while preserving the same geometry and ordering bug.
+    centers = (centers - [1600, 890]) / 10
+    image = np.zeros((140, 140), dtype=np.uint16)
+    for i, center in enumerate(centers):
+        image[circular_mask(image.shape, center, 10)] = 700 - 100 * i
+    candidates = pd.DataFrame(centers, columns=["x", "y"])
+    candidates["cluster"] = [2, 0, 4, 5, 1, 6, 3]
+    candidates["ROI Diameter"] = 20.
+    candidates["ROI Radius"] = 10.
+    detector = WellDetector(parallel_processing=False)
+    anchors, _ = detector.get_cluster_id(image, candidates, True)
+    np.testing.assert_allclose(anchors[["x", "y"]], centers)
+    labels = [str(i) for i in range(8)] + ["Control"]
+    completed = detector.estimate_remaining_wells_3x3(image, anchors, well_ids=labels)
+    np.testing.assert_allclose(completed[["x", "y"]].iloc[:7], centers, atol=0.3)
+
+    stats = WellAnalyzer(image, completed).get_raw_stats()
+    np.testing.assert_array_equal(stats["mean intensity"][:7], 700 - 100 * np.arange(7))
+    monkeypatch.setattr(plt, "show", lambda: None)
+    fig = WellPlotter(stats, image=image).visualize_roi()
+    try:
+        for i, (_, row) in enumerate(stats.iterrows()):
+            detected, analyzed = fig.axes[0].patches[2 * i:2 * i + 2]
+            np.testing.assert_allclose(detected.center, [row.x, row.y])
+            np.testing.assert_allclose(analyzed.center, [row.x, row.y])
+            assert analyzed.radius == row["Analyzed ROI Diameter"] / 2
+    finally:
+        plt.close(fig)
+
+
 def test_estimate_remaining_wells_3x3_keeps_supplied_row_major_order():
     """A tilted top row must not be re-sorted by y before the grid fit."""
     anchors = pd.DataFrame(

@@ -266,7 +266,7 @@ def test_all_saveable_examples_write_nonblank_files(
     )
 
     ret = importlib.import_module(
-        "qal.examples.radiometric_emitter_ret.ret_dark_frame_example"
+        "qal.examples.radiometric_emitter_ret.ret_gui_example"
     )
     light = np.full((61, 61), 10, dtype=np.uint16)
     light[circular_mask(light.shape, (30, 28), 10)] = 110
@@ -279,12 +279,12 @@ def test_all_saveable_examples_write_nonblank_files(
     monkeypatch.setattr(ret, "SAVE_RESULTS", True)
     monkeypatch.setattr(ret, "MODE", "manual_coordinates")
     monkeypatch.setattr(ret, "COORDINATES", [(30, 28)])
-    monkeypatch.setattr(ret, "MANUAL_ROI_DIAMETER", 20)
+    monkeypatch.setattr(ret, "MANUAL_ROI_DIAMETER", 20, raising=False)
     monkeypatch.setattr(ret, "SEARCH_RADIUS", 20)
     check(
         ret.__name__,
         light_path.parent / "ret_light_results",
-        ["roi.png", "stats.csv", "wells.csv"],
+        ["roi.png", "stats.csv"],
     )
 
     def run_rud(module_name, fetcher, subdir, expected, enable):

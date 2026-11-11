@@ -75,6 +75,24 @@ class RrtDataPlotter:
         self._save_figure(fig, save_path)
         plt.show()
     
+    def save_roi_image(self, image, group_coordinates, save_path):
+        """Save measurement lines on the source image without opening a window."""
+        # Use an unmanaged figure so even interactive backends create no window.
+        from matplotlib.figure import Figure
+        from matplotlib.backends.backend_agg import FigureCanvasAgg
+
+        fig = Figure(figsize=(7, 6))
+        FigureCanvasAgg(fig)
+        ax = fig.subplots()
+        ax.imshow(image, cmap="gray")
+        for group, data in group_coordinates.items():
+            (x1, y1), (x2, y2) = data["coordinates"]
+            ax.plot([x1, x2], [y1, y2], linewidth=2, label=f"Group {group}")
+        ax.legend()
+        ax.axis("off")
+        fig.savefig(save_path, bbox_inches="tight")
+        return fig
+
     def extract_line_profiles(self, im, x1, y1, x2, y2, offset, linewidth=4, order=0, mode="constant"):
         """
         Extracts line profiles from an image using the profile_line function

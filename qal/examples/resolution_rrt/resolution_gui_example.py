@@ -17,6 +17,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
+from qal.examples._output import results_directory, save_sample_sources
 from qal import RrtAnalyzer, RrtDataPlotter, RrtLineSelection, RrtROI, select_rrt_lines
 from qal.data import res_sample_1
 from qal.util import load_grayscale_image
@@ -41,8 +42,10 @@ IMAGE_PATH = res_sample_1()
 
 # True saves plots, a CSV, and selection.yaml.
 # With a file path, files go next to that image in <image_name>_results/.
-# With the built-in example, files go next to this script in res_sample_1_results/.
+# With built-in images, files go next to this script in resolution_gui_example_results/.
 SAVE_RESULTS = True
+# Optional copying of the original built-in image only.
+SAVE_SOURCE_IMAGES = False
 
 # Pick one mode. Leave the others commented out.
 # MODE = "automatic_refinement"  # click two corners; they snap onto the chart
@@ -95,10 +98,7 @@ def main():
     results_dir = None
     selection_path = None
     if SAVE_RESULTS:
-        if image_path is None:
-            results_dir = Path(__file__).resolve().parent / "res_sample_1_results"
-        else:
-            results_dir = image_path.parent / f"{image_path.stem}_results"
+        results_dir = results_directory(IMAGE_PATH, __file__)
         results_dir.mkdir(parents=True, exist_ok=True)
         selection_path = results_dir / "selection.yaml"
         print(f"Results folder: {results_dir}")
@@ -166,6 +166,9 @@ def main():
     )
     if results_dir:
         contrast.to_csv(results_dir / "percentage_contrast.csv", index=False)
+        plotter.save_roi_image(image, group_coordinates, results_dir / "roi.png")
+        if SAVE_SOURCE_IMAGES:
+            save_sample_sources(results_dir, IMAGE_PATH)
         print(f"Saved results to {results_dir}")
 
     plt.ioff()
