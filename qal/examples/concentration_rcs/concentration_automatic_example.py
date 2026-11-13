@@ -40,7 +40,7 @@ IMAGE_PATH = cn_sample_1()
 # Writes plots and CSVs beside your input file, or beside this script for samples.
 SAVE_RESULTS = True
 # Optional: copy built-in source images; user-supplied files are never copied.
-SAVE_SOURCE_IMAGES = True
+SAVE_SOURCE_IMAGES = False
 
 # Fraction of each well used for intensity.
 REGION_OF_WELL_TO_ANALYZE = 0.5
