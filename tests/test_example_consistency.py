@@ -13,7 +13,7 @@ from skimage import io
 import yaml
 
 from qal.data import _fetchers
-from qal.examples._output import save_sample_sources
+from qal.util import save_sample_sources
 from qal.util import describe_target_query, find_target_presets, lookup_target_preset
 
 

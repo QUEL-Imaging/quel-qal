@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tarfile
 import zipfile
+from email.parser import BytesParser
 
 import pytest
 
@@ -48,6 +49,8 @@ def test_wheel_and_sdist_keep_source_ref(tmp_path, ref, override):
                                 capture_output=True, text=True)
         if result.returncode:
             pytest.fail(f"Build backend failed:\n{result.stdout}\n{result.stderr}")
+        assert "License classifiers are deprecated" not in result.stderr
+        assert "`project.license` as a TOML table is deprecated" not in result.stderr
     builder = ProjectBuilder(str(project), runner=runner)
     direct = builder.build("wheel", str(tmp_path / "direct"))
     sdist = builder.build("sdist", str(tmp_path / "sdist"))
@@ -61,6 +64,13 @@ def test_wheel_and_sdist_keep_source_ref(tmp_path, ref, override):
         # Installing pure-Python wheel contents is sufficient to exercise the
         # runtime without dependencies or access to the original checkout.
         with zipfile.ZipFile(wheel) as archive:
+            metadata_path = next(name for name in archive.namelist() if name.endswith(".dist-info/METADATA"))
+            metadata = BytesParser().parsebytes(archive.read(metadata_path))
+            assert metadata["License-Expression"] == "AGPL-3.0-only"
+            assert metadata.get_all("License-File") == ["LICENSE"]
+            assert not any(value.startswith("License ::") for value in metadata.get_all("Classifier", []))
+            license_path = metadata_path.removesuffix("METADATA") + "licenses/LICENSE"
+            assert archive.read(license_path) == (ROOT / "LICENSE").read_bytes()
             archive.extractall(installed)
         runtime = env | {"PATH": ""}
         runtime.pop("QAL_DATA_REF", None)

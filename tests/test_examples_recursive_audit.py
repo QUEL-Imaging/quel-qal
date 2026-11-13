@@ -35,8 +35,7 @@ def code_cells(path):
 @pytest.mark.parametrize("path", FILES, ids=lambda p: str(p.relative_to(ROOT)))
 def test_recursive_example_contract(path):
     trees = [ast.parse(s, filename=str(path)) for s in code_cells(path)]
-    if path not in RUNNERS:
-        return  # Initializers/helpers are valid Python, not user-run analyses.
+    assert path in RUNNERS, "Shared implementation belongs in qal/util, outside the examples tree."
     settings = {target.id: node.value for tree in trees for node in tree.body
                 if isinstance(node, ast.Assign) for target in node.targets
                 if isinstance(target, ast.Name)}
