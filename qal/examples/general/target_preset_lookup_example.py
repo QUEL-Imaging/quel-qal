@@ -21,8 +21,8 @@ from qal.util import describe_target_query, find_target_presets, lookup_target_p
 
 
 # Catalog SKU, unit serial, unique fragment, or family-scoped tag.
-# Examples: "RCS-ICG-ST01-QUEL03", "RCS-S-IC1-S1-A-113", "RDS-80Q-LU05".
-TARGET_QUERY = "V3-ICG-ST03-RDS007"
+# Examples: "RCS-ICG-ST01-QUEL03", "RCS-S-IC1-S1-A-000", "RDS-80Q-LU05".
+TARGET_QUERY = "V3-ICG-ST03-RDS000"
 SAVE_RESULTS = True
 OUTPUT_DIR = Path(__file__).resolve().parent / "target_preset_lookup_example_results"
 
