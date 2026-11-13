@@ -9,14 +9,14 @@ import numpy as np
 
 from qal import PhantomCropper, DepthAnalyzer, DepthDataPlotter
 from qal.data import dr_sample1, dr_sample2, dr_sample3
-from qal.examples._output import results_directory, save_sample_sources
+from qal.util import results_directory, save_sample_sources
 from qal.rta.roi_extraction.well_detector_gui import use_native_window_backend
 from qal.util import load_grayscale_image
 
 # Choose one sample; leave the alternatives commented out.
-IMAGE_PATH = dr_sample1()
-# IMAGE_PATH = dr_sample2()
-# IMAGE_PATH = dr_sample3()
+IMAGE_PATH = dr_sample1()  # Standard dimensions; profiles at depths from 1 to 6 mm.
+# IMAGE_PATH = dr_sample2()  # Intensity drops below 2%; adds an indicator to the FWHM plot.
+# IMAGE_PATH = dr_sample3()  # Custom solid state phantom; 35 x 50 mm phantom; set CUSTOM_DIMENSIONS = True.
 # IMAGE_PATH = "path/to/your/image.tiff"
 
 SAVE_RESULTS = True

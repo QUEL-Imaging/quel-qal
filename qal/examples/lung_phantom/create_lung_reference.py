@@ -7,7 +7,7 @@ for your own files. Source-image copying is optional and off by default.
 
 from qal.data import lung_reference
 from qal import LungPhantom
-from qal.examples._output import results_directory, save_sample_sources
+from qal.util import results_directory, save_sample_sources
 from qal.util import load_grayscale_image
 
 

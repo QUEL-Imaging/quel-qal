@@ -15,7 +15,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from qal.examples._output import results_directory, save_sample_sources
+from qal.util import results_directory, save_sample_sources
 from qal import (
     RetAnalysisConfig,
     RetAnalyzer,

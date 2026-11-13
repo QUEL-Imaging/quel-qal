@@ -14,7 +14,7 @@ from pathlib import Path
 
 import numpy as np
 
-from qal.examples._output import results_directory, save_sample_sources, save_target_metadata
+from qal.util import results_directory, save_sample_sources, save_target_metadata
 from qal import WellAnalyzer, WellDetector, WellPlotter
 from qal.data import depth_sample_1, get_target_preset
 from qal.util import describe_stored_values, load_grayscale_image

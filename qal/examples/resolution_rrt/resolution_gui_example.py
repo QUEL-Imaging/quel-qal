@@ -17,7 +17,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-from qal.examples._output import results_directory, save_sample_sources
+from qal.util import results_directory, save_sample_sources
 from qal import RrtAnalyzer, RrtDataPlotter, RrtLineSelection, RrtROI, select_rrt_lines
 from qal.data import res_sample_1
 from qal.util import load_grayscale_image

@@ -14,7 +14,7 @@ from pathlib import Path
 
 import numpy as np
 
-from qal.examples._output import results_directory, save_sample_sources, save_target_metadata
+from qal.util import results_directory, save_sample_sources, save_target_metadata
 from qal import WellAnalyzer, WellDetector, WellPlotter
 from qal.data import cn_sample_1, get_concentration_target_preset
 from qal.util import describe_stored_values, load_grayscale_image
@@ -40,7 +40,7 @@ IMAGE_PATH = cn_sample_1()
 # Writes plots and CSVs beside your input file, or beside this script for samples.
 SAVE_RESULTS = True
 # Optional: copy built-in source images; user-supplied files are never copied.
-SAVE_SOURCE_IMAGES = False
+SAVE_SOURCE_IMAGES = True
 
 # Fraction of each well used for intensity.
 REGION_OF_WELL_TO_ANALYZE = 0.5

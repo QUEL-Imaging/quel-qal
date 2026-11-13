@@ -6,7 +6,7 @@ Results save beside this script for built-in samples, or beside your image.
 
 from qal.data import lung_test_image
 from qal import LungPhantom
-from qal.examples._output import results_directory, save_sample_sources
+from qal.util import results_directory, save_sample_sources
 from qal.util import load_grayscale_image
 
 
