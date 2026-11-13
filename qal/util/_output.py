@@ -1,4 +1,4 @@
-"""Shared output handling for the runnable examples and notebooks."""
+"""Utilities for analysis output folders, sample images, and target metadata."""
 
 from pathlib import Path
 import shutil

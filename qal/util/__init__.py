@@ -14,6 +14,11 @@ from ._image import (
     to_grayscale,
     to_log_scale,
 )
+from ._output import (
+    results_directory,
+    save_sample_sources,
+    save_target_metadata,
+)
 from ._roi import (
     CenterOrder,
     CircularRoiStats,
@@ -48,6 +53,9 @@ __all__ = [
     "print_preset",
     "raw_stats_in_circular_roi",
     "remove_corner_overlays",
+    "results_directory",
+    "save_sample_sources",
+    "save_target_metadata",
     "std_in_circular_roi",
     "target_data_labels",
     "to_grayscale",
