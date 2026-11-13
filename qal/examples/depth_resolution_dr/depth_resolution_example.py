@@ -1,114 +1,62 @@
-import platform
-import matplotlib
+"""Crop and analyze one depth-resolution sample.
 
-if platform.system() == "Darwin":
-    try:
-        matplotlib.use("TkAgg", force=True)
-    except Exception:
-        pass
+Choose one sample below; each run asks for four phantom edges. Sample 2
+shows the additional 2% intensity line. Sample 3 demonstrates custom
+physical dimensions. See doc/depth_resolution_examples.md for details.
+"""
 
 import numpy as np
-from qal.data import dr_sample1, dr_sample2, dr_sample3
+
 from qal import PhantomCropper, DepthAnalyzer, DepthDataPlotter
-from skimage import io
-import matplotlib.pyplot as plt
+from qal.data import dr_sample1, dr_sample2, dr_sample3
+from qal.util import results_directory, save_sample_sources
+from qal.rta.roi_extraction.well_detector_gui import use_native_window_backend
+from qal.util import load_grayscale_image
+
+# Choose one sample; leave the alternatives commented out.
+IMAGE_PATH = dr_sample1()  # Standard dimensions; profiles at depths from 1 to 6 mm.
+# IMAGE_PATH = dr_sample2()  # Intensity drops below 2%; adds an indicator to the FWHM plot.
+# IMAGE_PATH = dr_sample3()  # Custom solid state phantom; 35 x 50 mm phantom; set CUSTOM_DIMENSIONS = True.
+# IMAGE_PATH = "path/to/your/image.tiff"
+
+SAVE_RESULTS = True
+SAVE_SOURCE_IMAGES = False
+
+# Sample 3 uses different physical dimensions; enable these with dr_sample3().
+CUSTOM_DIMENSIONS = False
+ROTATE_IMAGE_90 = False
+
 
 def main():
-
-    # EXAMPLE 1
-    # ------------------------------------------------------------------------------------------------------------------
-    # Load the example image of the depth resolution phantom
-    im1 = dr_sample1()
-
-    # Directories to save plots to if desired (change from None)
-    save_dir1 = None
-
-    # Crop the image
+    if IMAGE_PATH is None:
+        raise ValueError("Set IMAGE_PATH to an image file or built-in sample.")
+    image = load_grayscale_image(IMAGE_PATH)
+    # Reuse the platform-aware backend selection rather than forcing Tk on macOS.
+    use_native_window_backend()
     cropper = PhantomCropper()
-    cropper.crop_image(im1)
-
-    # Analyze CROPPER for relevant information
+    cropper.crop_image(image)
     analyzer = DepthAnalyzer(cropper)
-    analyzer.get_profiles(depths=np.linspace(1, 6, 10))
-
-    # Plot data in ANALYZER
-    depth_data_plotter = DepthDataPlotter(analyzer.outputs)
-    depth_data_plotter.plot_data(graph_type='All', plot_smoothed=True, save_dir=save_dir1)
-
-
-    # EXAMPLE 2
-    # ------------------------------------------------------------------------------------------------------------------
-    # FOR THE SECOND IMAGE, INTENSITY ALONG THE CHANNEL DROPS BELOW 2% SO AN ADDITIONAL LINE INDICATING THIS IS ADDED TO
-    # THE FHWM PLOT
-
-    # Load the example image of the depth resolution phantom
-    im2 = dr_sample2()
-
-    # Directory to save plots to if desired (change from None)
-    save_dir2 = None
-
-    # Crop the image
-    cropper = PhantomCropper()
-    cropper.crop_image(im2)
-
-    # Analyze CROPPER for relevant information
-    analyzer = DepthAnalyzer(cropper)
-    analyzer.get_profiles()
-
-    # Plot data in ANALYZER
-    depth_data_plotter = DepthDataPlotter(analyzer.outputs)
-    depth_data_plotter.plot_data(graph_type='All', plot_smoothed=True, save_dir=save_dir2)
-
-    # EXAMPLE 3: CUSTOM DIMENSIONS AND PLOTTING
-    # ------------------------------------------------------------------------------------------------------------------
-    # Load example image 3 or custom image
-    # im3 = io.imread('***replace-with-path-to-your-image***')
-    im3 = dr_sample3()
-
-    # Directories to save plots to if desired (change from None)
-    save_dir3 = None
-
-    # Rotate the phantom image 90 degrees if needed to ensure channels are horizontal
-    rotate_image_90 = False
-
-    # Crop the image
-    cropper = PhantomCropper()
-    cropper.crop_image(im3)
-
-    # Plot the cropped image with inferno colormap and unit dimensions
-    img = cropper.img
-    top = cropper.borders["top"]
-    bottom = cropper.borders["bottom"]
-    left = cropper.borders["left"]
-    right = cropper.borders["right"]
-
-    cropped = img[int(top):int(bottom), int(left):int(right)]
-    if rotate_image_90 == True:
-            cropped = cropped.T
-
-    fig, ax = plt.subplots()
-    ax.imshow(cropped, extent=[0, 50, 0 , 35], cmap='inferno') # change extent to x and y dimensions (mm)
-    ax.set_xlabel('X-axis (mm)', fontsize=16, fontweight='bold')
-    ax.set_ylabel('Y-axis (mm)', fontsize=16, fontweight='bold')
-    ax.set_title('Cropped Fluorescence Image', fontsize=16)
-    plt.show(block=False)
-    plt.pause(0.01)
-
-
-    # Set dimensions and analyze CROPPER for relevant information
-    analyzer = DepthAnalyzer(cropper)
-    analyzer.depth_start_end = [1.3, 7.3] # z-depths (mm)
-    analyzer.descent_start_end = [6, 44] # x-positions (mm)
-    analyzer.phantom_dimensions = [35, 50] # y, x dimensions
-    analyzer.get_profiles(
-        depths=np.linspace(1.3, 7.3, 10),
-        rotate_image_90=rotate_image_90,
-        channel_distance_from_top=0.5,
+    if CUSTOM_DIMENSIONS:
+        analyzer.depth_start_end = [1.3, 7.3]
+        analyzer.descent_start_end = [6, 44]
+        analyzer.phantom_dimensions = [35, 50]
+        analyzer.get_profiles(
+            depths=np.linspace(1.3, 7.3, 10),
+            rotate_image_90=ROTATE_IMAGE_90,
+            channel_distance_from_top=0.5,
+        )
+    else:
+        analyzer.get_profiles(depths=np.linspace(1, 6, 10))
+    results_dir = None
+    if SAVE_RESULTS:
+        results_dir = results_directory(IMAGE_PATH, __file__)
+        results_dir.mkdir(parents=True, exist_ok=True)
+        if SAVE_SOURCE_IMAGES:
+            save_sample_sources(results_dir, IMAGE_PATH)
+    DepthDataPlotter(analyzer.outputs).plot_data(
+        graph_type="All", plot_smoothed=True, save_dir=results_dir
     )
 
-    # Plot data in ANALYZER
-    depth_data_plotter = DepthDataPlotter(analyzer.outputs)
-    depth_data_plotter.plot_data(graph_type='All', plot_smoothed=True, save_dir=save_dir3)
 
 if __name__ == "__main__":
     main()

@@ -58,8 +58,8 @@ jobs:
           python -m pip install --no-deps opencv-contrib-python==${{ matrix.opencv }}
           python -m pip check
       - name: Run unit and feature tests
-        # Depth-resolution analysis (#39) and batch examples are deferred.
-        run: python -m pytest -q -k "not issue_39 and not batch"
+        # Batch examples remain deferred; include the depth-resolution regressions.
+        run: python -m pytest -q -k "not batch"
 
   data-resolution:
     timeout-minutes: 20
@@ -95,7 +95,7 @@ jobs:
         run: python -c "from build import ProjectBuilder; import setuptools, wheel"
       - name: Baseline unit, feature and wheel/sdist provenance tests
         # Same exclusions as the compatibility matrix; network tests are opt-in.
-        run: python -m pytest -q -k "not issue_39 and not batch"
+        run: python -m pytest -q -k "not batch"
       - name: Validate every registered local dataset without HTTP
         env:
           QAL_TEST_LOCAL_LFS: "1"

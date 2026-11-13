@@ -137,29 +137,91 @@ def depth_analyzer(image):
     return DepthAnalyzer(cropper)
 
 
-def test_issue_39_explicit_control_row_is_not_replaced_by_brightest_row():
-    image = np.full((60, 100), 5., dtype=float)
-    image[15, :] += np.linspace(500, 0, 100)
-    automatic = depth_analyzer(image)
-    automatic.get_profiles()
-    assert automatic.outputs["Peak max"] > 100
+@pytest.mark.parametrize("bright_row", [10, 50])
+@pytest.mark.parametrize("kwargs,channel_row", [
+    ({}, 40),  # The default selects the center, even when another row is brighter.
+    ({"channel_distance_from_top": .75}, 60),
+])
+def test_issue_39_control_row_is_not_replaced_by_brightest_row(bright_row, kwargs, channel_row):
+    image = np.full((80, 120), 5.)
+    image[bright_row] += np.linspace(500, 0, 120)
+    image[channel_row] = np.linspace(8, 5, 120)
     control = depth_analyzer(image)
-    control.get_profiles(channel_row=40, flip_horizontal=False)
-    np.testing.assert_array_equal(control.outputs["Intensity profile"], image[40])
-    assert control.outputs["Peak max"] == 5
-    assert control.outputs["Vertical distance"][40] == 0
+    control.get_profiles(**kwargs)
+    np.testing.assert_array_equal(control.outputs["Intensity profile"], image[channel_row])
+    assert control.outputs["Peak max"] == 8
+    vertical = control.outputs["Vertical distance"]
+    assert vertical[channel_row] == 0
+    assert vertical[channel_row - 1] == pytest.approx(-30 / 80)
+    assert vertical[channel_row + 1] == pytest.approx(30 / 80)
 
 
-@pytest.mark.parametrize("row", [-1, 60, 2.5, True])
-def test_issue_39_invalid_explicit_channel_is_rejected(row):
-    with pytest.raises(ValueError, match="channel_row"):
-        depth_analyzer(np.ones((60, 100))).get_profiles(channel_row=row)
-
-
-def test_issue_39_explicit_orientation_does_not_depend_on_control_brightness():
-    image = np.tile(np.arange(100), (60, 1)).astype(float)
+@pytest.mark.parametrize("fraction,row", [(0, 0), (.25, 15), (.5, 30), (.999, 60), (1, 60)])
+def test_issue_39_channel_fraction_boundaries_and_rounding(fraction, row):
+    # Odd height exercises row rounding; fractions near 1 must stay in bounds.
+    image = np.repeat(np.arange(61, dtype=float)[:, None], 100, axis=1)
     analyzer = depth_analyzer(image)
-    analyzer.get_profiles(channel_row=20, flip_horizontal=False)
-    np.testing.assert_array_equal(analyzer.outputs["Intensity profile"], image[20])
-    analyzer.get_profiles(channel_row=20, flip_horizontal=True)
-    np.testing.assert_array_equal(analyzer.outputs["Intensity profile"], image[20, ::-1])
+    analyzer.get_profiles(channel_distance_from_top=fraction)
+    np.testing.assert_array_equal(analyzer.outputs["Intensity profile"], image[row])
+    assert analyzer.outputs["Vertical distance"][row] == 0
+
+
+@pytest.mark.parametrize("fraction", [
+    -.01, 1.01, np.nan, np.inf, -np.inf, True, False, np.bool_(True), None, "0.5", 1j,
+])
+def test_issue_39_invalid_channel_fraction_is_rejected(fraction):
+    with pytest.raises(ValueError, match="channel_distance_from_top"):
+        depth_analyzer(np.ones((60, 100))).get_profiles(channel_distance_from_top=fraction)
+
+
+@pytest.mark.parametrize("rotate", [False, True])
+@pytest.mark.parametrize("height,width,channel_row", [(80, 120, 60), (120, 80, 90)])
+def test_issue_39_channel_selection_uses_cropped_and_explicitly_rotated_coordinates(
+    rotate, height, width, channel_row
+):
+    expected = np.full((height, width), 5.)
+    expected[10] += np.linspace(500, 0, width)
+    expected[channel_row] = np.linspace(8, 5, width)
+    source = expected.T if rotate else expected
+    image = np.pad(source, ((8, 11), (12, 6)), constant_values=10000)
+    original = image.copy()
+    analyzer = depth_analyzer(image)
+    analyzer.borders = {"top": 8, "bottom": 8 + source.shape[0],
+                        "left": 12, "right": 12 + source.shape[1]}
+    analyzer.get_profiles(rotate_image_90=rotate, channel_distance_from_top=.75)
+    np.testing.assert_array_equal(analyzer.outputs["Intensity profile"], expected[channel_row])
+    assert len(analyzer.outputs["Vertical distance"]) == height
+    assert analyzer.outputs["Vertical distance"][channel_row] == 0
+    np.testing.assert_array_equal(image, original)
+
+
+@pytest.mark.parametrize("flip", [False, True])
+def test_issue_39_explicit_orientation_does_not_depend_on_control_brightness(flip):
+    image = np.tile(np.arange(100), (60, 1)).astype(float)
+    # A brighter row points the other way; neither row can override the caller.
+    image[5] += np.linspace(10000, 0, 100)
+    original = image.copy()
+    analyzer = depth_analyzer(image)
+    analyzer.get_profiles(channel_distance_from_top=.5, flip_horizontal=flip)
+    expected = np.fliplr(image) if flip else image
+    np.testing.assert_array_equal(analyzer.outputs["Intensity profile"], expected[30])
+    # Reorient the whole crop so transverse and longitudinal profiles agree.
+    np.testing.assert_array_equal(
+        analyzer.outputs["Spreads"]["1 mm depth"]["Spread profile"], expected[:, 16]
+    )
+    np.testing.assert_array_equal(image, original)
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+def test_issue_39_automatic_horizontal_orientation_is_preserved(reverse):
+    profile = np.linspace(500, 0, 100)
+    image = np.tile(profile[::-1] if reverse else profile, (60, 1))
+    analyzer = depth_analyzer(image)
+    analyzer.get_profiles()
+    np.testing.assert_array_equal(analyzer.outputs["Intensity profile"], profile)
+
+
+@pytest.mark.parametrize("flip", [0, 1, "false", np.nan])
+def test_issue_39_invalid_horizontal_flip_is_rejected(flip):
+    with pytest.raises(ValueError, match="flip_horizontal"):
+        depth_analyzer(np.ones((60, 100))).get_profiles(flip_horizontal=flip)

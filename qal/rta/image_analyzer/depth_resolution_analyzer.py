@@ -25,19 +25,27 @@ class DepthAnalyzer:
         }
 
     def get_profiles(
-        self, *, depths=None, rotate_image_90=False, channel_distance_from_top=0.5
+        self, *, depths=None, rotate_image_90=False, channel_distance_from_top=0.5,
+        flip_horizontal=None,
     ):
         """
         Analyze the image from CROPPER to produce an intensity profile and spread profile.
         :param rotate_image_90                 True or False, if the image needs to be rotated so that channels are horizontal
-        :param channel_distance_from_top       Percent (in fraction format [0 to 1] ) from the top that indicates the channel position, default = 0.5
+        :param channel_distance_from_top       Fraction [0, 1] from the top of the cropped, optionally rotated image;
+                                              default = 0.5 (center row), 0 and 1 select the first and last rows.
+        :param flip_horizontal                True to reverse the channel direction, False to preserve it, or None
+                                              (default) to infer direction from image intensity. Set explicitly for
+                                              dim control images to match the orientation of their reference image.
         :param depths:                         Depths for which to evaluate intensity spread
         :return:
         """
 
-        if (not isinstance(channel_distance_from_top, Real)
+        if (isinstance(channel_distance_from_top, (bool, np.bool_))
+                or not isinstance(channel_distance_from_top, Real)
                 or not 0 <= channel_distance_from_top <= 1):
             raise ValueError("channel_distance_from_top must be a finite fraction in [0, 1]")
+        if flip_horizontal is not None and not isinstance(flip_horizontal, (bool, np.bool_)):
+            raise ValueError("flip_horizontal must be True, False, or None")
 
         if depths is None:
             depths = np.arange(self.depth_start_end[0], self.depth_start_end[1] + 1)    # Default depths
@@ -58,13 +66,16 @@ class DepthAnalyzer:
 
         # Obtain region of image to be analyzed
         cropped = img[int(top):int(bottom), int(left):int(right)]
-        # if (bottom - top) > (right - left):     # Check whether phantom orientation is vertical
         if rotate_image_90 == True:
             cropped = cropped.T
 
-        # Check if phantom is oriented such that it has higher intensity on the right. If so, flip
-        average_row_intensity = np.mean(cropped, axis=0)
-        if np.argmax(average_row_intensity) > (cropped.shape[1] - np.argmax(average_row_intensity)):
+        # Keep automatic orientation for existing callers, but allow controls
+        # to use their reference image's direction without relying on signal.
+        if flip_horizontal is None:
+            average_row_intensity = np.mean(cropped, axis=0)
+            brightest_column = np.argmax(average_row_intensity)
+            flip_horizontal = brightest_column > cropped.shape[1] - brightest_column
+        if flip_horizontal:
             cropped = np.fliplr(cropped)
 
         # Estimate the background intensity of the phantom

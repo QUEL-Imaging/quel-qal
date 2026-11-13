@@ -43,15 +43,27 @@ class PhantomCropper:
             else:
                 ax.plot([pt[0], pt[0]], [0, y_ext - 1], color='r')
                 self.borders[use_word[i]] = pt[0]
-        ax.set_title("Close figure to continue")
-        plt.show()
+        ax.set_title("Press Enter or close figure to continue")
+        self._confirm_view(fig)
 
         cropped = self.log_img[int(pts[0][1]):int(pts[1][1]), int(pts[2][0]):int(pts[3][0])]
         fig, ax = plt.subplots()
         ax.imshow(cropped, cmap='gray')
-        ax.set_title("Cropped region\n(Close figure to continue)")
+        ax.set_title("Cropped region\n(Press Enter or close figure to continue)")
         ax.set_axis_off()
-        plt.show()
+        self._confirm_view(fig)
+
+    @staticmethod
+    def _confirm_view(fig):
+        def on_key(event):
+            if event.key in {"enter", "return"}:
+                plt.close(fig)
+
+        connection = fig.canvas.mpl_connect("key_press_event", on_key)
+        try:
+            plt.show(block=True)
+        finally:
+            fig.canvas.mpl_disconnect(connection)
 
     def cvt_to_log_scale(self):
         """
