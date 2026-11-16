@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from functools import lru_cache
 from argparse import ArgumentParser
 from collections.abc import Mapping, Sequence
 from typing import Any, Optional
@@ -216,15 +217,20 @@ def _parse_shorthand_constraints(parts: list[str]) -> dict[str, str]:
         parts[0] not in _VERSION_PREFIXES and parts[0] != "PR"
     ):
         return {}
+    # Compact inventory labels (e.g. v2_R3_C07) are distinct from full
+    # version/fluorophore/form/serial identifiers. An unknown RAS suffix
+    # must never be interpreted as a resolution-family shorthand.
+    if len(parts) > 3:
+        return {}
     last = parts[-1]
     family = None
     if last == "CU":
         family = "depth"
-    elif last.startswith("C"):
+    elif re.fullmatch(r"C\d+", last):
         family = "concentration"
-    elif last.startswith("D"):
+    elif re.fullmatch(r"D\d+", last):
         family = "depth"
-    elif last == "RNA" or last.startswith("R"):
+    elif last == "RNA" or re.fullmatch(r"R\d+", last):
         family = "resolution"
     if family is None:
         return {}
@@ -239,7 +245,62 @@ def _parse_shorthand_constraints(parts: list[str]) -> dict[str, str]:
     }
 
 
+@lru_cache(maxsize=128)
+def _partial_versioned_query(query):
+    parts = _normalize(query).split("-")
+    if len(parts) != 4 or parts[0] not in _VERSION_PREFIXES:
+        return None
+    recognized = {"version": parts[0]}
+    unknown = []
+    fluorophore = _FLUOROPHORE_CODES.get(parts[1])
+    if fluorophore:
+        recognized["fluorophore_code"] = fluorophore
+    else:
+        unknown.append(parts[1])
+    forms = {str(p.get("form_code")) for p in iter_product_presets()}
+    # Earlier form codes remain valid when recorded as legacy templates.
+    forms.update(
+        token for preset in iter_product_presets()
+        for identifier in _iter_identifier_values(preset)
+        for token in _normalize(identifier).split("-")
+        if re.fullmatch(r"(?:ST|SM|LU|LM|R)\d{2}", token)
+    )
+    if parts[2] in forms:
+        recognized["form_code"] = parts[2]
+    else:
+        unknown.append(parts[2])
+    family = _split_trailing_family(parts[3])
+    if family:
+        recognized["family_key"] = family
+    else:
+        unknown.append(parts[3])
+    return (recognized, unknown) if unknown else None
+
+
+def describe_target_query(query: str) -> str | None:
+    """Explain recognized and unknown fields in a malformed versioned serial.
+
+    Recognized fields constrain candidate products, but an incomplete serial
+    must not silently select a unique preset. Version alone selects no product.
+    """
+    partial = _partial_versioned_query(query)
+    if partial is None:
+        return None
+    recognized, unknown = partial
+    fields = ", ".join(f"{key}={value}" for key, value in recognized.items())
+    return (f"Partial target query {query!r}: recognized {fields}; "
+            f"unrecognized tokens: {', '.join(unknown)}. "
+            "Target family/product remains ambiguous; correct the query before analysis.")
+
+
 def _parse_constraints(query: str) -> dict[str, str]:
+    partial = _partial_versioned_query(query)
+    if partial is not None:
+        recognized, _ = partial
+        return {
+            key if key != "form_code" else "form_prefix": value
+            for key, value in recognized.items() if key != "version"
+        }
     parts = [part for part in _normalize(query).split("-") if part]
     constraints: dict[str, str] = {}
     if not parts:
@@ -424,7 +485,11 @@ def find_target_presets(
     *,
     family: Optional[str] = None,
 ) -> list[dict[str, Any]]:
-    """Return product presets that match a SKU, serial, or fragment."""
+    """Return candidate presets matching a SKU, serial, or fragment.
+
+    Use ``describe_target_query`` to explain partial malformed serials.
+    Use ``lookup_target_preset`` before analysis to require a valid unique match.
+    """
     return _matched_presets(query, family=family)
 
 
@@ -435,6 +500,14 @@ def lookup_target_preset(
 ) -> dict[str, Any]:
     """Return the unique product preset matching a SKU, serial, or fragment."""
     matches = _matched_presets(query, family=family)
+    partial = describe_target_query(query)
+    # Explicitly catalogued identifiers remain authoritative.
+    if partial and not any(_exact_match(query, preset) for preset in matches):
+        options = ", ".join(_format_match(preset) for preset in matches)
+        raise ValueError(
+            f"Ambiguous target query {query!r}. {partial} "
+            f"Candidate presets: {options or 'none from the recognized fields'}"
+        )
     if not matches:
         hint = f" in family {family!r}" if family is not None else ""
         raise ValueError(f"No product preset matches {query!r}{hint}")
@@ -526,6 +599,9 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
             matches = find_target_presets(args.query, family=args.family)
         except ValueError as exc:
             raise SystemExit(str(exc)) from None
+        diagnostic = describe_target_query(args.query)
+        if diagnostic:
+            print(diagnostic)
         if not matches:
             raise SystemExit(f"No product preset matches {args.query!r}")
         for preset in matches:

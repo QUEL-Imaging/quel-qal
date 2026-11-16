@@ -527,9 +527,17 @@ class WellDetector:
         avg_centers = self.get_well_intensities(
             im, avg_centers, sort_by_intensity=False
         )
-        avg_centers = avg_centers.sort_values(
-            by=["y", "x"], kind="mergesort"
-        )
+        # Group centers into rows before sorting left-to-right. Sorting by
+        # exact y first can swap neighboring wells even for subpixel tilt,
+        # which assigns the wrong canonical positions during grid completion.
+        ordered = avg_centers.sort_values("y", kind="mergesort")
+        row_tolerance = float(ordered["ROI Radius"].median())
+        rows = []
+        while not ordered.empty:
+            in_row = ordered["y"] <= ordered.iloc[0]["y"] + row_tolerance
+            rows.append(ordered.loc[in_row].sort_values("x", kind="mergesort"))
+            ordered = ordered.loc[~in_row]
+        avg_centers = pd.concat(rows)
         
         # If labels are provided, assign them; otherwise, assign numeric labels
         if wells is not None:

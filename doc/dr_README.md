@@ -86,8 +86,26 @@ Full execution of this code will generate the following plots:
 | Input  | Description |
 | ------------- | ------------- |
 | rotate_image_90 | (True or False) Parameter to rotate image 90 degrees so that channels run horizontal, default = False |
-| channel_distance_from_top | Percent (in fraction format [0 to 1] ) from the top that indicates the channel position, default = 0.5 |
+| channel_distance_from_top | Fraction [0, 1] from the top of the cropped, optionally rotated image; default = 0.5 (center row). 0 and 1 select the first and last rows. |
+| flip_horizontal | `None` (default) infers horizontal direction from image intensity; `False` preserves direction and `True` reverses it. Set explicitly for a dim control image to match its reference image. |
 | depths  | Chosen depths for which to evaluate intensity spread |
+
+The channel row is selected by position, even when another row is brighter.
+For a control image, use the same crop, rotation, channel fraction, and horizontal
+direction as its corresponding reference image. For example, if the channel is
+three quarters of the way down the crop and its shallow end is on the left:
+
+```python
+analyzer.get_profiles(
+    channel_distance_from_top=0.75,
+    rotate_image_90=False,
+    flip_horizontal=False,
+)
+```
+
+Channel position is measured after cropping and optional rotation. Horizontal
+flipping changes both the longitudinal and transverse sampling positions. The
+vertical-distance output is centered on the selected channel row.
 
 Optionally, to change the dimensions of the phantom, the following code should be changed (also shown above in the example code):
 

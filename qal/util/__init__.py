@@ -14,6 +14,11 @@ from ._image import (
     to_grayscale,
     to_log_scale,
 )
+from ._output import (
+    results_directory,
+    save_sample_sources,
+    save_target_metadata,
+)
 from ._roi import (
     CenterOrder,
     CircularRoiStats,
@@ -23,6 +28,7 @@ from ._roi import (
     std_in_circular_roi,
 )
 from ._target_lookup import (
+    describe_target_query,
     find_target_presets,
     lookup_concentration_preset,
     lookup_target_preset,
@@ -38,6 +44,7 @@ __all__ = [
     "StoredValueInfo",
     "circular_mask",
     "describe_stored_values",
+    "describe_target_query",
     "find_target_presets",
     "load_grayscale_image",
     "lookup_concentration_preset",
@@ -46,6 +53,9 @@ __all__ = [
     "print_preset",
     "raw_stats_in_circular_roi",
     "remove_corner_overlays",
+    "results_directory",
+    "save_sample_sources",
+    "save_target_metadata",
     "std_in_circular_roi",
     "target_data_labels",
     "to_grayscale",

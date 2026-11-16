@@ -1,5 +1,7 @@
 """Exercise the beginner RET workflow with generated frames and real analysis."""
 
+from pathlib import Path
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -7,7 +9,7 @@ import pytest
 from PIL import Image
 from skimage import io
 
-from qal.examples.radiometric_emitter_ret import ret_dark_frame_example as example
+from qal.examples.radiometric_emitter_ret import ret_gui_example as example
 from qal.examples.radiometric_emitter_ret import ret_gui_example as gui_example
 from qal.rta.roi_extraction.well_detector_gui import WellSelectionSession
 from qal.util import circular_mask
@@ -30,7 +32,7 @@ def frames(tmp_path, monkeypatch):
         "SAVE_RESULTS": False, "REGION_OF_WELL_TO_ANALYZE": .5,
         "CNR_THRESHOLD": 3.,
     }.items():
-        monkeypatch.setattr(example, name, value)
+        monkeypatch.setattr(example, name, value, raising=False)
     monkeypatch.setattr(plt, "show", lambda: plt.close("all"))
     yield image, dark, light_path.parent / "light frame_results"
     plt.close("all")
@@ -56,8 +58,8 @@ def test_fixed_coordinates_measure_matching_dark_roi_and_save_before_show(frames
     assert row["Analyzed ROI Diameter"] == 10
     stats = pd.read_csv(results_dir / "stats.csv")
     assert stats.loc[0, "CNR"] == pytest.approx(row["CNR"])
-    wells = pd.read_csv(results_dir / "wells.csv")
-    np.testing.assert_allclose(wells[["x", "y"]], [[30, 28]])
+    assert not (results_dir / "wells.csv").exists()
+    np.testing.assert_allclose(stats[["x", "y"]], [[30, 28]])
     with Image.open(results_dir / "roi.png") as plot:
         assert np.asarray(plot.convert("RGB")).std() > 5
 
@@ -71,15 +73,16 @@ def test_fixed_automatic_refinement_recenters_the_click(frames, monkeypatch):
     assert not frames[2].exists()
 
 
-def test_array_sample_saves_in_working_directory(frames, monkeypatch, tmp_path):
+def test_array_sample_saves_beside_script(frames, monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(example, "__file__", str(tmp_path / "ret_gui_example.py"))
     monkeypatch.setattr(example, "IMAGE_PATH", frames[0])
     monkeypatch.setattr(example, "DARK_FRAME_PATH", frames[1])
     monkeypatch.setattr(example, "SAVE_RESULTS", True)
     result = example.main()
     assert result.is_baselined
-    assert (tmp_path / "ret_sample_1_lf_results/stats.csv").is_file()
-    assert (tmp_path / "ret_sample_1_lf_results/roi.png").is_file()
+    assert (tmp_path / "ret_gui_example_results/stats.csv").is_file()
+    assert (tmp_path / "ret_gui_example_results/roi.png").is_file()
 
 
 @pytest.mark.parametrize("with_dark", [True, False])
@@ -89,9 +92,10 @@ def test_gui_example_analyzes_matching_pair_or_raw_signal(frames, monkeypatch, w
     monkeypatch.setattr(gui_example, "DARK_FRAME_PATH", dark if with_dark else None)
     monkeypatch.setattr(gui_example, "MODE", "manual_coordinates")
     monkeypatch.setattr(gui_example, "COORDINATES", [(30, 28)])
-    monkeypatch.setattr(gui_example, "MANUAL_ROI_DIAMETER", 20)
+    monkeypatch.setattr(gui_example, "MANUAL_ROI_DIAMETER", 20, raising=False)
+    monkeypatch.setattr(gui_example, "SAVE_RESULTS", False)
     plotted = []
-    monkeypatch.setattr(gui_example.WellPlotter, "visualize_roi", lambda self: plotted.append(self.df))
+    monkeypatch.setattr(gui_example.WellPlotter, "visualize_roi", lambda self, **kwargs: plotted.append(self.df))
     gui_example.main()
     stats = plotted[0]
     assert stats.loc[0, "mean intensity"] == 110

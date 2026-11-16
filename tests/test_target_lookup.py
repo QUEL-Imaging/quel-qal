@@ -99,7 +99,7 @@ def test_unknown_serial_raises():
 )
 def test_lookup_commands_exit_gracefully_on_lookup_error(module, args, message):
     result = subprocess.run(
-        [sys.executable, "-m", module, *args],
+        [sys.executable, "-m", module, *args, *(["--no-save"] if "examples" in module else [])],
         cwd=Path(__file__).resolve().parents[1],
         capture_output=True,
         text=True,
@@ -119,7 +119,7 @@ def test_lookup_commands_exit_gracefully_on_lookup_error(module, args, message):
 @pytest.mark.parametrize("options", [[], ["--all"]])
 def test_lookup_commands_print_matching_preset(module, options):
     result = subprocess.run(
-        [sys.executable, "-m", module, "RCS-ICG-ST01-QUEL03", *options],
+        [sys.executable, "-m", module, "RCS-ICG-ST01-QUEL03", *options, *(["--no-save"] if "examples" in module else [])],
         cwd=Path(__file__).resolve().parents[1],
         capture_output=True,
         text=True,

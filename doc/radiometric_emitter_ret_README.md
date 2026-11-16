@@ -99,17 +99,25 @@ behavior. Pseudo-dark results must not be used for production RET analysis.
 
 Runnable scripts are available in `qal/examples/radiometric_emitter_ret/`:
 
-- `ret_dark_frame_example.py`
-- `ret_light_frame_automatic_analysis_example.py`
-- `ret_gui_example.py`
+- `ret_gui_example.py`: automatic refinement (default), manual coordinates, or
+  automatic detection. Manual mode also supports a separately reported background
+  estimate. Uncomment `MANUAL_ROI_DIAMETER` before selecting manual mode.
+- `ret_light_frame_automatic_analysis_example.py`: automatic detection and
+  analysis with no well-selection window.
 
-All three scripts use `qal.data.ret_sample_1_lf()` as the signal image by default.
-The GUI and dark-frame examples use `qal.data.ret_sample_1_df()` as the matching
-dark frame. The light-frame-only example demonstrates raw analysis without a
-baseline. For pair 2, use `qal.data.ret_sample_2_lf()` and
-`qal.data.ret_sample_2_df()` together. All four loaders return grayscale arrays,
-resolving local checkout data or downloading the registered, SHA-256-validated
-image from the selected repository and branch.
+Both scripts default to sample 1's matching light/dark pair and save `stats.csv`
+and `roi.png`. Set `DARK_FRAME_PATH = None` for raw light-frame-only analysis.
+`ret_dark_frame_example.py` has been consolidated into `ret_gui_example.py`.
+Coordinates are included in `stats.csv`, so there is no duplicate `wells.csv`.
+For pair 2, use `qal.data.ret_sample_2_lf()` and `qal.data.ret_sample_2_df()` together.
+All four loaders resolve local checkout data or download registered,
+SHA-256-validated images from the selected repository and branch.
+
+Results go beside a user-supplied light frame, or beside the script for built-in
+samples. `SAVE_SOURCE_IMAGES = False` keeps source copying off by default.
+Enable it to copy original built-in files without re-encoding them or relocating
+cached data. Two source frames are grouped in `source_images/`; user-supplied
+files are not copied. `SAVE_RESULTS = False` disables all exports.
 
 For the popup picker with inline plots and optional CSV/plot saving, open
 `qal/examples/jupyter-notebook/radiometric_emitter_ret_gui_example.ipynb`.
@@ -117,3 +125,5 @@ It defaults to sample 1's matching light/dark pair, including dark-frame baselin
 and CNR statistics. Set `DARK_FRAME_PATH = None` for raw analysis only.
 
 The well-selection GUI guide is `doc/well_detector_gui_README.md`.
+
+A two-click line tool for estimating manual ROI diameter remains a proposed follow-up.

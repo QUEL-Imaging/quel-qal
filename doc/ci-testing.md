@@ -34,11 +34,12 @@ Missing tools fail tests instead of silently skipping packaging validation.
 python -m pip install -r requirements-test.txt
 python -m pip install -c requirements-constraints.txt .
 python -m pip check
-MPLBACKEND=Agg python -m pytest -q -k "not issue_39 and not batch"
+MPLBACKEND=Agg python -m pytest -q -k "not batch"
 ```
 
-The issue_39 and batch exclusions are the existing deferred-test policy. Live
-remote and all-download tests remain opt-in; see the instructions at the top of
+The depth-resolution regressions for issue #39 run in both baseline validation
+and the compatibility matrix. Only batch examples remain deferred. Live remote
+and all-download tests remain opt-in; see the instructions at the top of
 `tests/test_data_integration.py`.
 
 ## Applying workflow changes

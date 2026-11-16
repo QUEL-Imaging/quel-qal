@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=77.0.3", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -14,7 +14,8 @@ authors = [
 maintainers = [
     { name = "QUEL Imaging, LLC", email = "devops@quelimaging.com" },
 ]
-license = { text = "AGPL-3.0" }
+license = "AGPL-3.0-only"
+license-files = ["LICENSE"]
 readme = "README.md"
 keywords = [
     "image-processing",
@@ -30,7 +31,6 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
-    "License :: OSI Approved :: GNU Affero General Public License v3",
     "Intended Audience :: Science/Research",
     "Intended Audience :: Education",
     "Topic :: Scientific/Engineering :: Image Recognition",

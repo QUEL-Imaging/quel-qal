@@ -13,11 +13,12 @@ NOTEBOOK = (
 
 @pytest.mark.parametrize("cell_id", ["7b6bb3f4", "c3f0e030"])
 @pytest.mark.parametrize("query", ["IG", "", "RCS-ICG", "RCS-ICG-ST01-QUEL03"])
-def test_lookup_notebook_handles_queries_on_rerun(cell_id, query, capsys):
+def test_lookup_notebook_handles_queries_on_rerun(cell_id, query, capsys, tmp_path):
     notebook = json.loads(NOTEBOOK.read_text())
     cells = {cell["id"]: "".join(cell["source"]) for cell in notebook["cells"]}
     namespace = {}
     exec(cells["c279ee15"], namespace)
+    namespace["OUTPUT_DIR"] = tmp_path / "lookup"
 
     def run_query(value):
         tree = ast.parse(cells[cell_id])

@@ -151,3 +151,42 @@ def test_visualize_roi_overlays_detected_and_analyzed_circles(monkeypatch):
     labels = [handle.get_label() for handle in ax.get_legend().legend_handles]
     assert labels == ["Detected ROI", "Analyzed ROI"]
     plt.close("all")
+
+
+@pytest.mark.parametrize("family", ["concentration", "depth"])
+@pytest.mark.parametrize("mode", ["automatic", "gui"])
+@pytest.mark.parametrize("built_in", [True, False])
+def test_example_save_location(monkeypatch, tmp_path, roi_data, family, mode, built_in):
+    import importlib
+    from unittest.mock import Mock
+
+    directory = "concentration_rcs" if family == "concentration" else "depth_rds"
+    module = importlib.import_module(f"qal.examples.{directory}.{family}_{mode}_example")
+    image, wells = roi_data
+    script = tmp_path / "scripts" / "example.py"
+    script.parent.mkdir()
+    image_path = tmp_path / "images" / "sample.tiff"
+    monkeypatch.setattr(module, "__file__", str(script))
+    monkeypatch.setattr(module, "IMAGE_PATH", image if built_in else str(image_path))
+    monkeypatch.setattr(module, "SAVE_RESULTS", True)
+    monkeypatch.setattr(module, "load_grayscale_image", lambda _: image)
+    monkeypatch.setattr(plt, "show", lambda: plt.close("all"))
+    # Only location selection and real ROI/CSV saving are under test here.
+    monkeypatch.setattr(WellPlotter, "plot", lambda *a, **kw: None)
+    if mode == "gui":
+        monkeypatch.setattr(module, "select_concentration_grid", lambda *a, **kw: wells)
+    else:
+        detector = Mock()
+        detector.detect_wells.return_value = wells
+        detector.estimate_remaining_wells_3x3.return_value = wells
+        monkeypatch.setattr(module, "WellDetector", lambda: detector)
+    elsewhere = tmp_path / "cwd"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+    module.main()
+    output_base = script if built_in else image_path
+    result_dir = output_base.parent / f"{output_base.stem}_results"
+    assert_roi_png_has_content(result_dir / "roi.png")
+    saved = pd.read_csv(result_dir / "stats.csv")
+    np.testing.assert_allclose(saved["mean intensity"], wells["mean intensity"])
+    assert not list(elsewhere.iterdir())

@@ -100,7 +100,8 @@ def test_notebook_analyzes_and_saves_raw_or_dark_frame_results(notebook, tmp_pat
     saved = pd.read_csv(results_dir / "stats.csv")
     assert saved.loc[0, "mean intensity"] == 110
     assert ("CNR" in saved) == with_dark
-    assert len(pd.read_csv(results_dir / "wells.csv")) == 1
+    assert not (results_dir / "wells.csv").exists()
+    assert len(saved) == 1
     assert plt.imread(results_dir / "roi.png").std() > .01
 
 

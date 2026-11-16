@@ -14,6 +14,7 @@ from pathlib import Path
 
 import numpy as np
 
+from qal.util import results_directory, save_sample_sources, save_target_metadata
 from qal import WellAnalyzer, WellDetector, WellPlotter
 from qal.data import depth_sample_1, get_target_preset
 from qal.util import describe_stored_values, load_grayscale_image
@@ -37,8 +38,10 @@ TARGET_TAG = "icg"
 # Selecting the built-in example image:
 IMAGE_PATH = depth_sample_1()
 
-# Writes plots and CSVs to <image_stem>_results next to IMAGE_PATH.
-SAVE_RESULTS = False
+# Writes plots and CSVs beside your input file, or beside this script for samples.
+SAVE_RESULTS = True
+# Optional: copy built-in source images; user-supplied files are never copied.
+SAVE_SOURCE_IMAGES = False
 
 # Fraction of each well used for intensity.
 REGION_OF_WELL_TO_ANALYZE = 0.5
@@ -66,16 +69,11 @@ def main() -> None:
 
     results_dir = None
     if SAVE_RESULTS:
-        if image_path is None:
-            raise ValueError(
-                "SAVE_RESULTS requires a file path in IMAGE_PATH so results can be written "
-                "next to the image."
-            )
-        results_dir = image_path.parent / f"{image_path.stem}_results"
+        results_dir = results_directory(IMAGE_PATH, __file__)
         results_dir.mkdir(parents=True, exist_ok=True)
         print(f"Results folder: {results_dir}")
 
-    # 1. Find the wells. This script does not open an interactive GUI window.
+    # 1. Find the wells. Well detection needs no manual input.
     detector = WellDetector()
     wells = detector.detect_wells(
         image,
@@ -114,6 +112,9 @@ def main() -> None:
     if results_dir is not None:
         stats_path = results_dir / "stats.csv"
         stats.to_csv(stats_path, index=False)
+        save_target_metadata(results_dir, target)
+        if SAVE_SOURCE_IMAGES:
+            save_sample_sources(results_dir, IMAGE_PATH)
         print(f"Saved {roi_path}")
         print(f"Saved {plot_path}")
         print(f"Saved {stats_path}")

@@ -1,43 +1,33 @@
-"""Run single-well RET analysis without a dark frame.
+"""Analyze a RET light/dark pair automatically, without manual selection.
 
-Uses ret_sample_1_lf by default. To use your own image, edit IMAGE_PATH, then run:
+Set DARK_FRAME_PATH = None for light-frame-only analysis. Edit the settings
+below, then run:
 
     python -m qal.examples.radiometric_emitter_ret.ret_light_frame_automatic_analysis_example
 """
 
-from pathlib import Path
+from qal.data import ret_sample_1_df, ret_sample_1_lf
+from qal.examples.radiometric_emitter_ret import ret_gui_example as workflow
 
-import pandas as pd
-
-from qal import RetAnalyzer, WellDetector
-from qal.data import ret_sample_1_lf
-from qal.util import describe_stored_values, load_grayscale_image
-
-
-# Use the built-in sample, or replace with your light-frame file path.
-# Relative paths start where Python is run.
-# Images are loaded and converted to grayscale with load_grayscale_image.
-# Already-grayscale images remain unchanged: stored values and dtype are preserved.
-# RGB uses scikit-image rgb2gray weights across all channels (floating-point output).
 IMAGE_PATH = ret_sample_1_lf()
-# IMAGE_PATH = Path("path/to/light_frame.tiff").expanduser()
+DARK_FRAME_PATH = ret_sample_1_df()
+# IMAGE_PATH = "path/to/light_frame.tiff"
+# DARK_FRAME_PATH = "path/to/dark_frame.tiff"
+# DARK_FRAME_PATH = None
+
+SAVE_RESULTS = True
+SAVE_SOURCE_IMAGES = False
+REGION_OF_WELL_TO_ANALYZE = 0.5
+CNR_THRESHOLD = 3.0
 
 
-def main() -> None:
-    image = load_grayscale_image(IMAGE_PATH)
-    print(describe_stored_values(image).summary())
-
-    detector = WellDetector(parallel_processing=False)
-    detections = detector.detect_wells(image, well_ids=["RET"])
-    ret_roi = detector.select_single_well(image, detections)
-    if ret_roi.empty:
-        raise RuntimeError("WellDetector did not find a circular RET well")
-
-    result = RetAnalyzer().analyze(image, ret_roi)
-
-    with pd.option_context("display.max_columns", None):
-        print(result.stats_df)
-    print("\nNo dark frame supplied; baseline and CNR were not calculated.")
+def main():
+    return workflow.run_ret_example(
+        IMAGE_PATH, DARK_FRAME_PATH, mode="automatic_detection",
+        save_results=SAVE_RESULTS, save_sources=SAVE_SOURCE_IMAGES,
+        output_fallback=__file__, region=REGION_OF_WELL_TO_ANALYZE,
+        cnr_threshold=CNR_THRESHOLD,
+    )
 
 
 if __name__ == "__main__":
