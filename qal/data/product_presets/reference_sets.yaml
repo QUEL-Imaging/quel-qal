@@ -1,0 +1,91 @@
+schema_version: 1
+family: reference_sets
+product_code: RKT
+
+presets:
+  ICG_base:
+    display_name: Base ICG-equivalent reference set
+    old_sku: RKT-ICG-BS03-QUEL03
+    current_sku: S_RKT-B_STD_ICG-01_STND-01_rA
+    fluorophore_code: ICG
+    fluorophore_label: ICG-eq
+    form_code: BS03
+    status: current
+    source: https://shop.quelimaging.com/product/icg-equivalent-reference-set/
+    includes:
+      - concentration:ICG
+      - depth:ICG
+      - resolution:ICG
+
+  Q700_base:
+    display_name: Base Q700-01 reference set
+    old_sku: RKT-70Q-BS01-QUEL01
+    current_sku: S_RKT-B_STD_Q700-01_STND-01_rA
+    fluorophore_code: 70Q
+    fluorophore_label: Q700-01
+    form_code: BS01
+    status: current
+    source: https://shop.quelimaging.com/product/base-q700-01-reference-set/
+    includes:
+      - concentration:q700
+      - depth:q700
+      - resolution:q700
+
+  Q800_base:
+    display_name: Base Q800-01 reference set (Lung)
+    old_sku: RKT-80Q-BSL5-QUEL01
+    current_sku: S_RKT-B_STD_Q800-01_LUNG-04_rA
+    fluorophore_code: 80Q
+    fluorophore_label: Q800-01
+    form_code: BSL5
+    status: current
+    source: https://shop.quelimaging.com/product/base-q800-01-reference-set-lung/
+    includes:
+      - concentration:Q800
+      - depth:Q800
+      - resolution:Q800
+
+  ICG_quantitative:
+    display_name: Quantitative ICG-equivalent reference set
+    old_sku: RKT-ICG-QU04-QUEL03
+    current_sku: S_RKT-Q_STD_ICG-01_STND-01_rA
+    fluorophore_code: ICG
+    fluorophore_label: ICG-eq
+    form_code: QU04
+    status: current
+    source: https://shop.quelimaging.com/product/quant-icg-equivalent-reference-set/
+    includes:
+      - concentration:ICG
+      - depth:ICG
+      - resolution:ICG
+      - radiometric_emitter:ICG
+
+  Q700_quantitative:
+    display_name: Quantitative Q700-01 reference set
+    old_sku: RKT-70Q-QU01-QUEL01
+    current_sku: S_RKT-Q_STD_Q700-01_STND-01_rA
+    fluorophore_code: 70Q
+    fluorophore_label: Q700-01
+    form_code: QU01
+    status: current
+    source: https://shop.quelimaging.com/product/quantitative-q700-01-reference-set/
+    includes:
+      - concentration:q700
+      - depth:q700
+      - resolution:q700
+      - radiometric_emitter:q700
+
+  Q800_quantitative:
+    display_name: Quantitative Q800-01 reference set (Lung)
+    old_sku: RKT-80Q-QUL5-QUEL01
+    current_sku: S_RKT-Q_STD_Q800-01_LUNG-04_rA
+    fluorophore_code: 80Q
+    fluorophore_label: Q800-01
+    form_code: QUL5
+    status: current
+    source: https://shop.quelimaging.com/product/quantitative-Q800-01-reference-set-lung/
+    includes:
+      - concentration:Q800
+      - depth:Q800
+      - resolution:Q800
+      - radiometric_emitter:Q800

@@ -25,13 +25,17 @@ class PhantomCropper:
         fig, ax = plt.subplots(figsize=[11, 7.5])
         ax.imshow(self.log_img, cmap='gray')
         ax.set_axis_off()
+        fig.canvas.draw_idle()
+        plt.show(block=False)
+        self._focus_figure_window(fig)
+        plt.pause(0.15)
         use_word = ['top', 'bottom', 'left', 'right']
         pts = []
         self.borders = {}
         for i in range(4):
             ax.set_title(f"Select a point on the {use_word[i]} edge of the phantom")
-            plt.draw()
-            pt = plt.ginput(timeout=-1)[0]
+            fig.canvas.draw_idle()
+            pt = fig.ginput(1, timeout=-1)[0]
             pts.append(pt)
             if i < 2:
                 ax.plot([0, x_ext - 1], [pt[1], pt[1]], color='r')
@@ -39,15 +43,27 @@ class PhantomCropper:
             else:
                 ax.plot([pt[0], pt[0]], [0, y_ext - 1], color='r')
                 self.borders[use_word[i]] = pt[0]
-        ax.set_title("Close figure to continue")
-        plt.show()
+        ax.set_title("Press Enter or close figure to continue")
+        self._confirm_view(fig)
 
         cropped = self.log_img[int(pts[0][1]):int(pts[1][1]), int(pts[2][0]):int(pts[3][0])]
         fig, ax = plt.subplots()
         ax.imshow(cropped, cmap='gray')
-        ax.set_title("Cropped region\n(Close figure to continue)")
+        ax.set_title("Cropped region\n(Press Enter or close figure to continue)")
         ax.set_axis_off()
-        plt.show()
+        self._confirm_view(fig)
+
+    @staticmethod
+    def _confirm_view(fig):
+        def on_key(event):
+            if event.key in {"enter", "return"}:
+                plt.close(fig)
+
+        connection = fig.canvas.mpl_connect("key_press_event", on_key)
+        try:
+            plt.show(block=True)
+        finally:
+            fig.canvas.mpl_disconnect(connection)
 
     def cvt_to_log_scale(self):
         """
@@ -61,3 +77,32 @@ class PhantomCropper:
         c = uint16_max / np.log(1 + np.max(image))
         log_image = c * (np.log(image + 1.0))
         self.log_img = np.array(log_image, dtype=np.uint16)
+
+    @staticmethod
+    def _focus_figure_window(fig):
+        """
+        Best-effort figure focus so the first click is captured on GUI backends.
+        """
+        manager = getattr(fig.canvas, 'manager', None)
+        window = getattr(manager, 'window', None)
+
+        for obj, method_name in (
+            (manager, 'show'),
+            (window, 'show'),
+            (window, 'raise_'),
+            (window, 'activateWindow'),
+            (window, 'setFocus'),
+            (window, 'focus_force'),
+            (window, 'focus_set'),
+            (window, 'makeKeyAndOrderFront_'),
+            (window, 'orderFrontRegardless'),
+        ):
+            if obj is None:
+                continue
+            method = getattr(obj, method_name, None)
+            if method is None:
+                continue
+            try:
+                method()
+            except Exception:
+                pass

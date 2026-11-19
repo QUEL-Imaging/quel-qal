@@ -1,0 +1,94 @@
+schema_version: 1
+family: fluorescence_resolution
+product_code: RRT
+qal_workflow: RrtROI -> RrtAnalyzer -> RrtDataPlotter
+chart: USAF 1951
+groups: 0-7
+
+presets:
+  icg:
+    display_name: ICG-equivalent resolution target
+    old_sku: RRT-ICG-ST01-QUEL03
+    current_sku: S_RRT_STD_ICG-01_STND-01_rA
+    serial_template: RRT-S-IC1-S1-A-xxx
+    legacy_serial_template: V3-ICG-ST01-RRTxxx
+    fluorophore_code: ICG
+    fluorophore_label: ICG-eq
+    size: standard
+    form_code: ST01
+    status: current
+    channel_nm: 800
+    fluorescent_backing_concentration_nm: 1000
+    source: https://shop.quelimaging.com/product/icg-equivalent-resolution-target/
+    identifiers:
+      - V2_R4_07
+      - v2_R1_10
+
+  q800:
+    display_name: Q800-01 resolution target (Lung)
+    old_sku: RRT-80Q-LU04-QUEL01
+    current_sku: S_RRT_STD_Q800-01_LUNG-04_rA
+    serial_template: RRT-S-Q81-L4-A-xxx
+    legacy_serial_template: V1-80Q-LU04-RRTxxx
+    fluorophore_code: 80Q
+    fluorophore_label: Q800-01
+    size: standard
+    form_code: LU04
+    notes: >
+      Current Q800-01 lung resolution target. Older OTL38 resolution units are
+      the superseded o38 preset. Design change notice:
+      https://shop.quelimaging.com/resources/
+    status: current
+    channel_nm: 800
+    fluorescent_backing_concentration_nm: 600
+    source: https://shop.quelimaging.com/product/q800-01-resolution-target-lung/
+
+  q700:
+    display_name: Q700-01 resolution target
+    old_sku: RRT-70Q-ST01-QUEL01
+    current_sku: S_RRT_STD_Q700-01_STND-01_rA
+    serial_template: RRT-S-Q71-S1-A-xxx
+    legacy_serial_template: V1-70Q-ST01-RRTxxx
+    fluorophore_code: 70Q
+    fluorophore_label: Q700-01
+    size: standard
+    form_code: ST01
+    status: current
+    channel_nm: 700
+    fluorescent_backing_concentration_nm: 1000
+    source: https://shop.quelimaging.com/product/q700-resolution-target/
+
+  o38:
+    display_name: OTL38-equivalent resolution target (Lung)
+    old_sku: RRT-O38-LU02-QUEL01
+    status: superseded
+    replaced_by: q800
+    backwards_compatible: true
+    fluorophore_code: O38
+    fluorophore_label: OTL38
+    size: standard
+    form_code: LU02
+    channel_nm: 800
+    fluorescent_backing_concentration_nm: 1000
+    notes: >
+      Phased-out OTL38 lung resolution target. Catalog successor is
+      RRT-80Q-LU04-QUEL01. RRS serials in inventory are treated as RRT typos.
+    legacy_serial_templates:
+      - V1-O38-LU02-RRTxxx
+      - V2-O38-LU02-RRTxxx
+      - V2-O38-LU02-RRSxxx
+
+  mbl:
+    display_name: Methylene blue resolution target
+    old_sku: null
+    sku_status: not_in_catalog
+    status: legacy_inventory
+    fluorophore_code: MBL
+    fluorophore_label: MBL
+    size: standard
+    form_code: R01
+    channel_nm: 700
+    notes: >
+      Inventory methylene blue RRT units (V3-MBL-R01 and v3_Q1_R##).
+    legacy_serial_templates:
+      - V3-MBL-R01-RRTxxx

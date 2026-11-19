@@ -136,7 +136,7 @@ class UniformityAnalyzer:
             extra_val = 0
 
         x, y, z = data
-        z /= np.max(z)      # Normalize to help fitting
+        z = z / np.max(z)      # Normalize to help fitting
 
         # Get parameters
         k = self.k_spline
@@ -191,7 +191,7 @@ class UniformityAnalyzer:
         """
 
         x, y, z = data
-        z /= np.max(z)
+        z = z / np.max(z)
         rbf_y = np.vstack((x, y)).T
         rbf_d = z         # Normalize to help with fitting
 

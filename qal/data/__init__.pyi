@@ -7,8 +7,13 @@ __all__ = [
     "cn_sample_2",
     "cn_sample_3",
     "cn_sample_4",
+    "ret_sample_1_lf",
+    "ret_sample_1_df",
+    "ret_sample_2_lf",
+    "ret_sample_2_df",
     "dr_sample1",
     "dr_sample2",
+    "dr_sample3",
     "depth_sample_1",
     "depth_sample_2",
     "res_sample_1",
@@ -35,7 +40,14 @@ __all__ = [
     "lung_reference",
     "lung_reference_image",
     "lung_reference_mask",
-    "load_lung_info"
+    "load_lung_info",
+    "list_product_families",
+    "load_product_family_presets",
+    "load_concentration_target_presets",
+    "get_concentration_target_preset",
+    "get_target_preset",
+    "iter_product_presets",
+    "normalize_product_family",
 ]
 
 # Type hints for lazy-loaded modules
@@ -47,8 +59,13 @@ from ._fetchers import (
     cn_sample_2, 
     cn_sample_3,
     cn_sample_4,
+    ret_sample_1_lf,
+    ret_sample_1_df,
+    ret_sample_2_lf,
+    ret_sample_2_df,
     dr_sample1, 
     dr_sample2, 
+    dr_sample3,
     depth_sample_1,
     depth_sample_2,
     res_sample_1, 
@@ -76,4 +93,13 @@ from ._fetchers import (
     lung_reference_image,
     lung_reference_mask,
     load_lung_info
+)
+from ._target_presets import (
+    get_concentration_target_preset,
+    get_target_preset,
+    iter_product_presets,
+    list_product_families,
+    load_concentration_target_presets,
+    load_product_family_presets,
+    normalize_product_family,
 )

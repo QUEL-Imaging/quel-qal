@@ -1,10 +1,17 @@
 import numpy as np
 import pandas as pd
 
+from qal.util import (
+    describe_stored_values,
+    load_grayscale_image,
+    raw_stats_in_circular_roi,
+)
+
 class WellAnalyzer:
     def __init__(self, im, df):
-        self.im = im
+        self.im = load_grayscale_image(im)
         self.df = df
+        self.stored_values = describe_stored_values(self.im)
 
     def get_normalized_column(self, col_name, base_col_name=None):
         if base_col_name is None:
@@ -56,20 +63,86 @@ class WellAnalyzer:
         
         self.df['ROI ID'] = []
 
-    def get_stats(self, region_of_well_to_analyze=0.5):
-        # Calculates mean intensity using ROI
-        self.df['Analyzed ROI Diameter'] = self.df['ROI Diameter']*region_of_well_to_analyze
+    def _has_control(self) -> bool:
+        return "well" in self.df.columns and (self.df["well"] == "Control").any()
+
+    def get_raw_stats(self, region_of_well_to_analyze=0.5):
+        """Measure stored sample values in each well ROI.
+
+        Values are not rescaled by container bit depth, so an 8-bit payload
+        in a 16-bit file stays in 0–255.
+        """
+        self.df["Analyzed ROI Diameter"] = (
+            self.df["ROI Diameter"] * region_of_well_to_analyze
+        )
         for idx, well in self.df.iterrows():
-            if not (np.isfinite(well.x) and np.isfinite(well.y) and well['ROI Diameter'] > 0):
+            if not (
+                np.isfinite(well.x)
+                and np.isfinite(well.y)
+                and well["ROI Diameter"] > 0
+            ):
                 print(f"Skipping invalid well data at index {idx}")
                 continue
-            masked_im = self.circular_mask((well.x, well.y), well['Analyzed ROI Diameter']/2)
-            self.get_mean_intensity(masked_im, idx)
-            self.get_standard_deviation(masked_im, idx)
-        
+            try:
+                stats = raw_stats_in_circular_roi(
+                    self.im,
+                    (well.x, well.y),
+                    well["Analyzed ROI Diameter"] / 2,
+                )
+            except ValueError:
+                print(f"Skipping empty ROI at index {idx}")
+                continue
+            self.df.loc[idx, "mean intensity"] = stats.mean
+            self.df.loc[idx, "standard deviation"] = stats.std
+            self.df.loc[idx, "min intensity"] = stats.min_value
+            self.df.loc[idx, "max intensity"] = stats.max_value
+        return self.df
+
+    def get_stats(self, region_of_well_to_analyze=0.5):
+        self.get_raw_stats(region_of_well_to_analyze=region_of_well_to_analyze)
+        if not self._has_control():
+            return self.df
+
         self.get_mean_intensity_baselined()
-        self.get_normalized_column('mean intensity')
+        self.get_normalized_column("mean intensity")
         self.get_normalized_std()
         self.get_cnr()
 
         return self.df
+
+    def print_stats(self, *, mode=None):
+        """Print raw ROI values and, when a Control exists, derived metrics."""
+        stats = self.df
+        raw_columns = [
+            column
+            for column in (
+                "well",
+                "x",
+                "y",
+                "Analyzed ROI Diameter",
+                "mean intensity",
+                "standard deviation",
+                "min intensity",
+                "max intensity",
+            )
+            if column in stats.columns
+        ]
+        with pd.option_context("display.max_columns", None):
+            print("\nRaw ROI values:")
+            print(stats[raw_columns])
+        if not self._has_control():
+            print(
+                "\nNo Control well is available; concentration baselining and "
+                "CNR were skipped. Raw ROI values above are still the stored "
+                "samples in each detected well."
+            )
+            return stats
+        if mode == "manual_coordinates" and len(stats) < 9:
+            print(
+                "\nAn explicit Control was selected, so baselining and "
+                "control-dependent analysis will use the selected subset."
+            )
+        with pd.option_context("display.max_columns", None):
+            print("\nWell statistics:")
+            print(stats)
+        return stats
